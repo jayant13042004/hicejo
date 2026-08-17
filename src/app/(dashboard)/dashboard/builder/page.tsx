@@ -21,16 +21,16 @@ import {
   RotateCcw,
   RotateCw,
   RefreshCw,
-  Scissors
+  Scissors,
+  Check,
+  FileCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useResumeStore } from "@/store/useResumeStore";
-import { Skill, FitAnalysis } from "@/types/resume";
-import { FitIndicatorBar } from "@/components/builder/FitIndicatorBar";
+import { Skill } from "@/types/resume";
 import { DensityController } from "@/components/builder/DensityController";
-import { FitAnalysisDrawer } from "@/components/builder/FitAnalysisDrawer";
 import { SmartBulletCompressorModal } from "@/components/builder/SmartBulletCompressorModal";
 
 // 5 Curated ATS Typography Styles
@@ -95,6 +95,10 @@ function ResumeBuilderContent() {
   const [enhancingId, setEnhancingId] = React.useState<string | null>(null);
   const [newSkillName, setNewSkillName] = React.useState("");
   const [newSkillCategory, setNewSkillCategory] = React.useState("");
+
+  // Download PDF Modal state
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = React.useState(false);
+  const [downloadFileName, setDownloadFileName] = React.useState("");
   const [isDownloadingPDF, setIsDownloadingPDF] = React.useState(false);
 
   // Import Modal states
@@ -104,24 +108,6 @@ function ResumeBuilderContent() {
   const [portfolioResumes, setPortfolioResumes] = React.useState<any[]>([]);
   const [isParsing, setIsParsing] = React.useState(false);
   const [importError, setImportError] = React.useState<string | null>(null);
-
-  // Fit Analysis and Auto-Optimizer states
-  const resumeDocumentRef = React.useRef<HTMLDivElement | null>(null);
-  const resumeContentRef = React.useRef<HTMLDivElement | null>(null);
-  const [fitAnalysis, setFitAnalysis] = React.useState<FitAnalysis>({
-    status: "fits",
-    pageCount: 1,
-    utilizationPercentage: 85,
-    overflowLines: 0,
-    overflowPercentage: 0,
-    contentHeightPx: 800,
-    targetPageHeightPx: 1020,
-    readabilityGrade: "Excellent",
-    atsSafetyGrade: "Excellent",
-    contentDensity: "Optimal"
-  });
-  const [isAnalysisOpen, setIsAnalysisOpen] = React.useState(false);
-  const [isFixing, setIsFixing] = React.useState(false);
 
   // Smart Bullet Compressor Modal states
   const [compressorState, setCompressorState] = React.useState<{
@@ -173,63 +159,6 @@ function ResumeBuilderContent() {
     fetchResume();
   }, [resumeIdParam, loadResume]);
 
-  // Real-time A4 DOM Height & Fit Calculation
-  React.useEffect(() => {
-    const calculateFit = () => {
-      if (!resumeContentRef.current) return;
-      const contentEl = resumeContentRef.current;
-      const contentHeightPx = contentEl.scrollHeight || contentEl.offsetHeight;
-
-      // Available printable content height for 1 A4 page:
-      // Total A4 height (297mm ≈ 1122.5px) minus top/bottom padding (12mm + 15mm = 27mm ≈ 102px) = ~1020px.
-      const availablePageContentHeightPx = 1020;
-      
-      const isOverflowing = contentHeightPx > availablePageContentHeightPx + 4;
-      const utilization = Math.min(100, Math.max(10, Math.round((contentHeightPx / availablePageContentHeightPx) * 100)));
-      const overflowLines = isOverflowing ? Math.max(1, Math.ceil((contentHeightPx - availablePageContentHeightPx) / 20)) : 0;
-      const overflowPercentage = isOverflowing ? Math.max(1, Math.round(((contentHeightPx - availablePageContentHeightPx) / availablePageContentHeightPx) * 100)) : 0;
-
-      let status: FitAnalysis["status"] = "fits";
-      if (isOverflowing) status = "overflowing";
-      else if (utilization < 75) status = "underutilized";
-      else if (utilization >= 75 && utilization <= 99) status = "perfect";
-
-      const currentDensity = data.design?.density || "normal";
-      const currentFontSize = data.design?.fontSize || "md";
-
-      let readabilityGrade: FitAnalysis["readabilityGrade"] = "Excellent";
-      if (currentDensity === "ultra-compact" || currentFontSize === "xs" || currentFontSize === "sm") {
-        readabilityGrade = "Good";
-      }
-
-      let contentDensity: FitAnalysis["contentDensity"] = "Optimal";
-      if (currentDensity === "relaxed") contentDensity = "Relaxed";
-      else if (currentDensity === "compact") contentDensity = "Compact";
-      else if (currentDensity === "ultra-compact") contentDensity = "Dense";
-
-      setFitAnalysis({
-        status,
-        pageCount: isOverflowing ? 2 : 1,
-        utilizationPercentage: utilization,
-        overflowLines,
-        overflowPercentage,
-        contentHeightPx,
-        targetPageHeightPx: availablePageContentHeightPx,
-        readabilityGrade,
-        atsSafetyGrade: "Excellent",
-        contentDensity,
-        recommendedAction: isOverflowing ? `Shorten ${Math.min(3, overflowLines)} bullets or apply compact density` : undefined
-      });
-    };
-
-    calculateFit();
-    const observer = new ResizeObserver(calculateFit);
-    if (resumeContentRef.current) {
-      observer.observe(resumeContentRef.current);
-    }
-    return () => observer.disconnect();
-  }, [data]);
-
   // Debounced Auto-save to cloud DB
   React.useEffect(() => {
     if (saveState !== "typing") return;
@@ -244,7 +173,7 @@ function ResumeBuilderContent() {
           method,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            title,
+            title: title.trim() || "Untitled Resume",
             content: data
           })
         });
@@ -265,47 +194,23 @@ function ResumeBuilderContent() {
         console.error("Auto-save network error:", err);
         setSaveState("error");
       }
-    }, 1500);
+    }, 1200);
 
     return () => clearTimeout(timer);
   }, [data, title, id, saveState, setResumeId, setSaveState]);
 
-  // Hierarchical 5-Stage Auto-Fit Solver
-  const handleFixToOnePage = React.useCallback(() => {
-    setIsFixing(true);
-    const currentDensity = data.design?.density || "normal";
-    const currentFontSize = data.design?.fontSize || "md";
+  // Open Download Modal and prefill name
+  const handleOpenDownloadModal = () => {
+    const defaultName = (data.personalInfo.fullName || title || "Resume")
+      .trim()
+      .replace(/[^a-zA-Z0-9_\-\s]/g, "")
+      .replace(/\s+/g, "_");
+    setDownloadFileName(`${defaultName}_Resume`);
+    setIsDownloadModalOpen(true);
+  };
 
-    // Priority 1 & 2: Step through density levels
-    if (currentDensity === "relaxed") {
-      setDensity("normal");
-    } else if (currentDensity === "normal") {
-      setDensity("compact");
-    } else if (currentDensity === "compact") {
-      setDensity("ultra-compact");
-    } else if (currentDensity === "ultra-compact") {
-      // Priority 3: Typography adjustment within safe bounds
-      if (currentFontSize === "xl") {
-        updateDesignSettings({ fontSize: "lg" });
-      } else if (currentFontSize === "lg") {
-        updateDesignSettings({ fontSize: "md" });
-      } else if (currentFontSize === "md") {
-        updateDesignSettings({ fontSize: "sm" });
-      } else if (currentFontSize === "sm") {
-        updateDesignSettings({ fontSize: "xs" });
-      } else {
-        // Priority 4 & 5: Heavily overflowing -> open analysis drawer for AI bullet compression
-        setIsAnalysisOpen(true);
-      }
-    }
-
-    setTimeout(() => {
-      setIsFixing(false);
-    }, 300);
-  }, [data.design, setDensity, updateDesignSettings]);
-
-  // Direct 1-Click PDF Download (Captures strictly the clean resume canvas without UI leftovers)
-  const handleDirectDownloadPDF = async () => {
+  // Direct 1-Click High-Quality Full-Width PDF Download
+  const handleExecutePDFDownload = async () => {
     const resumeEl = document.getElementById("resume-print-area");
     if (!resumeEl) return;
 
@@ -314,38 +219,51 @@ function ResumeBuilderContent() {
       const html2canvas = (await import("html2canvas")).default;
       const { jsPDF } = await import("jspdf");
 
-      // Clone the resume node to isolate from screen UI
-      const cloned = resumeEl.cloneNode(true) as HTMLElement;
-      // Remove all non-print overlays, dashed lines, and badges
-      cloned.querySelectorAll(".no-print").forEach((el) => el.remove());
-      cloned.style.boxShadow = "none";
-      cloned.style.border = "none";
-      cloned.style.margin = "0";
-      cloned.style.width = "794px"; // exact 210mm at 96 DPI
-      cloned.style.minHeight = "1123px"; // exact 297mm
-      cloned.style.backgroundColor = "#ffffff";
-      cloned.style.color = "#09090b";
-
-      // Put in an offscreen container
+      // 1. Create a pristine detached container with exact A4 proportions (794px width)
       const container = document.createElement("div");
       container.style.position = "fixed";
       container.style.left = "-9999px";
       container.style.top = "0";
       container.style.width = "794px";
+      container.style.minHeight = "1123px";
       container.style.backgroundColor = "#ffffff";
+      container.style.zIndex = "-9999";
+      container.style.boxSizing = "border-box";
+
+      // 2. Clone resume node cleanly
+      const cloned = resumeEl.cloneNode(true) as HTMLElement;
+      cloned.id = "clean-pdf-render";
+      cloned.style.width = "794px";
+      cloned.style.minWidth = "794px";
+      cloned.style.maxWidth = "794px";
+      cloned.style.minHeight = "1123px";
+      cloned.style.margin = "0";
+      cloned.style.padding = "45px 55px";
+      cloned.style.boxShadow = "none";
+      cloned.style.border = "none";
+      cloned.style.backgroundColor = "#ffffff";
+      cloned.style.color = "#09090b";
+      cloned.style.transform = "none";
+
+      // Remove non-print UI overlays
+      cloned.querySelectorAll(".no-print, [data-no-print]").forEach((el) => el.remove());
+
       container.appendChild(cloned);
       document.body.appendChild(container);
 
+      // 3. Render high-resolution canvas (Scale 2 for crisp vector typography)
       const canvas = await html2canvas(cloned, {
-        scale: 2.5,
+        scale: 2,
         useCORS: true,
         backgroundColor: "#ffffff",
         logging: false,
+        width: 794,
         windowWidth: 794
       });
 
       document.body.removeChild(container);
 
+      // 4. Create standard A4 portrait PDF (210mm x 297mm)
       const imgData = canvas.toDataURL("image/jpeg", 0.98);
       const pdf = new jsPDF({
         orientation: "portrait",
@@ -354,17 +272,14 @@ function ResumeBuilderContent() {
         compress: true
       });
 
-      const pdfWidth = 210;
-      const pdfHeight = 297;
-      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
+      pdf.addImage(imgData, "JPEG", 0, 0, 210, 297, undefined, "FAST");
 
-      const cleanFilename = (data.personalInfo.fullName || title || "Resume")
-        .trim()
-        .replace(/[^a-zA-Z0-9_-]/g, "_");
-      pdf.save(`${cleanFilename}_Resume.pdf`);
+      const finalName = (downloadFileName.trim() || "Resume").replace(/[^a-zA-Z0-9_\-]/g, "_");
+      pdf.save(`${finalName}.pdf`);
+      setIsDownloadModalOpen(false);
     } catch (err) {
       console.error("Direct PDF download error:", err);
-      window.print();
+      alert("Encountered an issue generating PDF. Please try again.");
     } finally {
       setIsDownloadingPDF(false);
     }
@@ -449,6 +364,7 @@ function ResumeBuilderContent() {
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            placeholder="Untitled Resume"
             className="text-lg font-bold bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none px-1 py-0.5 rounded transition-colors"
           />
           {/* Cloud Auto-save state pill */}
@@ -514,16 +430,11 @@ function ResumeBuilderContent() {
 
           <Button
             size="sm"
-            onClick={handleDirectDownloadPDF}
-            disabled={isDownloadingPDF}
-            className="bg-gradient-to-r from-primary to-violet-600 gap-1.5 text-xs font-semibold shadow-xs"
+            onClick={handleOpenDownloadModal}
+            className="bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-700 gap-1.5 text-xs font-bold shadow-sm"
           >
-            {isDownloadingPDF ? (
-              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Download className="h-3.5 w-3.5" />
-            )}
-            <span>{isDownloadingPDF ? "Generating PDF..." : "Download PDF"}</span>
+            <Download className="h-3.5 w-3.5" />
+            <span>Download PDF</span>
           </Button>
         </div>
       </header>
@@ -1071,37 +982,33 @@ function ResumeBuilderContent() {
           </div>
         </div>
 
-        {/* Right Side: Exact A4 Page Preview Panel */}
+        {/* Right Side: Clean A4 Page Preview Panel */}
         <div className="w-1/2 flex flex-col bg-muted/30 overflow-y-auto h-full p-6 space-y-4">
-          {/* 1-Page Fit Indicator Header (without Perfect 1-Page mode toggle) */}
-          <FitIndicatorBar
-            fitAnalysis={fitAnalysis}
-            onFixToOnePage={handleFixToOnePage}
-            isFixing={isFixing}
-            isAnalysisOpen={isAnalysisOpen}
-            onToggleAnalysis={() => setIsAnalysisOpen(!isAnalysisOpen)}
-          />
-
-          {/* Expandable Diagnostic Fit Analysis Drawer */}
-          <FitAnalysisDrawer
-            isOpen={isAnalysisOpen}
-            fitAnalysis={fitAnalysis}
-            resumeData={data}
-            onOpenCompressor={(bulletText, itemId, itemType) => setCompressorState({
-              isOpen: true,
-              bulletText,
-              itemId,
-              itemType
-            })}
-          />
+          {/* Document Preview Status Badge */}
+          <div className="flex items-center justify-between p-2 px-4 rounded-xl border border-border/60 bg-card/90 backdrop-blur-md shadow-xs">
+            <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <span>Standard A4 Document Preview</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleOpenDownloadModal}
+                className="h-7 text-xs gap-1.5 font-semibold"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>Export PDF</span>
+              </Button>
+            </div>
+          </div>
 
           {/* A4 Canvas Container with Scaled Visuals */}
           <div className="flex items-start justify-center pb-12">
             <div className="relative">
-              {/* Exact A4 Document Sheet (210mm width, 297mm target single page height) */}
+              {/* Exact A4 Document Sheet (210mm width, 297mm min-height) */}
               <div
                 id="resume-print-area"
-                ref={resumeDocumentRef}
                 className={`relative w-[210mm] min-h-[297mm] p-[12mm_15mm] bg-white text-zinc-900 shadow-xl border border-zinc-200 rounded-xs flex flex-col transition-all resume-a4-page ${
                   fontClassMap[data.design?.fontFamily || "font-sans"]
                 } ${
@@ -1111,24 +1018,9 @@ function ResumeBuilderContent() {
                   lineHeight: lineHeightMultiplier
                 }}
               >
-                {/* Visual Page 1 Boundary Marker Line (Calculated at exactly 297mm) */}
-                <div
-                  className="absolute left-0 right-0 top-[297mm] pointer-events-none no-print"
-                  style={{
-                    display: fitAnalysis.status === "overflowing" ? "block" : "none"
-                  }}
-                >
-                  <div className="relative flex items-center justify-center">
-                    <div className="w-full border-t-2 border-dashed border-amber-500/80" />
-                    <span className="absolute px-3 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-amber-500 text-white shadow-md">
-                      ⚠ Page 1 Boundary (Overflow Detected)
-                    </span>
-                  </div>
-                </div>
-
-                {/* Inner Content Measurer */}
-                <div ref={resumeContentRef} className="flex flex-col w-full flex-1">
-                  {/* Personal Details Header (Always at Top) */}
+                {/* Inner Content Container */}
+                <div className="flex flex-col w-full flex-1">
+                  {/* Personal Details Header */}
                   <div
                     className="text-center border-b border-zinc-200 shrink-0"
                     style={{
@@ -1345,6 +1237,79 @@ function ResumeBuilderContent() {
         </div>
       </div>
 
+      {/* Direct PDF Download Modal */}
+      <AnimatePresence>
+        {isDownloadModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl p-6 space-y-5 text-foreground"
+            >
+              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                    <Download className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-foreground">Download Resume PDF</h3>
+                    <p className="text-xs text-muted-foreground">Save pure A4 document directly to your device</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsDownloadModalOpen(false)}
+                  className="text-muted-foreground hover:text-foreground text-sm cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  PDF File Name
+                </label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="text"
+                    value={downloadFileName}
+                    onChange={(e) => setDownloadFileName(e.target.value)}
+                    placeholder="Alex_Johnson_Resume"
+                    className="font-mono text-xs"
+                    autoFocus
+                  />
+                  <span className="text-xs font-mono text-muted-foreground font-semibold">.pdf</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsDownloadModalOpen(false)}
+                  disabled={isDownloadingPDF}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleExecutePDFDownload}
+                  disabled={isDownloadingPDF || !downloadFileName.trim()}
+                  className="bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-700 gap-1.5 font-bold"
+                >
+                  {isDownloadingPDF ? (
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5" />
+                  )}
+                  <span>{isDownloadingPDF ? "Generating PDF..." : "Download Now"}</span>
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Smart Bullet Compressor Modal */}
       <SmartBulletCompressorModal
         isOpen={compressorState.isOpen}
@@ -1470,6 +1435,7 @@ function ResumeBuilderContent() {
                               setImportError("File upload extraction failed.");
                             } finally {
                               setIsParsing(false);
+                              e.target.value = "";
                             }
                           }}
                           className="hidden"
