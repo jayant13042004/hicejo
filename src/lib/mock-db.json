@@ -1,0 +1,238 @@
+{
+  "profiles": {
+    "demo-user-id": {
+      "id": "demo-user-id",
+      "email": "demo@hicejo.com",
+      "full_name": "Jayant",
+      "target_role": "Software Engineer",
+      "target_industry": "Technology",
+      "target_salary": "$120,000",
+      "updated_at": "2026-08-08T01:05:00.832Z"
+    }
+  },
+  "resumes": [
+    {
+      "id": "f8ee89e7-94f1-4bad-bbb0-3c6a28a4a743",
+      "user_id": "demo-user-id",
+      "title": "Untitled Resume",
+      "content": {
+        "personalInfo": {
+          "fullName": "Jayant",
+          "email": "jayantvjagtap@gmail.com",
+          "phone": "+91 9654678623",
+          "location": "SF",
+          "website": "",
+          "linkedin": ""
+        },
+        "summary": "The next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, if all the permutations of the array are sorted in one container according to their lexicographical order, then the next permutation of that array is the permutation that follows it in the sorted container. If such arrangement is not possible, the array must be rearranged as the lowest possible order (i.e., sorted in ascending order).",
+        "experience": [
+          {
+            "id": "a989770c-62b5-45ae-96b0-5fe4ab418563",
+            "company": "AVEVA",
+            "position": "Software Developer INtern",
+            "location": "",
+            "startDate": "Jan 2022",
+            "endDate": "Jun 2022",
+            "current": false,
+            "description": "The next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, i\nThe next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, if all the permutations of the array are sorted in one container according to their lexicographical order"
+          }
+        ],
+        "education": [
+          {
+            "id": "3ec880bc-9ce6-4cda-9cf6-09f263161e60",
+            "school": "IITH",
+            "degree": "BTech",
+            "fieldOfStudy": "Chemical Engineering",
+            "location": "Hyderabad",
+            "startDate": "Sep 2018",
+            "endDate": "Jun 2022",
+            "current": false,
+            "description": ""
+          }
+        ],
+        "projects": [
+          {
+            "id": "b8de20f7-fe16-4e02-86d2-f230177f80bf",
+            "name": "fdfsf",
+            "role": "sfsfsfsf",
+            "link": "google.com",
+            "startDate": "Jul 2021",
+            "endDate": "Oct 2021",
+            "description": "The next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally\nIf all the permutations of the array are sorted in one container according to their lexicographical order.then the next permutation\nOf that array is the permutation that follows it in the sorted container. If such arrangement is not possible, the array must be rearranged as the lowest possible order (i.e., sorted in ascending order)."
+          },
+          {
+            "id": "69ab53e5-7c18-4280-97aa-2aa81467dd1e",
+            "name": "E commerce API",
+            "role": "Lead Developer",
+            "link": "github.com",
+            "startDate": "Jul 2023",
+            "endDate": "Oct 2024",
+            "description": "The next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, if all the permutations of the array are sorted in one container\nAccording to their lexicographical order. \nIf such arrangement is not possible, the array must be rearranged as the lowest possible order (i.e., sorted in ascending order)."
+          }
+        ],
+        "skills": [
+          {
+            "id": "bdcc2122-f695-4aff-9b34-7c63288da794",
+            "name": "SQL"
+          },
+          {
+            "id": "fc58aea7-b53c-4096-9f08-160ffe375bb7",
+            "name": "React"
+          },
+          {
+            "id": "98efde0b-04c1-4670-88e0-5fc363381509",
+            "name": "TypeScript"
+          },
+          {
+            "id": "77baac92-e72f-405a-ad93-bf4fa8fed22c",
+            "name": "NodeJS"
+          },
+          {
+            "id": "631d604e-78dd-4a23-b0b9-ecec1b2ef369",
+            "name": "TypeScript"
+          }
+        ],
+        "design": {
+          "fontFamily": "font-sans",
+          "fontSize": "md",
+          "sectionOrder": [
+            "summary",
+            "experience",
+            "projects",
+            "education",
+            "skills"
+          ]
+        }
+      },
+      "ats_score": 0,
+      "created_at": "2026-08-08T00:22:05.397Z",
+      "updated_at": "2026-08-08T01:02:16.148Z"
+    },
+    {
+      "id": "4c228098-3863-4cb5-9c19-997bf501f03e",
+      "user_id": "demo-user-id",
+      "title": "Stripe - Product Manager Tailored",
+      "content": {
+        "personalInfo": {
+          "fullName": "Jayant",
+          "email": "jayant@email.com",
+          "phone": "(555) 000-0000",
+          "location": "San Francisco, CA",
+          "website": "",
+          "linkedin": ""
+        },
+        "summary": "Accomplished engineer specializing in launching core projects at Stripe. Experienced implementing scalable systems using React and TypeScript, aligning cleanly with requirements for the Product Manager role.",
+        "experience": [],
+        "education": [],
+        "projects": [],
+        "skills": [
+          {
+            "id": "9dc36ee5-fe72-4fc7-847e-3d9f46ab41b5",
+            "name": "Stripe API Architecture"
+          }
+        ]
+      },
+      "ats_score": 0,
+      "created_at": "2026-08-08T00:46:26.539Z",
+      "updated_at": "2026-08-08T00:46:26.539Z"
+    },
+    {
+      "id": "132f4800-391c-4d9b-ae3a-95d0c91ca4c9",
+      "user_id": "demo-user-id",
+      "title": "Untitled Resume",
+      "content": {
+        "personalInfo": {
+          "fullName": "sjfdsg",
+          "email": "gsgsgsgzgzs",
+          "phone": "545848583849nutba",
+          "location": "dgdgbugbgbhghbj",
+          "website": "fgdgdignagjbgbisgbjseg",
+          "linkedin": "gsrgdhgoijargiuwhiuaw"
+        },
+        "summary": "The next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, if all the permutations of the array are sorted in one container according to their lexicographical order, then the next permutation of that array is the permutation that follows it in the sorted container. If such arrangement is not possible.\nThe next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, if all the permutations of the array are sorted in one container according to their lexicographical order, then the next permutation of that array is the permutation that follows it in the sorted container. If such arrangement is not possible.",
+        "experience": [
+          {
+            "id": "d824e2b2-98e8-4bfa-a017-a5ecc86f8ba6",
+            "company": "Stripe",
+            "position": "dpsd",
+            "location": "dvdv",
+            "startDate": "ssf",
+            "endDate": "fs",
+            "current": false,
+            "description": "The next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, if all the permutations of the array are sorted in one container according to their lexicographical order, then the next permutation of that array is the permutation that follows it in the sorted container. If such arrangement is not possible.\nThe next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, if all the permutations of the array are sorted in one container according to their lexicographical order, then the next permutation of that array is the permutation that follows it in the sorted container. If such arrangement is not possible."
+          }
+        ],
+        "education": [
+          {
+            "id": "531f9691-8af4-405c-a99c-73adea20adca",
+            "school": "fsfsffsfsf",
+            "degree": "ff",
+            "fieldOfStudy": "sfsfsf",
+            "location": "ffsf",
+            "startDate": "1234",
+            "endDate": "2222",
+            "current": false,
+            "description": ""
+          }
+        ],
+        "projects": [
+          {
+            "id": "5447f5d6-5ce7-4e9d-bcd9-200a5329d58d",
+            "name": "fgasg",
+            "role": "gsgsg",
+            "link": "github.con",
+            "startDate": "jun 2022",
+            "endDate": "of 3034",
+            "description": "The next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, if all the permutations of the array are sorted in one container according to their lexicographical order, then the next permutation of that array is the permutation that follows it in the sorted container. If such arrangement is not possible."
+          },
+          {
+            "id": "cb86f7cf-e100-4c38-9ba2-d221f65e2434",
+            "name": "dfdddg",
+            "role": "developwr",
+            "link": "youtube.com",
+            "startDate": "2021",
+            "endDate": "2021",
+            "description": "The next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, if all the permutations of the array are sorted in one container according to their lexicographical order, then the next permutation of that array is the permutation that follows it in the sorted container. If such arrangement is not possible."
+          }
+        ],
+        "skills": [
+          {
+            "id": "4bb3df88-92da-461e-9a23-58e8c6efac17",
+            "name": "reg, gfg, gdgd",
+            "category": "Languages"
+          },
+          {
+            "id": "3c52e0d0-98db-4e20-ae4d-685dbbf112a6",
+            "name": "fefdfs, ghg, ghg",
+            "category": "Sex"
+          }
+        ],
+        "design": {
+          "fontFamily": "font-serif",
+          "fontSize": "sm",
+          "sectionOrder": [
+            "education",
+            "summary",
+            "experience",
+            "projects",
+            "skills"
+          ]
+        }
+      },
+      "ats_score": 0,
+      "created_at": "2026-08-08T00:50:15.358Z",
+      "updated_at": "2026-08-08T00:55:29.223Z"
+    }
+  ],
+  "coverLetters": [
+    {
+      "id": "b08e9b4f-85a7-4d65-82c1-7865b35c46f0",
+      "user_id": "demo-user-id",
+      "resume_id": "1",
+      "job_title": "PM",
+      "company": "Stripe",
+      "content": "Jayant\nSan Francisco, CA | (555) 000-0000 | jayant@email.com\n\nAugust 8, 2026\n\nHiring Manager\nStripe Recruiting Team\nStripe Headquarters\n\nSubject: Application for PM Role\n\nDear Hiring Manager,\n\nI am writing to express my enthusiastic interest in the PM position at Stripe. Having followed Stripe’s recent innovations and commitment to engineering excellence, I am excited about the opportunity to contribute my skills in front-end design, TypeScript development, and user-centric architecture to your growing team.\n\nMy technical background aligns cleanly with the challenges at Stripe. In my previous experience, I focused on refactoring legacy application modules into responsive Next.js frameworks, which resulted in a 24% boost in overall page loading performance. Additionally, collaborating in cross-functional squads allowed me to design API integration schemas that cut client request latency by 35%. I am confident that this blend of clean-code practices and quantitative impact will allow me to deliver immediate value to your codebase.\n\nWhat excites me most about Stripe is your focus on building scalable products that redefine user productivity. I would welcome the opportunity to discuss how my background in modern web standards and responsive interfaces can help accelerate your upcoming product goals.\n\nThank you for your time and consideration. I look forward to hearing from you regarding next steps.\n\nSincerely,\n\nJayant",
+      "created_at": "2026-08-08T00:47:25.742Z"
+    }
+  ]
+}
