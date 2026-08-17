@@ -11,7 +11,9 @@ import {
   RotateCw,
   Info,
   CheckCircle2,
-  Upload
+  Upload,
+  Sparkles,
+  FileCheck
 } from "lucide-react";
 import { DashboardShell } from "@/components/shared/DashboardShell";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -36,6 +38,31 @@ interface RoastResult {
   verdict: string;
 }
 
+const SAMPLE_RESUME_TEXT = `Alex Johnson | Senior Full Stack Engineer
+San Francisco, CA | (555) 019-2834 | alex.johnson@example.com | linkedin.com/in/alexj-tech
+
+PROFESSIONAL SUMMARY
+Dynamic, passionate, and results-driven self-starter with 6+ years of experience leveraging agile methodologies to synergize cutting-edge tech stacks and drive digital transformation across enterprise squads.
+
+EXPERIENCE
+Lead Full Stack Developer — Apex Cloud Technologies (2022 - Present)
+• Responsible for writing code and maintaining frontend and backend systems.
+• Collaborated with cross-functional teams in daily standups and sprint planning.
+• Optimized database queries and improved overall user interface feel.
+• Handled deployments to cloud infrastructure using CI/CD pipelines.
+
+Software Engineer — Nova Global Solutions (2019 - 2022)
+• Worked on various client projects using React, Node.js, and MongoDB.
+• Built features according to stakeholder specifications and fixed bugs.
+• Participated in code reviews and mentored junior software engineering interns.
+
+EDUCATION
+B.S. in Computer Science — California State University (2015 - 2019)
+
+SKILLS
+Languages & Frameworks: JavaScript, TypeScript, React, Node.js, Express, HTML5, CSS3, JSON
+Tools & Others: Git, GitHub, VS Code, Microsoft Office, JIRA, Agile, Problem Solving, Communication`;
+
 export default function RoastPage() {
   const [resumes, setResumes] = React.useState<ResumeOption[]>([]);
   const [sourceType, setSourceType] = React.useState<"draft" | "text">("draft");
@@ -43,6 +70,8 @@ export default function RoastPage() {
   const [resumeText, setResumeText] = React.useState("");
 
   const [isRoasting, setIsRoasting] = React.useState(false);
+  const [isExtractingFile, setIsExtractingFile] = React.useState(false);
+  const [uploadedFileName, setUploadedFileName] = React.useState<string | null>(null);
   const [terminalLines, setTerminalLines] = React.useState<string[]>([]);
   const [roastResult, setRoastResult] = React.useState<RoastResult | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -60,30 +89,18 @@ export default function RoastPage() {
           }
         }
       } catch (err) {
-        console.error(err);
+        console.error("Failed to load drafts:", err);
       }
     };
     loadResumes();
   }, []);
-
-  const terminalSequence = [
-    "guest@hicejo:~$ roast-resume --target current_draft",
-    "[INFO] Initializing Hicejo Roasting Suite v2.1...",
-    "[INFO] Extracting candidate details and experience strings...",
-    "[WARN] Cliché alert: Found 'passionate self-starter' cliches.",
-    "[WARN] Math failure: 3 experiences have 0 quantified metrics.",
-    "[INFO] Formatting diagnostics... dates patterns look chaotic.",
-    "[INFO] Packaging payload to Tough Recruiter AI agent...",
-    "[SUCCESS] Critique package retrieved. Compiling burn report."
-  ];
-
-  const [isExtractingFile, setIsExtractingFile] = React.useState(false);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setIsExtractingFile(true);
     setError(null);
+    setUploadedFileName(file.name);
     try {
       const fData = new FormData();
       fData.append("file", file);
@@ -98,7 +115,7 @@ export default function RoastPage() {
         setError(result.error || "Failed to extract text from file.");
       }
     } catch {
-      setError("File upload connection failed.");
+      setError("File upload connection failed. Please paste text directly.");
     } finally {
       setIsExtractingFile(false);
     }
@@ -106,16 +123,23 @@ export default function RoastPage() {
 
   const handleRoast = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (sourceType === "draft" && !selectedResumeId) return;
-    if (sourceType === "text" && !resumeText.trim()) return;
+
+    if (sourceType === "draft" && !selectedResumeId) {
+      setError("Please select a saved resume draft or switch to 'Paste / Upload Text'.");
+      return;
+    }
+    if (sourceType === "text" && !resumeText.trim()) {
+      setError("Please enter or paste your resume text, or upload a document to roast.");
+      return;
+    }
 
     setIsRoasting(true);
     setError(null);
     setRoastResult(null);
     setTerminalLines([
-      "guest@hicejo:~$ roast-resume --target candidate_profile",
+      "guest@hicejo:~$ roast-resume --mode brutal_critique --target profile",
       "[INFO] Initializing Hicejo Roasting Suite v2.1...",
-      "[INFO] Extracting candidate details and experience strings..."
+      "[INFO] Ingesting candidate credentials and experience narrative..."
     ]);
 
     try {
@@ -125,19 +149,19 @@ export default function RoastPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           resumeId: sourceType === "draft" ? selectedResumeId : undefined,
-          resumeText: sourceType === "text" ? resumeText : undefined
+          resumeText: sourceType === "text" ? resumeText.trim() : undefined
         })
       });
 
-      // Quick diagnostic progression lines
+      // Streaming diagnostic lines
       setTimeout(() => {
         setTerminalLines((prev) => [
           ...prev,
-          "[WARN] Cliché alert: Found buzzwords & unsubstantiated claims.",
-          "[INFO] Analyzing metrics & bullet density...",
+          "[WARN] Cliché detection: Found generic adjectives & unverified claims.",
+          "[INFO] Analyzing impact metrics, grammar patterns, and bullet density...",
           "[INFO] Packaging payload to Tough Recruiter AI agent..."
         ]);
-      }, 400);
+      }, 350);
 
       const res = await roastPromise;
       const result = await res.json();
@@ -149,10 +173,10 @@ export default function RoastPage() {
         ]);
         setRoastResult(result.data);
       } else {
-        setError(result.error || "Failed to roast resume.");
+        setError(result.error || "Failed to roast resume. Please try again.");
       }
-    } catch {
-      setError("Server connection failure.");
+    } catch (err: any) {
+      setError("Server connection failure. Please check your network and try again.");
     } finally {
       setIsRoasting(false);
     }
@@ -161,7 +185,7 @@ export default function RoastPage() {
   return (
     <DashboardShell title="Resume Roast Room">
       <div className="space-y-8">
-        {/* Intro */}
+        {/* Intro Header */}
         <div>
           <p className="text-muted-foreground text-sm">
             Expose structural formatting errors and narrative cliches. Humorous yet highly action-focused critique.
@@ -174,15 +198,22 @@ export default function RoastPage() {
           <div className="lg:col-span-5 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Roast Configurator</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Flame className="h-5 w-5 text-orange-500" />
+                  <span>Roast Configurator</span>
+                </CardTitle>
                 <CardDescription>Select target resume to incinerate.</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleRoast} className="space-y-4">
                   {error && (
-                    <div className="rounded-lg bg-destructive/15 p-3 text-sm text-destructive font-medium border border-destructive/20">
+                    <motion.div
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-lg bg-destructive/15 p-3 text-xs text-destructive font-medium border border-destructive/20"
+                    >
                       {error}
-                    </div>
+                    </motion.div>
                   )}
 
                   {/* Input Source Toggle */}
@@ -193,7 +224,10 @@ export default function RoastPage() {
                     <div className="grid grid-cols-2 gap-1 bg-muted p-1 rounded-lg text-xs font-medium">
                       <button
                         type="button"
-                        onClick={() => setSourceType("draft")}
+                        onClick={() => {
+                          setSourceType("draft");
+                          setError(null);
+                        }}
                         className={`py-1.5 rounded-md text-center transition-colors cursor-pointer ${
                           sourceType === "draft"
                             ? "bg-card shadow-sm text-foreground font-semibold"
@@ -204,7 +238,10 @@ export default function RoastPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setSourceType("text")}
+                        onClick={() => {
+                          setSourceType("text");
+                          setError(null);
+                        }}
                         className={`py-1.5 rounded-md text-center transition-colors cursor-pointer ${
                           sourceType === "text"
                             ? "bg-card shadow-sm text-foreground font-semibold"
@@ -218,9 +255,9 @@ export default function RoastPage() {
 
                   {/* Contextual Input Fields */}
                   {sourceType === "draft" ? (
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        Select Resume
+                        Select Resume Draft
                       </label>
                       {resumes.length > 0 ? (
                         <select
@@ -235,9 +272,23 @@ export default function RoastPage() {
                           ))}
                         </select>
                       ) : (
-                        <div className="text-xs text-muted-foreground py-2 px-1 flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          <span>No resumes found. Create a draft in Builder first.</span>
+                        <div className="text-xs text-muted-foreground py-3 px-3 rounded-lg border border-dashed border-border flex flex-col gap-2">
+                          <div className="flex items-center gap-2 text-amber-500 font-semibold">
+                            <Info className="h-4 w-4" />
+                            <span>No saved drafts found</span>
+                          </div>
+                          <p className="text-muted-foreground">
+                            Switch to <strong>Paste / Upload Text</strong> tab above to paste your resume or upload a file.
+                          </p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSourceType("text")}
+                            className="text-xs h-7 self-start"
+                          >
+                            Switch to Paste / Upload Text
+                          </Button>
                         </div>
                       )}
                     </div>
@@ -247,189 +298,202 @@ export default function RoastPage() {
                         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                           Resume Text Content
                         </label>
-                        <label className="flex items-center gap-1 text-[10px] text-primary hover:underline cursor-pointer font-medium uppercase tracking-wider">
-                          {isExtractingFile ? (
-                            <RotateCw className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <Upload className="h-3 w-3" />
-                          )}
-                          <span>{isExtractingFile ? "Extracting..." : "Upload File (PDF/Word/Text)"}</span>
-                          <input
-                            type="file"
-                            accept=".txt,.pdf,.docx"
-                            onChange={handleFileUpload}
-                            disabled={isExtractingFile}
-                            className="hidden"
-                          />
-                        </label>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setResumeText(SAMPLE_RESUME_TEXT)}
+                            className="text-[11px] text-primary hover:underline font-semibold cursor-pointer"
+                          >
+                            Load Sample
+                          </button>
+                          <label className="flex items-center gap-1 text-[11px] text-primary hover:underline cursor-pointer font-semibold uppercase tracking-wide">
+                            {isExtractingFile ? (
+                              <RotateCw className="h-3 w-3 animate-spin text-primary" />
+                            ) : (
+                              <Upload className="h-3 w-3" />
+                            )}
+                            <span>{isExtractingFile ? "Extracting..." : "Upload File"}</span>
+                            <input
+                              type="file"
+                              accept=".txt,.pdf,.docx"
+                              onChange={handleFileUpload}
+                              disabled={isExtractingFile}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
                       </div>
+
+                      {uploadedFileName && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-emerald-500 font-medium">
+                          <FileCheck className="h-3.5 w-3.5" />
+                          <span>Extracted text from: {uploadedFileName}</span>
+                        </div>
+                      )}
+
                       <textarea
-                        rows={6}
+                        rows={7}
                         placeholder="Paste the raw text of your resume here..."
                         value={resumeText}
                         onChange={(e) => setResumeText(e.target.value)}
-                        required
-                        className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                        className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-xs placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none font-mono leading-relaxed"
                       />
                     </div>
                   )}
 
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 shadow-md shadow-red-500/10 gap-2"
+                    className="w-full bg-gradient-to-r from-orange-500 via-rose-500 to-red-600 hover:from-orange-600 hover:to-red-700 shadow-md shadow-red-500/10 gap-2 font-bold"
                     isLoading={isRoasting}
-                    disabled={
-                      (sourceType === "draft" && resumes.length === 0) ||
-                      (sourceType === "text" && !resumeText.trim())
-                    }
+                    disabled={isRoasting || isExtractingFile}
                   >
-                    <Flame className="h-4 w-4 animate-pulse" />
-                    <span>Roast My Resume</span>
+                    <Flame className="h-4 w-4" />
+                    <span>{isRoasting ? "Incinerating Resume..." : "Roast My Resume"}</span>
                   </Button>
                 </form>
               </CardContent>
             </Card>
+
+            {/* Terminal Feed View during roasting */}
+            {isRoasting && (
+              <Card className="bg-zinc-950 border-zinc-800 text-zinc-300 font-mono text-xs shadow-2xl">
+                <CardHeader className="py-2.5 px-4 border-b border-zinc-800/80 bg-zinc-900/50 flex flex-row items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Terminal className="h-3.5 w-3.5 text-zinc-400" />
+                    <span className="text-[11px] font-semibold text-zinc-300">roast_engine.log</span>
+                  </div>
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                  </span>
+                </CardHeader>
+                <CardContent className="p-4 space-y-1.5 min-h-[140px] max-h-[220px] overflow-y-auto">
+                  {terminalLines.map((line, idx) => (
+                    <div
+                      key={idx}
+                      className={`leading-relaxed ${
+                        line.startsWith("[WARN]")
+                          ? "text-amber-400 font-medium"
+                          : line.startsWith("[SUCCESS]")
+                          ? "text-emerald-400 font-bold"
+                          : line.startsWith("guest")
+                          ? "text-zinc-400 font-bold"
+                          : "text-zinc-300"
+                      }`}
+                    >
+                      {line}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
           </div>
 
-          {/* Diagnostics Display (Right) */}
+          {/* Results Panel (Right) */}
           <div className="lg:col-span-7">
-            <AnimatePresence mode="wait">
-              {/* Terminal Loader */}
-              {isRoasting && (
-                <motion.div
-                  key="terminal"
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -15 }}
-                  className="w-full rounded-xl bg-black border border-zinc-800 text-zinc-300 font-mono text-xs shadow-xl p-5 space-y-2 h-64 overflow-y-auto"
-                >
-                  <div className="flex items-center gap-2 border-b border-zinc-800 pb-2 mb-2 shrink-0">
-                    <Terminal className="h-4 w-4 text-orange-500" />
-                    <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">
-                      Diagnostics Console
-                    </span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {terminalLines.map((line, i) => {
-                      let colorClass = "text-zinc-300";
-                      if (line.startsWith("[WARN]")) colorClass = "text-amber-500";
-                      if (line.startsWith("[SUCCESS]")) colorClass = "text-emerald-500";
-                      if (line.startsWith("guest")) colorClass = "text-primary";
-                      return (
-                        <p key={i} className={colorClass}>
-                          {line}
-                        </p>
-                      );
-                    })}
-                  </div>
-                </motion.div>
-              )}
+            {roastResult ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="space-y-6"
+              >
+                {/* Score Banner */}
+                <div className="relative overflow-hidden rounded-2xl border border-red-500/20 bg-gradient-to-br from-red-500/10 via-orange-500/5 to-transparent p-6 backdrop-blur-md">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-500/15 text-red-500 border border-red-500/30">
+                        <Flame className="h-3.5 w-3.5" />
+                        {roastResult.roastLevel}
+                      </span>
+                      <h3 className="text-xl font-bold mt-2 text-foreground">
+                        Savage Diagnostic Report
+                      </h3>
+                    </div>
 
-              {/* Empty display */}
-              {!isRoasting && !roastResult && (
-                <motion.div
-                  key="empty"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex flex-col items-center justify-center py-28 text-center border border-dashed border-border rounded-2xl bg-card/25"
-                >
-                  <Flame className="h-12 w-12 text-muted-foreground/60 mb-4" />
-                  <p className="text-sm font-semibold text-muted-foreground">Audit Board</p>
-                  <p className="text-xs text-muted-foreground/80 mt-1 max-w-xs">
-                    Trigger the roasting sequence on the left to activate diagnostics.
+                    <div className="text-right flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-3 sm:pt-0 border-border/40">
+                      <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
+                        Roast Score
+                      </span>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-4xl font-extrabold tracking-tight text-red-500">
+                          {roastResult.roastScore}
+                        </span>
+                        <span className="text-sm font-semibold text-muted-foreground">/100</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="mt-4 text-sm text-foreground/90 leading-relaxed font-serif italic border-l-2 border-red-500/50 pl-3">
+                    &ldquo;{roastResult.brutalIntro}&rdquo;
                   </p>
-                </motion.div>
-              )}
+                </div>
 
-              {/* Roast Results */}
-              {!isRoasting && roastResult && (
-                <motion.div
-                  key="results"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                  className="space-y-6"
-                >
-                  {/* Rating Header */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Dial */}
-                    <Card className="flex flex-col items-center justify-center p-6 text-center border-red-500/20 bg-red-500/5">
-                      <p className="text-3xl font-extrabold text-red-500">{roastResult.roastScore}%</p>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-red-400 mt-2">
-                        Resume Score
-                      </p>
-                    </Card>
+                {/* Critiques List */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    Detailed Section Roasts & Prescriptions
+                  </h4>
 
-                    {/* Meta Status */}
-                    <Card className="md:col-span-2 p-6 flex flex-col justify-center space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Flame className="h-5 w-5 text-red-500 animate-pulse" />
-                        <span className="text-sm font-extrabold uppercase tracking-wider text-red-500">
-                          {roastResult.roastLevel}
+                  {roastResult.critiques.map((c, i) => (
+                    <Card key={i} className="border-border/60 overflow-hidden">
+                      <div className="border-b border-border/40 px-4 py-2 bg-muted/30 flex items-center justify-between">
+                        <span className="text-xs font-bold text-primary uppercase tracking-wider">
+                          {c.area}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          #CRITIQUE-0{i + 1}
                         </span>
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed italic">
-                        {roastResult.brutalIntro}
-                      </p>
+                      <CardContent className="p-4 space-y-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-red-500">
+                            <Flame className="h-3.5 w-3.5 shrink-0" />
+                            <span>The Roast</span>
+                          </div>
+                          <p className="text-xs text-foreground/90 leading-relaxed">
+                            {c.insult}
+                          </p>
+                        </div>
+
+                        <div className="space-y-1 bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                            <span>How to Fix It</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {c.fix}
+                          </p>
+                        </div>
+                      </CardContent>
                     </Card>
-                  </div>
+                  ))}
+                </div>
 
-                  {/* Critiques Grid */}
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                    Section-Specific Audits
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    {roastResult.critiques.map((crit, i) => (
-                      <Card key={i} className="border-border/60">
-                        <CardContent className="p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold uppercase tracking-wider bg-red-500/10 text-red-500 px-2 py-0.5 rounded">
-                              {crit.area} Area
-                            </span>
-                          </div>
-                          
-                          <div className="space-y-2 text-xs">
-                            {/* Insult */}
-                            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-red-500/5 border border-red-500/10">
-                              <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
-                              <div>
-                                <p className="font-bold text-red-500 uppercase text-[9px] tracking-wider mb-0.5">Roast</p>
-                                <p className="text-muted-foreground leading-relaxed">{crit.insult}</p>
-                              </div>
-                            </div>
-
-                            {/* Remedy */}
-                            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
-                              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                              <div>
-                                <p className="font-bold text-emerald-500 uppercase text-[9px] tracking-wider mb-0.5">How to Fix</p>
-                                <p className="text-muted-foreground leading-relaxed">{crit.fix}</p>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-
-                  {/* Verdict */}
-                  <Card className="border-zinc-800 bg-zinc-950/20">
-                    <CardHeader className="py-4">
-                      <div className="flex items-center gap-2 text-zinc-400 font-bold text-xs uppercase tracking-wider">
-                        <Info className="h-4 w-4 text-zinc-500" />
-                        <span>Savage Verdict</span>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pb-4">
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        {roastResult.verdict}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                {/* Final Verdict */}
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardContent className="p-5 space-y-2">
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-primary">
+                      Final Executive Verdict
+                    </h5>
+                    <p className="text-sm text-foreground/90 font-medium leading-relaxed">
+                      {roastResult.verdict}
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ) : (
+              <div className="h-[420px] rounded-2xl border border-dashed border-border flex flex-col items-center justify-center p-8 text-center bg-card/20">
+                <div className="h-12 w-12 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 mb-4">
+                  <Flame className="h-6 w-6" />
+                </div>
+                <h3 className="font-bold text-base text-foreground">
+                  Ready to Roast
+                </h3>
+                <p className="text-xs text-muted-foreground max-w-sm mt-1 leading-relaxed">
+                  Select a resume draft or paste your text on the left, then click <strong>&quot;Roast My Resume&quot;</strong> to receive an unvarnished audit with actionable fixes.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
