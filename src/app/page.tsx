@@ -36,7 +36,7 @@ export default function Home() {
     },
     {
       icon: ShieldCheck,
-      title: "ATS Resume Checker",
+      title: "Resume ATS Score Checker",
       desc: "Identify keyword matching errors and layout flaws using the same algorithms recruiters use.",
       color: "from-emerald-500/20 to-teal-500/20",
       accent: "text-emerald-500",

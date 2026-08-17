@@ -141,7 +141,7 @@ export default function CheckerPage() {
     : circumference;
 
   return (
-    <DashboardShell title="ATS Resume Checker">
+    <DashboardShell title="Resume ATS Score Checker">
       <div className="space-y-8">
         {/* Intro */}
         <div>

@@ -36,7 +36,7 @@ export function Sidebar() {
   const navItems = [
     { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
     { label: "AI Resume Builder", href: "/dashboard/builder", icon: FileText },
-    { label: "ATS Resume Checker", href: "/dashboard/checker", icon: ShieldCheck },
+    { label: "Resume ATS Score Checker", href: "/dashboard/checker", icon: ShieldCheck },
     { label: "Resume Tailor", href: "/dashboard/tailor", icon: Sparkles },
     { label: "Cover Letter Gen", href: "/dashboard/cover-letter", icon: FileUp },
     { label: "Resume Roast", href: "/dashboard/roast", icon: Flame },
