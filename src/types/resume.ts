@@ -50,8 +50,8 @@ export interface Skill {
 export type ResumeDensity = "relaxed" | "normal" | "compact" | "ultra-compact";
 
 export interface DesignSettings {
-  fontFamily?: "font-sans" | "font-serif" | "font-mono";
-  fontSize?: "sm" | "md" | "lg";
+  fontFamily?: "font-sans" | "font-serif" | "font-mono" | "font-executive" | "font-geometric";
+  fontSize?: "xs" | "sm" | "md" | "lg" | "xl";
   sectionOrder?: string[];
   density?: ResumeDensity;
   sectionSpacing?: number; // 0.6 to 1.4 multiplier

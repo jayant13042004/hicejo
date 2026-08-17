@@ -8,8 +8,6 @@ import { Button } from "@/components/ui/button";
 
 interface FitIndicatorBarProps {
   fitAnalysis: FitAnalysis;
-  autoFitEnabled: boolean;
-  onToggleAutoFit: () => void;
   onFixToOnePage: () => void;
   isFixing: boolean;
   isAnalysisOpen: boolean;
@@ -18,8 +16,6 @@ interface FitIndicatorBarProps {
 
 export function FitIndicatorBar({
   fitAnalysis,
-  autoFitEnabled,
-  onToggleAutoFit,
   onFixToOnePage,
   isFixing,
   isAnalysisOpen,
@@ -94,28 +90,8 @@ export function FitIndicatorBar({
         </button>
       </div>
 
-      {/* Right: Perfect 1-Page Mode Toggle & Fix Action */}
+      {/* Right: Fix Action */}
       <div className="flex items-center gap-2.5">
-        {/* Continuous Auto-Fit Toggle */}
-        <button
-          type="button"
-          onClick={onToggleAutoFit}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border cursor-pointer ${
-            autoFitEnabled
-              ? "bg-primary/15 text-primary border-primary/30 shadow-xs"
-              : "bg-muted/50 text-muted-foreground hover:text-foreground border-transparent"
-          }`}
-          title="Continuously adjust layout density to guarantee one-page fit"
-        >
-          <Target className="h-3.5 w-3.5" />
-          <span>Perfect 1-Page Mode</span>
-          <span
-            className={`ml-1 h-2 w-2 rounded-full ${
-              autoFitEnabled ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground/40"
-            }`}
-          />
-        </button>
-
         {/* Fix to 1 Page One-Click Button (Visible especially on overflow) */}
         {isOverflowing && (
           <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }}>

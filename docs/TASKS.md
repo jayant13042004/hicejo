@@ -117,12 +117,12 @@ Goal: Automatically fit resumes onto one perfect A4 page without sacrificing rea
 | :--- | :--- | :--- | :--- | :--- |
 | M9-T1 | Exact A4 canvas container with real-time DOM height calculation (<5ms) | P0 | [x] Completed | None |
 | M9-T2 | Fit Indicator Bar (`✓ 1 PAGE — 94% UTILIZED`, `⚠ 2 LINES OVERFLOWING`) | P0 | [x] Completed | M9-T1 |
-| M9-T3 | Perfect 1-Page Mode continuous monitoring and automatic layout adjusting | P0 | [x] Completed | M9-T2 |
-| M9-T4 | Hierarchical 5-stage auto-fit solver (Spacing → Layout → Typography → AI) | P0 | [x] Completed | M9-T1 |
-| M9-T5 | Interactive Resume Density Control slider (Relaxed to Ultra-Compact) | P0 | [x] Completed | M9-T4 |
-| M9-T6 | Smart Bullet Compressor Modal (`/api/ai/compress-bullet`) with metric protection | P0 | [x] Completed | M9-T4 |
-| M9-T7 | Fit Analysis Drawer with diagnostic scores and candidate bullet audit | P1 | [x] Completed | M9-T2 |
-| M9-T8 | Synchronized `@media print` rules for 1:1 on-screen to PDF download parity | P0 | [x] Completed | M9-T1 |
+| M9-T3 | High-speed Gemini models (`gemini-3.5-flash-lite`, `gemini-flash-lite-latest`, `gemini-3.7-flash`) | P0 | [x] Completed | None |
+| M9-T4 | Direct 1-click single-page PDF download without print dialog | P0 | [x] Completed | M9-T1 |
+| M9-T5 | 5 Curated Typography Styles and 5 Text Scale options | P0 | [x] Completed | None |
+| M9-T6 | Clickable short-label contact destinations (Email, Phone, Portfolio, LinkedIn) | P0 | [x] Completed | None |
+| M9-T7 | Interactive Resume Density Control slider (Relaxed to Ultra-Compact) | P0 | [x] Completed | M9-T1 |
+| M9-T8 | Smart Bullet Compressor Modal (`/api/ai/compress-bullet`) with metric protection | P0 | [x] Completed | M9-T3 |
 
 ---
 

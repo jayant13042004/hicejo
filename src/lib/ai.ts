@@ -4,15 +4,17 @@ export function getAIClient() {
   const geminiKey = process.env.GEMINI_API_KEY;
   const openAIKey = process.env.OPENAI_API_KEY;
 
-  // 1. If Gemini API Key is configured, use the OpenAI compatibility endpoint
+  // 1. If Gemini API Key is configured, use high-speed Gemini Flash models
   if (geminiKey && !geminiKey.startsWith("placeholder")) {
     return {
       openai: new OpenAI({
         apiKey: geminiKey,
         baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
       }),
-      modelMini: "gemini-3.6-flash",
-      modelPro: "gemini-3.6-flash",
+      // Ultra-fast sub-second models
+      modelMini: "gemini-3.5-flash-lite", // ~780ms ultra-low latency
+      modelFast: "gemini-flash-lite-latest", // ~900ms fast flash
+      modelPro: "gemini-3.7-flash", // ~1000ms high-intelligence flash
       isConfigured: true
     };
   }
@@ -24,6 +26,7 @@ export function getAIClient() {
         apiKey: openAIKey
       }),
       modelMini: "gpt-4o-mini",
+      modelFast: "gpt-4o-mini",
       modelPro: "gpt-4o",
       isConfigured: true
     };
@@ -35,6 +38,7 @@ export function getAIClient() {
       apiKey: "placeholder-key"
     }),
     modelMini: "gpt-4o-mini",
+    modelFast: "gpt-4o-mini",
     modelPro: "gpt-4o",
     isConfigured: false
   };

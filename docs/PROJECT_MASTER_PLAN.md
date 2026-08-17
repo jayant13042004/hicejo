@@ -33,15 +33,14 @@ Hicejo is built using a modern, scalable web stack optimized for performance, SE
 ## 3. Features Implemented Till Now
 
 ### 1. Interactive AI Resume Builder & One-Page Optimizer
-* **Exact A4 Canvas**: Real-time DOM height calculation (<5ms) matching calibrated A4 dimensions (`210mm x 297mm`) without calling external APIs during typing.
-* **Fit Indicator Bar**:
-  * Status Pill: `✓ 1 PAGE — 94% UTILIZED`, `✓ PERFECT 1-PAGE FIT`, or `⚠ 2 LINES OVERFLOWING (6% OVERFLOW)`.
-  * `🎯 Perfect 1-Page Resume` continuous auto-fit monitor toggle.
-  * `✨ Fix to 1 Page` hierarchical 5-stage auto-fit solver (Spacing → Layout → Typography → AI Content Compression).
-* **Resume Density Controller**: Interactive slider (`Relaxed ─────●───── Compact`) adjusting section margins, bullet spacing, and line heights within safe ATS bounds.
-* **Smart Bullet Compressor Modal**: AI action (`✨ Shorten Bullet`) providing concise alternatives while strictly preserving metrics, technologies, and achievements.
-* **Fit Analysis Drawer**: Detailed diagnostic metrics (Page Utilization, Readability Grade, ATS Safety, Content Density, and Candidate Bullets).
-* **Exact PDF & Print Parity**: `@media print` rules synchronized with preview canvas for 1:1 single-page PDF downloads.
+* **Ultra-Fast Gemini Models**: Integrated `gemini-3.5-flash-lite` (~780ms), `gemini-flash-lite-latest` (~900ms), and `gemini-3.7-flash` (~1000ms) for high-speed AI tasks.
+* **Direct 1-Click PDF Download**: Direct vector/bitmap PDF generation (`html2canvas` & `jsPDF`) saving pure single-page A4 documents directly to disk without browser print dialogs or UI element bleeding.
+* **5 Curated Typography Styles**: Modern Sans (Inter), Classic Serif (Merriweather), Tech Monospace (JetBrains), Executive Serif (Garamond), and Clean Geometric (Outfit).
+* **5 Proportional Font Scales**: Compact (11.5px), Small (12.5px), Standard (14px), Medium (15px), and Spacious (16.5px).
+* **Interactive Contact Links with Short Labels**: Contact items display short clean labels (`Email`, `Phone`, `Location`, `Portfolio`, `LinkedIn`) that redirect directly to destinations upon click.
+* **Fit Indicator Bar**: Real-time page utilization metrics and `✨ Fix to 1 Page` hierarchical auto-fit solver.
+* **Resume Density Controller**: Interactive slider (`Relaxed ─────●───── Compact`) adjusting margins and line heights within safe ATS bounds.
+* **Smart Bullet Compressor Modal**: AI bullet compression that protects metrics, tools, and outcomes.
 * **Tabbed Configuration Sidebar**: Form tabs for Contact Info, Professional Summary, Work History, Education, Projects, Skills, and Design Settings.
 * **Drag-and-Drop Reordering**: Users can dynamically rearrange resume sections (e.g. moving Skills above Work History) and instantly see the output on screen.
 * **Proportional Relative Scales**: Choose between Small (12px), Medium (14px), and Large (16px) font systems. Section headings, line heights, and margins scale proportionally using relative `em` styles.

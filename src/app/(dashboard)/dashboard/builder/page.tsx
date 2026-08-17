@@ -12,15 +12,12 @@ import {
   Cpu,
   Palette,
   Sparkles,
-  Printer,
   Download,
   Plus,
   Trash2,
   ArrowUp,
   ArrowDown,
   Upload,
-  CheckCircle2,
-  AlertTriangle,
   RotateCcw,
   RotateCw,
   RefreshCw,
@@ -28,24 +25,30 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useResumeStore } from "@/store/useResumeStore";
-import { Experience, Education, Project, Skill, FitAnalysis, ResumeDensity } from "@/types/resume";
+import { Skill, FitAnalysis } from "@/types/resume";
 import { FitIndicatorBar } from "@/components/builder/FitIndicatorBar";
 import { DensityController } from "@/components/builder/DensityController";
 import { FitAnalysisDrawer } from "@/components/builder/FitAnalysisDrawer";
 import { SmartBulletCompressorModal } from "@/components/builder/SmartBulletCompressorModal";
 
+// 5 Curated ATS Typography Styles
 const fontClassMap: Record<string, string> = {
   "font-sans": "font-sans",
-  "font-serif": "font-serif",
-  "font-mono": "font-mono"
+  "font-serif": "font-serif font-[Merriweather,Georgia,serif]",
+  "font-mono": "font-mono font-[JetBrains_Mono,monospace]",
+  "font-executive": "font-[Garamond,Georgia,serif]",
+  "font-geometric": "font-[Outfit,system-ui,sans-serif]"
 };
 
+// 5 Text Scale Levels
 const fontSizeMap: Record<string, string> = {
-  "sm": "text-[12px] leading-snug",
+  "xs": "text-[11.5px] leading-snug",
+  "sm": "text-[12.5px] leading-snug",
   "md": "text-[14px] leading-normal",
-  "lg": "text-[16px] leading-relaxed"
+  "lg": "text-[15px] leading-relaxed",
+  "xl": "text-[16.5px] leading-relaxed"
 };
 
 function ResumeBuilderContent() {
@@ -78,7 +81,6 @@ function ResumeBuilderContent() {
     removeSkill,
     updateDesignSettings,
     setDensity,
-    toggleAutoFitOnePage,
     applyCompressedBullet,
     undo,
     redo,
@@ -93,6 +95,7 @@ function ResumeBuilderContent() {
   const [enhancingId, setEnhancingId] = React.useState<string | null>(null);
   const [newSkillName, setNewSkillName] = React.useState("");
   const [newSkillCategory, setNewSkillCategory] = React.useState("");
+  const [isDownloadingPDF, setIsDownloadingPDF] = React.useState(false);
 
   // Import Modal states
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false);
@@ -151,8 +154,7 @@ function ResumeBuilderContent() {
             density: "normal",
             sectionSpacing: 1.0,
             itemSpacing: 1.0,
-            lineHeight: 1.4,
-            autoFitOnePage: false
+            lineHeight: 1.4
           }
         });
         return;
@@ -196,7 +198,7 @@ function ResumeBuilderContent() {
       const currentFontSize = data.design?.fontSize || "md";
 
       let readabilityGrade: FitAnalysis["readabilityGrade"] = "Excellent";
-      if (currentDensity === "ultra-compact" || currentFontSize === "sm") {
+      if (currentDensity === "ultra-compact" || currentFontSize === "xs" || currentFontSize === "sm") {
         readabilityGrade = "Good";
       }
 
@@ -283,10 +285,14 @@ function ResumeBuilderContent() {
       setDensity("ultra-compact");
     } else if (currentDensity === "ultra-compact") {
       // Priority 3: Typography adjustment within safe bounds
-      if (currentFontSize === "lg") {
+      if (currentFontSize === "xl") {
+        updateDesignSettings({ fontSize: "lg" });
+      } else if (currentFontSize === "lg") {
         updateDesignSettings({ fontSize: "md" });
       } else if (currentFontSize === "md") {
         updateDesignSettings({ fontSize: "sm" });
+      } else if (currentFontSize === "sm") {
+        updateDesignSettings({ fontSize: "xs" });
       } else {
         // Priority 4 & 5: Heavily overflowing -> open analysis drawer for AI bullet compression
         setIsAnalysisOpen(true);
@@ -295,18 +301,74 @@ function ResumeBuilderContent() {
 
     setTimeout(() => {
       setIsFixing(false);
-    }, 400);
+    }, 300);
   }, [data.design, setDensity, updateDesignSettings]);
 
-  // Continuous Auto-Fit when "Perfect 1-Page Mode" is active
-  React.useEffect(() => {
-    if (data.design?.autoFitOnePage && fitAnalysis.status === "overflowing" && !isFixing) {
-      const timer = setTimeout(() => {
-        handleFixToOnePage();
-      }, 600);
-      return () => clearTimeout(timer);
+  // Direct 1-Click PDF Download (Captures strictly the clean resume canvas without UI leftovers)
+  const handleDirectDownloadPDF = async () => {
+    const resumeEl = document.getElementById("resume-print-area");
+    if (!resumeEl) return;
+
+    setIsDownloadingPDF(true);
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
+
+      // Clone the resume node to isolate from screen UI
+      const cloned = resumeEl.cloneNode(true) as HTMLElement;
+      // Remove all non-print overlays, dashed lines, and badges
+      cloned.querySelectorAll(".no-print").forEach((el) => el.remove());
+      cloned.style.boxShadow = "none";
+      cloned.style.border = "none";
+      cloned.style.margin = "0";
+      cloned.style.width = "794px"; // exact 210mm at 96 DPI
+      cloned.style.minHeight = "1123px"; // exact 297mm
+      cloned.style.backgroundColor = "#ffffff";
+      cloned.style.color = "#09090b";
+
+      // Put in an offscreen container
+      const container = document.createElement("div");
+      container.style.position = "fixed";
+      container.style.left = "-9999px";
+      container.style.top = "0";
+      container.style.width = "794px";
+      container.style.backgroundColor = "#ffffff";
+      container.appendChild(cloned);
+      document.body.appendChild(container);
+
+      const canvas = await html2canvas(cloned, {
+        scale: 2.5,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        windowWidth: 794
+      });
+
+      document.body.removeChild(container);
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.98);
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true
+      });
+
+      const pdfWidth = 210;
+      const pdfHeight = 297;
+      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
+
+      const cleanFilename = (data.personalInfo.fullName || title || "Resume")
+        .trim()
+        .replace(/[^a-zA-Z0-9_-]/g, "_");
+      pdf.save(`${cleanFilename}_Resume.pdf`);
+    } catch (err) {
+      console.error("Direct PDF download error:", err);
+      window.print();
+    } finally {
+      setIsDownloadingPDF(false);
     }
-  }, [data.design?.autoFitOnePage, fitAnalysis.status, isFixing, handleFixToOnePage]);
+  };
 
   // AI Bullet Enhancer endpoint trigger
   const handleEnhanceBullet = async (itemId: string, text: string, itemType: "experience" | "projects") => {
@@ -452,11 +514,16 @@ function ResumeBuilderContent() {
 
           <Button
             size="sm"
-            onClick={() => window.print()}
+            onClick={handleDirectDownloadPDF}
+            disabled={isDownloadingPDF}
             className="bg-gradient-to-r from-primary to-violet-600 gap-1.5 text-xs font-semibold shadow-xs"
           >
-            <Download className="h-3.5 w-3.5" />
-            <span>Download PDF</span>
+            {isDownloadingPDF ? (
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
+            <span>{isDownloadingPDF ? "Generating PDF..." : "Download PDF"}</span>
           </Button>
         </div>
       </header>
@@ -636,18 +703,16 @@ function ResumeBuilderContent() {
                             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                               Bullet Achievements (one per line)
                             </label>
-                            <div className="flex items-center gap-1.5">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleEnhanceBullet(exp.id, exp.description, "experience")}
-                                disabled={enhancingId === exp.id || !exp.description}
-                                className="h-7 text-xs gap-1 border-primary/20 hover:border-primary text-primary"
-                              >
-                                <Sparkles className="h-3 w-3" />
-                                <span>{enhancingId === exp.id ? "Enhancing..." : "AI Enhance"}</span>
-                              </Button>
-                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEnhanceBullet(exp.id, exp.description, "experience")}
+                              disabled={enhancingId === exp.id || !exp.description}
+                              className="h-7 text-xs gap-1 border-primary/20 hover:border-primary text-primary"
+                            >
+                              <Sparkles className="h-3 w-3" />
+                              <span>{enhancingId === exp.id ? "Enhancing..." : "AI Enhance"}</span>
+                            </Button>
                           </div>
                           <textarea
                             rows={5}
@@ -913,14 +978,16 @@ function ResumeBuilderContent() {
                   onChangeDensity={(density) => setDensity(density)}
                 />
 
-                {/* 2. Typography Style */}
+                {/* 2. 5 Curated Typography Styles */}
                 <div className="space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Typography Style</h3>
-                  <div className="grid grid-cols-3 gap-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Typography Style (5 Options)</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {[
-                      { id: "font-sans", label: "Sans-Serif", desc: "Clean & Modern" },
-                      { id: "font-serif", label: "Serif", desc: "Classic Executive" },
-                      { id: "font-mono", label: "Monospace", desc: "Tech / Code" }
+                      { id: "font-sans", label: "Modern Sans", desc: "Inter / Crisp & Clean" },
+                      { id: "font-serif", label: "Classic Serif", desc: "Merriweather / Editorial" },
+                      { id: "font-mono", label: "Tech Monospace", desc: "JetBrains / Code" },
+                      { id: "font-executive", label: "Executive Serif", desc: "Garamond / Traditional" },
+                      { id: "font-geometric", label: "Clean Geometric", desc: "Outfit / Minimalist" }
                     ].map((fontOpt) => (
                       <button
                         key={fontOpt.id}
@@ -928,7 +995,7 @@ function ResumeBuilderContent() {
                         onClick={() => updateDesignSettings({ fontFamily: fontOpt.id as any })}
                         className={`flex flex-col p-3 rounded-xl border text-left cursor-pointer transition-all ${
                           (data.design?.fontFamily || "font-sans") === fontOpt.id
-                            ? "border-primary bg-primary/10 text-primary font-bold"
+                            ? "border-primary bg-primary/10 text-primary font-bold shadow-xs"
                             : "border-border/60 hover:bg-muted/40 text-muted-foreground hover:text-foreground"
                         }`}
                       >
@@ -939,14 +1006,16 @@ function ResumeBuilderContent() {
                   </div>
                 </div>
 
-                {/* 3. Text Scaling */}
+                {/* 3. 5 Text Scale Levels */}
                 <div className="space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Base Font Scale</h3>
-                  <div className="grid grid-cols-3 gap-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Base Font Scale (5 Levels)</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {[
-                      { id: "sm", label: "Small (12px)", desc: "Compact sizing" },
-                      { id: "md", label: "Medium (14px)", desc: "Standard grid" },
-                      { id: "lg", label: "Large (16px)", desc: "Spacious layout" }
+                      { id: "xs", label: "Compact (11.5px)", desc: "Ultra-high density" },
+                      { id: "sm", label: "Small (12.5px)", desc: "High density" },
+                      { id: "md", label: "Standard (14px)", desc: "Balanced default" },
+                      { id: "lg", label: "Medium (15px)", desc: "Open & spacious" },
+                      { id: "xl", label: "Spacious (16.5px)", desc: "Max readability" }
                     ].map((sizeOpt) => (
                       <button
                         key={sizeOpt.id}
@@ -954,7 +1023,7 @@ function ResumeBuilderContent() {
                         onClick={() => updateDesignSettings({ fontSize: sizeOpt.id as any })}
                         className={`flex flex-col p-3 rounded-xl border text-left cursor-pointer transition-all ${
                           (data.design?.fontSize || "md") === sizeOpt.id
-                            ? "border-primary bg-primary/10 text-primary font-bold"
+                            ? "border-primary bg-primary/10 text-primary font-bold shadow-xs"
                             : "border-border/60 hover:bg-muted/40 text-muted-foreground hover:text-foreground"
                         }`}
                       >
@@ -1004,11 +1073,9 @@ function ResumeBuilderContent() {
 
         {/* Right Side: Exact A4 Page Preview Panel */}
         <div className="w-1/2 flex flex-col bg-muted/30 overflow-y-auto h-full p-6 space-y-4">
-          {/* 1-Page Fit Indicator Header */}
+          {/* 1-Page Fit Indicator Header (without Perfect 1-Page mode toggle) */}
           <FitIndicatorBar
             fitAnalysis={fitAnalysis}
-            autoFitEnabled={!!data.design?.autoFitOnePage}
-            onToggleAutoFit={toggleAutoFitOnePage}
             onFixToOnePage={handleFixToOnePage}
             isFixing={isFixing}
             isAnalysisOpen={isAnalysisOpen}
@@ -1059,7 +1126,7 @@ function ResumeBuilderContent() {
                   </div>
                 </div>
 
-                {/* Inner Content Measurer (Without min-height constraint) */}
+                {/* Inner Content Measurer */}
                 <div ref={resumeContentRef} className="flex flex-col w-full flex-1">
                   {/* Personal Details Header (Always at Top) */}
                   <div
@@ -1069,163 +1136,211 @@ function ResumeBuilderContent() {
                       marginBottom: `${12 * sectionSpacingMultiplier}px`
                     }}
                   >
-                  <h2 className="text-2xl font-extrabold tracking-tight uppercase text-zinc-950">
-                    {data.personalInfo.fullName || "Your Full Name"}
-                  </h2>
-                  <div className="flex flex-wrap items-center justify-center gap-3.5 text-[0.8em] text-zinc-600 font-semibold uppercase tracking-wide mt-1.5">
-                    {data.personalInfo.email && <span>{data.personalInfo.email}</span>}
-                    {data.personalInfo.phone && <span>{data.personalInfo.phone}</span>}
-                    {data.personalInfo.location && <span>{data.personalInfo.location}</span>}
-                    {data.personalInfo.website && <span>{data.personalInfo.website}</span>}
-                    {data.personalInfo.linkedin && <span>{data.personalInfo.linkedin}</span>}
+                    <h2 className="text-2xl font-extrabold tracking-tight uppercase text-zinc-950">
+                      {data.personalInfo.fullName || "Your Full Name"}
+                    </h2>
+                    {/* Clickable short-label contact destinations */}
+                    <div className="flex flex-wrap items-center justify-center gap-3.5 text-[0.85em] text-zinc-700 font-semibold uppercase tracking-wider mt-1.5">
+                      {data.personalInfo.email && (
+                        <a
+                          href={`mailto:${data.personalInfo.email}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:text-primary hover:underline transition-colors"
+                          title={data.personalInfo.email}
+                        >
+                          Email
+                        </a>
+                      )}
+                      {data.personalInfo.phone && (
+                        <a
+                          href={`tel:${data.personalInfo.phone.replace(/[^0-9+]/g, "")}`}
+                          className="hover:text-primary hover:underline transition-colors"
+                          title={data.personalInfo.phone}
+                        >
+                          Phone
+                        </a>
+                      )}
+                      {data.personalInfo.location && (
+                        <span className="text-zinc-600 font-normal">
+                          {data.personalInfo.location}
+                        </span>
+                      )}
+                      {data.personalInfo.website && (
+                        <a
+                          href={data.personalInfo.website.startsWith("http") ? data.personalInfo.website : `https://${data.personalInfo.website}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:text-primary hover:underline transition-colors"
+                          title={data.personalInfo.website}
+                        >
+                          Portfolio
+                        </a>
+                      )}
+                      {data.personalInfo.linkedin && (
+                        <a
+                          href={data.personalInfo.linkedin.startsWith("http") ? data.personalInfo.linkedin : `https://${data.personalInfo.linkedin}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:text-primary hover:underline transition-colors"
+                          title={data.personalInfo.linkedin}
+                        >
+                          LinkedIn
+                        </a>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Dynamic Sections rendering according to sectionOrder */}
-                <div className="flex flex-col flex-1" style={{ gap: `${14 * sectionSpacingMultiplier}px` }}>
-                  {(data.design?.sectionOrder || ["summary", "experience", "projects", "education", "skills"]).map((secId) => {
-                    // 1. Professional Summary section
-                    if (secId === "summary" && data.summary) {
-                      return (
-                        <div key="summary" className="space-y-1 section-item break-inside-avoid">
-                          <h3 className="text-[1.05em] font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-200 pb-0.5">
-                            Professional Summary
-                          </h3>
-                          <p className="text-[0.95em] text-zinc-700 text-justify whitespace-pre-line leading-relaxed">
-                            {data.summary}
-                          </p>
-                        </div>
-                      );
-                    }
-
-                    // 2. Work History section
-                    if (secId === "experience" && data.experience.length > 0) {
-                      return (
-                        <div key="experience" className="space-y-1.5 section-item break-inside-avoid">
-                          <h3 className="text-[1.05em] font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-200 pb-0.5">
-                            Work Experience
-                          </h3>
-                          <div style={{ display: "flex", flexDirection: "column", gap: `${10 * itemSpacingMultiplier}px` }}>
-                            {data.experience.map((exp) => (
-                              <div key={exp.id} className="space-y-0.5">
-                                <div className="flex items-center justify-between text-[1em] font-bold">
-                                  <span className="text-zinc-900">{exp.position} — {exp.company}</span>
-                                  <span className="text-zinc-600 font-medium text-[0.9em]">{exp.startDate} - {exp.endDate}</span>
-                                </div>
-                                {exp.location && (
-                                  <p className="text-[0.8em] text-zinc-500 font-semibold uppercase tracking-wide">
-                                    {exp.location}
-                                  </p>
-                                )}
-                                {exp.description && (
-                                  <ul className="list-disc list-outside pl-4 space-y-0.5">
-                                    {exp.description.split("\n").filter(b => b.trim() !== "").map((bullet, i) => (
-                                      <li key={i} className="text-[0.95em] text-zinc-700 leading-relaxed">
-                                        {bullet.replace(/^[•\-\s]*/, "")}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-                              </div>
-                            ))}
+                  {/* Dynamic Sections rendering according to sectionOrder */}
+                  <div className="flex flex-col flex-1" style={{ gap: `${14 * sectionSpacingMultiplier}px` }}>
+                    {(data.design?.sectionOrder || ["summary", "experience", "projects", "education", "skills"]).map((secId) => {
+                      // 1. Professional Summary section
+                      if (secId === "summary" && data.summary) {
+                        return (
+                          <div key="summary" className="space-y-1 section-item break-inside-avoid">
+                            <h3 className="text-[1.05em] font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-200 pb-0.5">
+                              Professional Summary
+                            </h3>
+                            <p className="text-[0.95em] text-zinc-700 text-justify whitespace-pre-line leading-relaxed">
+                              {data.summary}
+                            </p>
                           </div>
-                        </div>
-                      );
-                    }
+                        );
+                      }
 
-                    // 3. Projects section
-                    if (secId === "projects" && data.projects.length > 0) {
-                      return (
-                        <div key="projects" className="space-y-1.5 section-item break-inside-avoid">
-                          <h3 className="text-[1.05em] font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-200 pb-0.5">
-                            Personal Projects
-                          </h3>
-                          <div style={{ display: "flex", flexDirection: "column", gap: `${10 * itemSpacingMultiplier}px` }}>
-                            {data.projects.map((proj) => (
-                              <div key={proj.id} className="space-y-0.5">
-                                <div className="flex items-center justify-between text-[1em] font-bold">
-                                  <span className="text-zinc-900">{proj.name} — {proj.role}</span>
-                                  <span className="text-zinc-600 font-medium text-[0.9em]">{proj.startDate} - {proj.endDate}</span>
+                      // 2. Work History section
+                      if (secId === "experience" && data.experience.length > 0) {
+                        return (
+                          <div key="experience" className="space-y-1.5 section-item break-inside-avoid">
+                            <h3 className="text-[1.05em] font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-200 pb-0.5">
+                              Work Experience
+                            </h3>
+                            <div style={{ display: "flex", flexDirection: "column", gap: `${10 * itemSpacingMultiplier}px` }}>
+                              {data.experience.map((exp) => (
+                                <div key={exp.id} className="space-y-0.5">
+                                  <div className="flex items-center justify-between text-[1em] font-bold">
+                                    <span className="text-zinc-900">{exp.position} — {exp.company}</span>
+                                    <span className="text-zinc-600 font-medium text-[0.9em]">{exp.startDate} - {exp.endDate}</span>
+                                  </div>
+                                  {exp.location && (
+                                    <p className="text-[0.8em] text-zinc-500 font-semibold uppercase tracking-wide">
+                                      {exp.location}
+                                    </p>
+                                  )}
+                                  {exp.description && (
+                                    <ul className="list-disc list-outside pl-4 space-y-0.5">
+                                      {exp.description.split("\n").filter(b => b.trim() !== "").map((bullet, i) => (
+                                        <li key={i} className="text-[0.95em] text-zinc-700 leading-relaxed">
+                                          {bullet.replace(/^[•\-\s]*/, "")}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
                                 </div>
-                                {proj.link && (
-                                  <p className="text-[0.8em] text-blue-600 font-semibold">
-                                    {proj.link}
-                                  </p>
-                                )}
-                                {proj.description && (
-                                  <ul className="list-disc list-outside pl-4 space-y-0.5">
-                                    {proj.description.split("\n").filter(b => b.trim() !== "").map((bullet, i) => (
-                                      <li key={i} className="text-[0.95em] text-zinc-700 leading-relaxed">
-                                        {bullet.replace(/^[•\-\s]*/, "")}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    }
+                        );
+                      }
 
-                    // 4. Education section
-                    if (secId === "education" && data.education.length > 0) {
-                      return (
-                        <div key="education" className="space-y-1.5 section-item break-inside-avoid">
-                          <h3 className="text-[1.05em] font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-200 pb-0.5">
-                            Education
-                          </h3>
-                          <div style={{ display: "flex", flexDirection: "column", gap: `${8 * itemSpacingMultiplier}px` }}>
-                            {data.education.map((edu) => (
-                              <div key={edu.id} className="space-y-0.5 text-[0.95em]">
-                                <div className="flex items-center justify-between font-bold text-[1em]">
-                                  <span className="text-zinc-900">{edu.school}</span>
-                                  <span className="text-zinc-600 font-medium text-[0.9em]">{edu.startDate} - {edu.endDate}</span>
+                      // 3. Projects section
+                      if (secId === "projects" && data.projects.length > 0) {
+                        return (
+                          <div key="projects" className="space-y-1.5 section-item break-inside-avoid">
+                            <h3 className="text-[1.05em] font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-200 pb-0.5">
+                              Personal Projects
+                            </h3>
+                            <div style={{ display: "flex", flexDirection: "column", gap: `${10 * itemSpacingMultiplier}px` }}>
+                              {data.projects.map((proj) => (
+                                <div key={proj.id} className="space-y-0.5">
+                                  <div className="flex items-center justify-between text-[1em] font-bold">
+                                    <span className="text-zinc-900">{proj.name} — {proj.role}</span>
+                                    <span className="text-zinc-600 font-medium text-[0.9em]">{proj.startDate} - {proj.endDate}</span>
+                                  </div>
+                                  {proj.link && (
+                                    <a
+                                      href={proj.link.startsWith("http") ? proj.link : `https://${proj.link}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-[0.8em] text-primary hover:underline font-semibold"
+                                    >
+                                      {proj.link}
+                                    </a>
+                                  )}
+                                  {proj.description && (
+                                    <ul className="list-disc list-outside pl-4 space-y-0.5">
+                                      {proj.description.split("\n").filter(b => b.trim() !== "").map((bullet, i) => (
+                                        <li key={i} className="text-[0.95em] text-zinc-700 leading-relaxed">
+                                          {bullet.replace(/^[•\-\s]*/, "")}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
                                 </div>
-                                <div className="flex items-center justify-between text-zinc-700 text-[0.95em]">
-                                  <span>{edu.degree} in {edu.fieldOfStudy}</span>
-                                  {edu.location && <span className="text-zinc-500 font-medium">{edu.location}</span>}
-                                </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    }
+                        );
+                      }
 
-                    // 5. Technical Skills section
-                    if (secId === "skills" && data.skills.length > 0) {
-                      const keys = Object.keys(groupedSkills);
-                      return (
-                        <div key="skills" className="space-y-1 section-item break-inside-avoid">
-                          <h3 className="text-[1.05em] font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-200 pb-0.5">
-                            Skills & Technologies
-                          </h3>
-                          <div className="space-y-1 text-[0.95em] text-zinc-700 leading-relaxed">
-                            {keys.map((catKey) => {
-                              const rowSkills = groupedSkills[catKey].map(s => s.name).join(", ");
-                              return (
-                                <div key={catKey} className="grid grid-cols-12 gap-2">
-                                  <span className="col-span-3 font-bold text-zinc-900 uppercase text-[0.85em] tracking-wide">
-                                    {catKey}:
-                                  </span>
-                                  <span className="col-span-9">
-                                    {rowSkills}
-                                  </span>
+                      // 4. Education section
+                      if (secId === "education" && data.education.length > 0) {
+                        return (
+                          <div key="education" className="space-y-1.5 section-item break-inside-avoid">
+                            <h3 className="text-[1.05em] font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-200 pb-0.5">
+                              Education
+                            </h3>
+                            <div style={{ display: "flex", flexDirection: "column", gap: `${8 * itemSpacingMultiplier}px` }}>
+                              {data.education.map((edu) => (
+                                <div key={edu.id} className="space-y-0.5 text-[0.95em]">
+                                  <div className="flex items-center justify-between font-bold text-[1em]">
+                                    <span className="text-zinc-900">{edu.school}</span>
+                                    <span className="text-zinc-600 font-medium text-[0.9em]">{edu.startDate} - {edu.endDate}</span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-zinc-700 text-[0.95em]">
+                                    <span>{edu.degree} in {edu.fieldOfStudy}</span>
+                                    {edu.location && <span className="text-zinc-500 font-medium">{edu.location}</span>}
+                                  </div>
                                 </div>
-                              );
-                            })}
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    }
+                        );
+                      }
 
-                    return null;
-                  })}
+                      // 5. Technical Skills section
+                      if (secId === "skills" && data.skills.length > 0) {
+                        const keys = Object.keys(groupedSkills);
+                        return (
+                          <div key="skills" className="space-y-1 section-item break-inside-avoid">
+                            <h3 className="text-[1.05em] font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-200 pb-0.5">
+                              Skills & Technologies
+                            </h3>
+                            <div className="space-y-1 text-[0.95em] text-zinc-700 leading-relaxed">
+                              {keys.map((catKey) => {
+                                const rowSkills = groupedSkills[catKey].map(s => s.name).join(", ");
+                                return (
+                                  <div key={catKey} className="grid grid-cols-12 gap-2">
+                                    <span className="col-span-3 font-bold text-zinc-900 uppercase text-[0.85em] tracking-wide">
+                                      {catKey}:
+                                    </span>
+                                    <span className="col-span-9">
+                                      {rowSkills}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return null;
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
           </div>
         </div>
       </div>
