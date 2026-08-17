@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ResumeData, PersonalInfo, Experience, Education, Project, Skill, SaveState, DesignSettings } from "@/types/resume";
+import { ResumeData, PersonalInfo, Experience, Education, Project, Skill, SaveState, DesignSettings, ResumeDensity } from "@/types/resume";
 
 interface ResumeStore {
   id: string | null;
@@ -38,12 +38,26 @@ interface ResumeStore {
   removeSkill: (id: string) => void;
 
   updateDesignSettings: (design: Partial<DesignSettings>) => void;
+  setDensity: (density: ResumeDensity) => void;
+  toggleAutoFitOnePage: () => void;
+  applyCompressedBullet: (itemId: string, itemType: "experience" | "projects", oldBullet: string, newBullet: string) => void;
   
   // History Actions
   undo: () => void;
   redo: () => void;
   clearHistory: () => void;
 }
+
+const defaultDesign: DesignSettings = {
+  fontFamily: "font-sans",
+  fontSize: "md",
+  sectionOrder: ["summary", "experience", "projects", "education", "skills"],
+  density: "normal",
+  sectionSpacing: 1.0,
+  itemSpacing: 1.0,
+  lineHeight: 1.4,
+  autoFitOnePage: false
+};
 
 const initialResumeData: ResumeData = {
   personalInfo: {
@@ -59,11 +73,7 @@ const initialResumeData: ResumeData = {
   education: [],
   projects: [],
   skills: [],
-  design: {
-    fontFamily: "font-sans",
-    fontSize: "md",
-    sectionOrder: ["summary", "experience", "projects", "education", "skills"]
-  }
+  design: defaultDesign
 };
 
 export const useResumeStore = create<ResumeStore>((set, get) => {
@@ -86,9 +96,8 @@ export const useResumeStore = create<ResumeStore>((set, get) => {
       const mergedData = {
         ...data,
         design: {
-          fontFamily: data.design?.fontFamily || "font-sans",
-          fontSize: data.design?.fontSize || "md",
-          sectionOrder: data.design?.sectionOrder || ["summary", "experience", "projects", "education", "skills"]
+          ...defaultDesign,
+          ...(data.design || {})
         }
       };
       set({ id, title, data: mergedData, past: [], future: [], saveState: "idle" });
@@ -99,9 +108,9 @@ export const useResumeStore = create<ResumeStore>((set, get) => {
         const mergedData = {
           ...data,
           design: {
-            fontFamily: data.design?.fontFamily || state.data.design?.fontFamily || "font-sans",
-            fontSize: data.design?.fontSize || state.data.design?.fontSize || "md",
-            sectionOrder: data.design?.sectionOrder || state.data.design?.sectionOrder || ["summary", "experience", "projects", "education", "skills"]
+            ...defaultDesign,
+            ...(state.data.design || {}),
+            ...(data.design || {})
           }
         };
         return {
@@ -147,7 +156,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => {
         ...saveHistory(state),
         data: {
           ...state.data,
-          experience: [...state.data.experience, newExp],
+          experience: [newExp, ...state.data.experience],
         },
         saveState: "typing",
       };
@@ -189,7 +198,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => {
         ...saveHistory(state),
         data: {
           ...state.data,
-          education: [...state.data.education, newEdu],
+          education: [newEdu, ...state.data.education],
         },
         saveState: "typing",
       };
@@ -229,7 +238,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => {
         ...saveHistory(state),
         data: {
           ...state.data,
-          projects: [...state.data.projects, newProj],
+          projects: [newProj, ...state.data.projects],
         },
         saveState: "typing",
       };
@@ -296,14 +305,83 @@ export const useResumeStore = create<ResumeStore>((set, get) => {
       data: {
         ...state.data,
         design: {
-          fontFamily: state.data.design?.fontFamily || "font-sans",
-          fontSize: state.data.design?.fontSize || "md",
-          sectionOrder: state.data.design?.sectionOrder || ["summary", "experience", "projects", "education", "skills"],
+          ...defaultDesign,
+          ...(state.data.design || {}),
           ...design
         }
       },
       saveState: "typing"
     })),
+
+    setDensity: (density: ResumeDensity) => {
+      const densityPresets: Record<ResumeDensity, { sectionSpacing: number; itemSpacing: number; lineHeight: number }> = {
+        "relaxed": { sectionSpacing: 1.3, itemSpacing: 1.25, lineHeight: 1.55 },
+        "normal": { sectionSpacing: 1.0, itemSpacing: 1.0, lineHeight: 1.4 },
+        "compact": { sectionSpacing: 0.8, itemSpacing: 0.8, lineHeight: 1.3 },
+        "ultra-compact": { sectionSpacing: 0.65, itemSpacing: 0.65, lineHeight: 1.22 }
+      };
+
+      const preset = densityPresets[density] || densityPresets.normal;
+
+      set((state) => ({
+        ...saveHistory(state),
+        data: {
+          ...state.data,
+          design: {
+            ...defaultDesign,
+            ...(state.data.design || {}),
+            density,
+            ...preset
+          }
+        },
+        saveState: "typing"
+      }));
+    },
+
+    toggleAutoFitOnePage: () => set((state) => ({
+      ...saveHistory(state),
+      data: {
+        ...state.data,
+        design: {
+          ...defaultDesign,
+          ...(state.data.design || {}),
+          autoFitOnePage: !(state.data.design?.autoFitOnePage)
+        }
+      },
+      saveState: "typing"
+    })),
+
+    applyCompressedBullet: (itemId, itemType, oldBullet, newBullet) => set((state) => {
+      if (itemType === "experience") {
+        return {
+          ...saveHistory(state),
+          data: {
+            ...state.data,
+            experience: state.data.experience.map((item) => {
+              if (item.id !== itemId) return item;
+              const bullets = item.description.split("\n");
+              const updatedBullets = bullets.map((b) => b.trim() === oldBullet.trim() ? newBullet : b);
+              return { ...item, description: updatedBullets.join("\n") };
+            })
+          },
+          saveState: "typing"
+        };
+      } else {
+        return {
+          ...saveHistory(state),
+          data: {
+            ...state.data,
+            projects: state.data.projects.map((item) => {
+              if (item.id !== itemId) return item;
+              const bullets = item.description.split("\n");
+              const updatedBullets = bullets.map((b) => b.trim() === oldBullet.trim() ? newBullet : b);
+              return { ...item, description: updatedBullets.join("\n") };
+            })
+          },
+          saveState: "typing"
+        };
+      }
+    }),
 
     undo: () => set((state) => {
       if (state.past.length === 0) return {};

@@ -47,10 +47,31 @@ export interface Skill {
   level?: string; // e.g. Beginner, Intermediate, Expert
 }
 
+export type ResumeDensity = "relaxed" | "normal" | "compact" | "ultra-compact";
+
 export interface DesignSettings {
   fontFamily?: "font-sans" | "font-serif" | "font-mono";
   fontSize?: "sm" | "md" | "lg";
   sectionOrder?: string[];
+  density?: ResumeDensity;
+  sectionSpacing?: number; // 0.6 to 1.4 multiplier
+  itemSpacing?: number;    // 0.6 to 1.4 multiplier
+  lineHeight?: number;     // 1.2 to 1.6 multiplier
+  autoFitOnePage?: boolean;
+}
+
+export interface FitAnalysis {
+  status: "fits" | "underutilized" | "overflowing" | "perfect";
+  pageCount: number;
+  utilizationPercentage: number;
+  overflowLines: number;
+  overflowPercentage: number;
+  contentHeightPx: number;
+  targetPageHeightPx: number;
+  readabilityGrade: "Excellent" | "Good" | "Tight" | "Needs Attention";
+  atsSafetyGrade: "Excellent" | "Good" | "Warning";
+  contentDensity: "Optimal" | "Relaxed" | "Compact" | "Dense";
+  recommendedAction?: string;
 }
 
 export interface ResumeData {

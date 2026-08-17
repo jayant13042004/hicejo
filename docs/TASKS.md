@@ -110,11 +110,27 @@ Goal: Integrate Google and Email providers in Supabase and Next.js.
 
 ---
 
-## Milestone 9: Upcoming Roadmap Milestones
+## Milestone 9: One-Page Resume Optimizer (New Signature Feature)
+Goal: Automatically fit resumes onto one perfect A4 page without sacrificing readability or content impact.
+
+| Task ID | Task Description | Priority | Status | Dependencies |
+| :--- | :--- | :--- | :--- | :--- |
+| M9-T1 | Exact A4 canvas container with real-time DOM height calculation (<5ms) | P0 | [x] Completed | None |
+| M9-T2 | Fit Indicator Bar (`✓ 1 PAGE — 94% UTILIZED`, `⚠ 2 LINES OVERFLOWING`) | P0 | [x] Completed | M9-T1 |
+| M9-T3 | Perfect 1-Page Mode continuous monitoring and automatic layout adjusting | P0 | [x] Completed | M9-T2 |
+| M9-T4 | Hierarchical 5-stage auto-fit solver (Spacing → Layout → Typography → AI) | P0 | [x] Completed | M9-T1 |
+| M9-T5 | Interactive Resume Density Control slider (Relaxed to Ultra-Compact) | P0 | [x] Completed | M9-T4 |
+| M9-T6 | Smart Bullet Compressor Modal (`/api/ai/compress-bullet`) with metric protection | P0 | [x] Completed | M9-T4 |
+| M9-T7 | Fit Analysis Drawer with diagnostic scores and candidate bullet audit | P1 | [x] Completed | M9-T2 |
+| M9-T8 | Synchronized `@media print` rules for 1:1 on-screen to PDF download parity | P0 | [x] Completed | M9-T1 |
+
+---
+
+## Milestone 10: Upcoming Roadmap Milestones
 Goal: Future integrations for post-launch career scaling.
 
 | Task ID | Task Description | Priority | Status | Dependencies |
 | :--- | :--- | :--- | :--- | :--- |
-| M9-T1 | Phase 10: Implement AI Voice Interview Copilot with audio comments | P1 | [ ] Todo | None |
-| M9-T2 | Phase 11: Build Kanban board job application tracker dashboard | P1 | [ ] Todo | None |
-| M9-T3 | Phase 12: Add LinkedIn Profile Headline & Summary Optimizer | P2 | [ ] Todo | None |
+| M10-T1 | Phase 10: Implement AI Voice Interview Copilot with audio comments | P1 | [ ] Todo | None |
+| M10-T2 | Phase 11: Build Kanban board job application tracker dashboard | P1 | [ ] Todo | None |
+| M10-T3 | Phase 12: Add LinkedIn Profile Headline & Summary Optimizer | P2 | [ ] Todo | None |

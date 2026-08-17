@@ -32,12 +32,20 @@ Hicejo is built using a modern, scalable web stack optimized for performance, SE
 
 ## 3. Features Implemented Till Now
 
-### 1. Interactive AI Resume Builder
+### 1. Interactive AI Resume Builder & One-Page Optimizer
+* **Exact A4 Canvas**: Real-time DOM height calculation (<5ms) matching calibrated A4 dimensions (`210mm x 297mm`) without calling external APIs during typing.
+* **Fit Indicator Bar**:
+  * Status Pill: `✓ 1 PAGE — 94% UTILIZED`, `✓ PERFECT 1-PAGE FIT`, or `⚠ 2 LINES OVERFLOWING (6% OVERFLOW)`.
+  * `🎯 Perfect 1-Page Resume` continuous auto-fit monitor toggle.
+  * `✨ Fix to 1 Page` hierarchical 5-stage auto-fit solver (Spacing → Layout → Typography → AI Content Compression).
+* **Resume Density Controller**: Interactive slider (`Relaxed ─────●───── Compact`) adjusting section margins, bullet spacing, and line heights within safe ATS bounds.
+* **Smart Bullet Compressor Modal**: AI action (`✨ Shorten Bullet`) providing concise alternatives while strictly preserving metrics, technologies, and achievements.
+* **Fit Analysis Drawer**: Detailed diagnostic metrics (Page Utilization, Readability Grade, ATS Safety, Content Density, and Candidate Bullets).
+* **Exact PDF & Print Parity**: `@media print` rules synchronized with preview canvas for 1:1 single-page PDF downloads.
 * **Tabbed Configuration Sidebar**: Form tabs for Contact Info, Professional Summary, Work History, Education, Projects, Skills, and Design Settings.
 * **Drag-and-Drop Reordering**: Users can dynamically rearrange resume sections (e.g. moving Skills above Work History) and instantly see the output on screen.
 * **Proportional Relative Scales**: Choose between Small (12px), Medium (14px), and Large (16px) font systems. Section headings, line heights, and margins scale proportionally using relative `em` styles.
 * **Categorized Skills**: Add skills grouped by classification categories (e.g., Languages, Frameworks, Libraries).
-* **A4 Print Output**: Styled with CSS print media rules (`@page { margin: 0; }` with visual division overflow markers) for clean, watermarked-free PDF downloads.
 
 ### 2. Multi-Format Document Parser
 * **Upload Extractor API**: A server route (`/api/parse-file`) utilizing `pdf-parse` (for PDF files) and `mammoth` (for DOCX Word files) to parse text entirely using code, avoiding AI costs for raw extraction.
