@@ -60,6 +60,16 @@ export async function POST(request: Request) {
       skills: []
     };
 
+    // Ensure profile row exists to satisfy foreign key constraints
+    try {
+      await supabase.from("profiles").upsert({
+        id: user.id,
+        email: user.email || "",
+        full_name: user.user_metadata?.full_name || "",
+        updated_at: new Date().toISOString()
+      }, { onConflict: "id" });
+    } catch {}
+
     const { data: newResume, error: dbError } = await supabase
       .from("resumes")
       .insert({
@@ -72,6 +82,7 @@ export async function POST(request: Request) {
       .single();
 
     if (dbError) {
+      console.error("Database insert error:", dbError);
       return NextResponse.json({ success: false, error: dbError.message }, { status: 500 });
     }
 

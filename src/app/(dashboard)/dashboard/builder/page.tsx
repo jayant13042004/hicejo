@@ -149,10 +149,11 @@ function ResumeBuilderContent() {
           }
           setSaveState("saved");
         } else {
+          console.error("Auto-save failed from server:", result.error);
           setSaveState("error");
         }
       } catch (err) {
-        console.error(err);
+        console.error("Auto-save network error:", err);
         setSaveState("error");
       }
     }, 1500);
