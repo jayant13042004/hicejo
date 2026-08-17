@@ -62,13 +62,17 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // Clean up empty lines
-    text = text.replace(/\r\n/g, "\n").trim();
+    // Clean up empty lines and PDF page artifacts like "-- 1 of 1 --"
+    text = text
+      .replace(/\r\n/g, "\n")
+      .replace(/--\s*\d+\s*of\s*\d+\s*--/gi, "")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
 
-    if (!text || text.length < 10) {
+    if (!text || text.length < 5) {
       return NextResponse.json({
         success: false,
-        error: "No readable text was found in the uploaded file. Please paste the resume text directly."
+        error: "No readable text was found in the uploaded file. If it is an image/scanned PDF, please paste the resume text directly."
       }, { status: 400 });
     }
 

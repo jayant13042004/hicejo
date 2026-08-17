@@ -123,7 +123,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => {
     },
 
     setResumeId: (id) => set({ id }),
-    setTitle: (title) => set({ title }),
+    setTitle: (title) => set({ title, saveState: "typing" }),
     setSaveState: (saveState) => set({ saveState }),
 
     updatePersonalInfo: (info) => set((state) => ({

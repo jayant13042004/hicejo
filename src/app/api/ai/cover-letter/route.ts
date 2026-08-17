@@ -7,8 +7,8 @@ export async function POST(request: Request) {
   try {
     const { resumeId, resumeText, company, jobTitle, jobDescription } = await request.json();
 
-    if ((!resumeId && !resumeText) || !company || !jobTitle || !jobDescription) {
-      return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 });
+    if ((!resumeId && (!resumeText || resumeText.trim() === "")) || !company || !jobTitle || !jobDescription) {
+      return NextResponse.json({ success: false, error: "Please provide resume details, target company, job title, and description." }, { status: 400 });
     }
 
     let resumeContent: any = null;
@@ -18,119 +18,121 @@ export async function POST(request: Request) {
       if (isDemoMode()) {
         const resume = getDemoResume(resumeId);
         if (!resume) {
-          return NextResponse.json({ success: false, error: "Resume not found" }, { status: 404 });
+          return NextResponse.json({ success: false, error: "Resume draft not found" }, { status: 404 });
         }
         resumeContent = resume.content;
         resumeTitle = resume.title;
       } else {
         const supabase = await createServerSideClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-          return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-        }
 
-        const { data: resume, error: resumeError } = await supabase
-          .from("resumes")
-          .select("content, title")
-          .eq("id", resumeId)
-          .eq("user_id", user.id)
-          .single();
+        if (user && !authError) {
+          const { data: resume } = await supabase
+            .from("resumes")
+            .select("content, title")
+            .eq("id", resumeId)
+            .eq("user_id", user.id)
+            .single();
 
-        if (resumeError || !resume) {
-          return NextResponse.json({ success: false, error: "Resume not found" }, { status: 404 });
+          if (resume) {
+            resumeContent = resume.content;
+            resumeTitle = resume.title;
+          }
         }
-        resumeContent = resume.content;
-        resumeTitle = resume.title;
       }
-    } else {
+    }
+
+    if (!resumeContent) {
       resumeContent = resumeText;
-      resumeTitle = "Uploaded Text Resume";
+      resumeTitle = "Candidate Resume";
     }
 
     const { openai, modelPro, isConfigured } = getAIClient();
 
-    // Check if key is configured
+    // Format resume content into clean text
+    let formattedResumeText = "";
+    if (typeof resumeContent === "string") {
+      formattedResumeText = resumeContent.trim();
+    } else if (typeof resumeContent === "object" && resumeContent !== null) {
+      const parts: string[] = [];
+      if (resumeContent.personalInfo?.fullName) parts.push(`Candidate Name: ${resumeContent.personalInfo.fullName}`);
+      if (resumeContent.personalInfo?.email) parts.push(`Email: ${resumeContent.personalInfo.email}`);
+      if (resumeContent.personalInfo?.phone) parts.push(`Phone: ${resumeContent.personalInfo.phone}`);
+      if (resumeContent.personalInfo?.location) parts.push(`Location: ${resumeContent.personalInfo.location}`);
+      if (resumeContent.summary) parts.push(`Professional Summary:\n${resumeContent.summary}`);
+      if (Array.isArray(resumeContent.experience) && resumeContent.experience.length > 0) {
+        parts.push(`Work Experience:\n` + resumeContent.experience.map((e: any) => `• ${e.position || 'Role'} at ${e.company || 'Company'} (${e.startDate || ''} - ${e.endDate || ''}):\n  ${e.description || ''}`).join("\n"));
+      }
+      if (Array.isArray(resumeContent.education) && resumeContent.education.length > 0) {
+        parts.push(`Education:\n` + resumeContent.education.map((e: any) => `• ${e.degree || 'Degree'} from ${e.school || 'School'}`).join("\n"));
+      }
+      if (Array.isArray(resumeContent.projects) && resumeContent.projects.length > 0) {
+        parts.push(`Projects:\n` + resumeContent.projects.map((p: any) => `• ${p.name || 'Project'}: ${p.description || ''}`).join("\n"));
+      }
+      if (Array.isArray(resumeContent.skills) && resumeContent.skills.length > 0) {
+        parts.push(`Skills: ` + resumeContent.skills.map((s: any) => typeof s === 'string' ? s : s.name).filter(Boolean).join(", "));
+      }
+      formattedResumeText = parts.join("\n\n");
+    }
+
+    if (!formattedResumeText) {
+      formattedResumeText = typeof resumeContent === "string" ? resumeContent : "Experienced candidate applying for the role.";
+    }
+
+    // Mock mode fallback
     if (!isConfigured) {
-      // Mock Cover Letter for testing
-      const personalInfo = typeof resumeContent === "object" ? (resumeContent.personalInfo || {}) : {};
-      const fullName = personalInfo.fullName || "Candidate Name";
-      const email = personalInfo.email || "candidate@email.com";
-      const phone = personalInfo.phone || "(555) 000-0000";
-      const location = personalInfo.location || "San Francisco, CA";
-
       const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-
-      const mockContent = `${fullName}
-${location} | ${phone} | ${email}
+      const mockContent = `Candidate Name
+San Francisco, CA | (555) 019-2834 | candidate@example.com
 
 ${today}
 
-Hiring Manager
-${company} Recruiting Team
+Hiring Team
+${company}
 ${company} Headquarters
 
 Subject: Application for ${jobTitle} Role
 
-Dear Hiring Manager,
+Dear Hiring Team at ${company},
 
-I am writing to express my enthusiastic interest in the ${jobTitle} position at ${company}. Having followed ${company}’s recent innovations and commitment to engineering excellence, I am excited about the opportunity to contribute my skills in front-end design, TypeScript development, and user-centric architecture to your growing team.
+I am writing to express my enthusiastic interest in the ${jobTitle} position at ${company}. Having followed ${company}’s recent product milestones, I am excited about the opportunity to contribute my technical background in building scalable, modern applications to your engineering organization.
 
-My technical background aligns cleanly with the challenges at ${company}. In my previous experience, I focused on refactoring legacy application modules into responsive Next.js frameworks, which resulted in a 24% boost in overall page loading performance. Additionally, collaborating in cross-functional squads allowed me to design API integration schemas that cut client request latency by 35%. I am confident that this blend of clean-code practices and quantitative impact will allow me to deliver immediate value to your codebase.
+Throughout my experience, I have focused on engineering resilient software architectures that directly accelerate business KPIs. In my previous work, I delivered high-performance full-stack features that improved user response times by 30% and simplified system workflows across cross-functional squads. I pride myself on writing clean, well-tested code and collaborating closely with design and product teams to exceed stakeholder expectations.
 
-What excites me most about ${company} is your focus on building scalable products that redefine user productivity. I would welcome the opportunity to discuss how my background in modern web standards and responsive interfaces can help accelerate your upcoming product goals.
+What excites me most about ${company} is your commitment to pushing the envelope in product quality and customer experience. I am confident that my technical skills and proactive mindset will allow me to hit the ground running and make an immediate impact on your upcoming goals.
 
-Thank you for your time and consideration. I look forward to hearing from you regarding next steps.
+Thank you for your time and consideration. I would welcome the opportunity to discuss how my background aligns with the needs of the ${jobTitle} role.
 
 Sincerely,
 
-${fullName}`;
+Candidate Name`;
 
-      let letterId = crypto.randomUUID();
-      if (isDemoMode()) {
-        const newLetter = insertDemoCoverLetter(company, jobTitle, mockContent, resumeId || null);
-        letterId = newLetter.id;
-      } else {
-        const supabase = await createServerSideClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        const { data: newLetter, error: dbError } = await supabase
-          .from("cover_letters")
-          .insert({
-            user_id: user!.id,
-            resume_id: resumeId || null,
-            job_title: jobTitle,
-            company,
-            content: mockContent
-          })
-          .select()
-          .single();
-
-        if (dbError) {
-          return NextResponse.json({ success: false, error: dbError.message }, { status: 500 });
-        }
-        letterId = newLetter.id;
-      }
-
-      return NextResponse.json({ success: true, data: { content: mockContent, id: letterId } });
+      return NextResponse.json({ success: true, data: { content: mockContent, id: crypto.randomUUID() } });
     }
 
-    const systemPrompt = `You are a professional cover letter writer and career strategist.
-Generate a highly engaging, professional, and personalized cover letter matching the candidate's resume details and the target job description.
-Structure the cover letter following standard formal business guidelines:
-1. Candidate header details (Name, contact information).
+    const systemPrompt = `You are an elite executive career strategist and professional cover letter writer.
+Generate a tailored, persuasive, and beautifully written formal business cover letter.
+
+Structure:
+1. Candidate header details (Name, Contact information).
 2. Current Date.
-3. Hiring Manager block (Recruiting Team at the target company).
-4. Subject line specifying the application role.
-5. Opening hook paragraph aligning candidate credentials with the company's culture and job.
-6. Body paragraph detailing specific technical achievements and quantified impact from their resume experience.
-7. Closing paragraph indicating interest in a discussion, followed by a professional sign-off and candidate name.
+3. Hiring Team / Company block (e.g. Hiring Team at [Target Company]).
+4. Subject line specifying the application position.
+5. Opening hook paragraph demonstrating specific interest in [Target Company] and the [Target Job Title] role.
+6. 1-2 Body paragraphs bridging candidate's actual accomplishments, technical strengths, and metrics directly to the requirements in the job description.
+7. Strong closing paragraph requesting a conversation, followed by a professional sign-off ("Sincerely,") and candidate name.
 
-Respond with ONLY the raw cover letter text. Do not wrap in markdown quotes. Do not add comments or options.`;
+Format Rules:
+- Return ONLY the clean, raw cover letter text with proper paragraph spacing.
+- Do NOT wrap in markdown quotes, backticks, or explanatory commentary.`;
 
-    const userPrompt = `Candidate Resume Data: ${typeof resumeContent === "string" ? resumeContent : JSON.stringify(resumeContent)}
+    const userPrompt = `Candidate Resume Information:
+${formattedResumeText.slice(0, 3500)}
 
 Target Company: ${company}
 Target Job Title: ${jobTitle}
-Target Job Description: ${jobDescription}`;
+Target Job Description:
+${jobDescription.slice(0, 2000)}`;
 
     const chatResponse = await openai.chat.completions.create({
       model: modelPro,
@@ -138,42 +140,51 @@ Target Job Description: ${jobDescription}`;
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
       ],
-      temperature: 0.6,
-      max_tokens: 800
+      temperature: 0.5,
+      max_tokens: 1000
     });
 
-    const letterContent = chatResponse.choices[0]?.message?.content?.trim();
+    let letterContent = chatResponse.choices[0]?.message?.content?.trim();
     if (!letterContent) {
       return NextResponse.json({ success: false, error: "AI failed to write cover letter" }, { status: 500 });
     }
 
-    let letterId = crypto.randomUUID();
-    if (isDemoMode()) {
-      const newLetter = insertDemoCoverLetter(company, jobTitle, letterContent, resumeId || null);
-      letterId = newLetter.id;
-    } else {
-      const supabase = await createServerSideClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: newLetter, error: dbError } = await supabase
-        .from("cover_letters")
-        .insert({
-          user_id: user!.id,
-          resume_id: resumeId || null,
-          job_title: jobTitle,
-          company,
-          content: letterContent
-        })
-        .select()
-        .single();
+    // Strip code fences if present
+    if (letterContent.startsWith("```")) {
+      letterContent = letterContent.replace(/^```(?:markdown|text)?\s*/, "").replace(/\s*```$/, "").trim();
+    }
 
-      if (dbError) {
-        return NextResponse.json({ success: false, error: dbError.message }, { status: 500 });
+    let letterId = crypto.randomUUID();
+    try {
+      if (isDemoMode()) {
+        const newLetter = insertDemoCoverLetter(company, jobTitle, letterContent, resumeId || null);
+        letterId = newLetter.id;
+      } else {
+        const supabase = await createServerSideClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: newLetter } = await supabase
+            .from("cover_letters")
+            .insert({
+              user_id: user.id,
+              resume_id: resumeId || null,
+              job_title: jobTitle,
+              company,
+              content: letterContent
+            })
+            .select()
+            .single();
+
+          if (newLetter) letterId = newLetter.id;
+        }
       }
-      letterId = newLetter.id;
+    } catch (dbErr) {
+      console.warn("Cover letter database cache warning:", dbErr);
     }
 
     return NextResponse.json({ success: true, data: { content: letterContent, id: letterId } });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error("Cover letter endpoint failure:", error);
+    return NextResponse.json({ success: false, error: error.message || "Failed to generate cover letter" }, { status: 500 });
   }
 }

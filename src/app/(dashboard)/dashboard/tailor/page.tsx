@@ -71,11 +71,15 @@ export default function TailorPage() {
     loadResumes();
   }, []);
 
+  const [isExtractingFile, setIsExtractingFile] = React.useState(false);
+  const [uploadedFileName, setUploadedFileName] = React.useState<string | null>(null);
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setIsProcessing(true);
+    setIsExtractingFile(true);
     setError(null);
+    setUploadedFileName(file.name);
     try {
       const fData = new FormData();
       fData.append("file", file);
@@ -86,13 +90,15 @@ export default function TailorPage() {
       const result = await res.json();
       if (result.success && result.text) {
         setResumeText(result.text);
+        setSourceType("text");
       } else {
         setError(result.error || "Failed to extract text from file.");
       }
     } catch {
-      setError("File upload connection failed.");
+      setError("File upload connection failed. Please paste text directly.");
     } finally {
-      setIsProcessing(false);
+      setIsExtractingFile(false);
+      e.target.value = "";
     }
   };
 
@@ -220,24 +226,36 @@ export default function TailorPage() {
                         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                           Resume Text Content
                         </label>
-                        <label className="flex items-center gap-1 text-[10px] text-primary hover:underline cursor-pointer font-medium uppercase tracking-wider">
-                          <Upload className="h-3 w-3" />
-                          <span>Upload File (PDF/Word/Text)</span>
+                        <label className="flex items-center gap-1 text-[10px] text-primary hover:underline cursor-pointer font-semibold uppercase tracking-wider">
+                          {isExtractingFile ? (
+                            <RefreshCw className="h-3 w-3 animate-spin text-primary" />
+                          ) : (
+                            <Upload className="h-3 w-3" />
+                          )}
+                          <span>{isExtractingFile ? "Extracting..." : "Upload File"}</span>
                           <input
                             type="file"
                             accept=".txt,.pdf,.docx"
                             onChange={handleFileUpload}
+                            disabled={isExtractingFile}
                             className="hidden"
                           />
                         </label>
                       </div>
+
+                      {uploadedFileName && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-emerald-500 font-medium">
+                          <span>✓ Extracted from: {uploadedFileName}</span>
+                        </div>
+                      )}
+
                       <textarea
                         rows={5}
                         placeholder="Paste the raw text of your resume here..."
                         value={resumeText}
                         onChange={(e) => setResumeText(e.target.value)}
                         required
-                        className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                        className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-xs placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none font-mono leading-relaxed"
                       />
                     </div>
                   )}
