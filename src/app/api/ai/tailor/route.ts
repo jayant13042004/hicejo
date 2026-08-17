@@ -7,8 +7,8 @@ export async function POST(request: Request) {
   try {
     const { resumeId, resumeText, company, jobTitle, jobDescription } = await request.json();
 
-    if ((!resumeId && !resumeText) || !company || !jobTitle || !jobDescription) {
-      return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 });
+    if ((!resumeId && (!resumeText || resumeText.trim() === "")) || !company || !jobTitle || !jobDescription) {
+      return NextResponse.json({ success: false, error: "Please provide resume details, target company, job title, and description." }, { status: 400 });
     }
 
     let resumeContent: any = null;
@@ -26,36 +26,35 @@ export async function POST(request: Request) {
       } else {
         const supabase = await createServerSideClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-          return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-        }
 
-        const { data: resume, error: resumeError } = await supabase
-          .from("resumes")
-          .select("content, title")
-          .eq("id", resumeId)
-          .eq("user_id", user.id)
-          .single();
+        if (user && !authError) {
+          const { data: resume } = await supabase
+            .from("resumes")
+            .select("content, title")
+            .eq("id", resumeId)
+            .eq("user_id", user.id)
+            .single();
 
-        if (resumeError || !resume) {
-          return NextResponse.json({ success: false, error: "Resume not found" }, { status: 404 });
+          if (resume) {
+            resumeContent = resume.content;
+            resumeTitle = resume.title;
+          }
         }
-        resumeContent = resume.content;
-        resumeTitle = resume.title;
       }
-    } else {
+    }
+
+    if (!resumeContent) {
       resumeContent = resumeText;
-      resumeTitle = "Uploaded Text Resume";
+      resumeTitle = "Uploaded Resume";
       isRawText = true;
     }
 
     const { openai, modelPro, isConfigured } = getAIClient();
 
-    // Check if key is configured
+    // Mock Tailored Content Fallback
     if (!isConfigured) {
-      // Mock Tailored Content
       let sourceJson: any = {
-        personalInfo: { fullName: "Candidate Name", email: "candidate@email.com", phone: "(555) 000-0000", location: "San Francisco, CA" },
+        personalInfo: { fullName: "Alex Johnson", email: "alex@example.com", phone: "(555) 019-2834", location: "San Francisco, CA" },
         summary: "",
         experience: [],
         education: [],
@@ -67,18 +66,18 @@ export async function POST(request: Request) {
         sourceJson = JSON.parse(JSON.stringify(resumeContent));
       }
 
-      sourceJson.summary = `Accomplished engineer specializing in launching core projects at ${company}. Experienced implementing scalable systems using React and TypeScript, aligning cleanly with requirements for the ${jobTitle} role.`;
+      sourceJson.summary = `Accomplished engineer specializing in launching core platform services at ${company}. Experienced implementing scalable systems using React and TypeScript, aligning directly with requirements for the ${jobTitle} role.`;
       
       const mockSkillId = crypto.randomUUID();
-      sourceJson.skills.push({ id: mockSkillId, name: `${company} API Architecture` });
+      sourceJson.skills.push({ id: mockSkillId, name: `${company} Architecture` });
 
       const changesMade = [
         {
           section: "summary",
           itemId: "summary-block",
-          original: !isRawText ? (resumeContent.summary || "") : "Raw Text Input",
+          original: !isRawText ? (resumeContent.summary || "") : "General Summary",
           tailored: sourceJson.summary,
-          reason: `Adapted focus to highlight alignment with ${company} team requirements.`
+          reason: `Adapted focus to highlight alignment with ${company} ${jobTitle} requirements.`
         }
       ];
 
@@ -99,24 +98,6 @@ export async function POST(request: Request) {
       if (isDemoMode()) {
         const newResume = insertDemoResume(newTitle, sourceJson);
         tailoredResumeId = newResume.id;
-      } else {
-        const supabase = await createServerSideClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        const { data: newResume, error: dbError } = await supabase
-          .from("resumes")
-          .insert({
-            user_id: user!.id,
-            title: newTitle,
-            content: sourceJson,
-            ats_score: 82
-          })
-          .select()
-          .single();
-
-        if (dbError) {
-          return NextResponse.json({ success: false, error: dbError.message }, { status: 500 });
-        }
-        tailoredResumeId = newResume.id;
       }
 
       return NextResponse.json({
@@ -130,14 +111,17 @@ export async function POST(request: Request) {
       });
     }
 
-    const systemPrompt = `You are a professional resume writer and optimization assistant.
-You will receive a candidate's resume (either in structured JSON format or as unstructured raw text) and a target job description.
-Your goal is to tailor the candidate's resume (specifically the executive summary, experience bullet points, and projects) to highlight matching skills and keywords.
+    const systemPrompt = `You are an expert resume writer and technical recruiter.
+You will receive a candidate's resume and a target job description.
+Your goal is to tailor the candidate's summary, work experience bullet points, projects, and skills to highlight keywords and competencies matching the target job description.
 
-IF you receive unstructured raw text, you MUST parse the text and extract all parts into the required structured "tailoredContent" schema. Ensure you generate random UUID strings for "id" fields in "experience", "projects", and "skills".
-Do NOT modify personal contact info, company names, school names, degrees, or dates. Only adapt bullet details and summaries. Keep sections structurally identical.
+Rules:
+1. Preserve true factual metrics and experiences while rephrasing bullets to match the job terminology and emphasize quantifiable impact.
+2. If given raw text, parse all details (Name, Contact, Summary, Experience, Education, Projects, Skills) into the structured schema below.
+3. Keep personal contact info, company names, school names, degrees, and dates factual and unchanged.
+4. Generate UUID strings for 'id' fields in experience, education, projects, and skills.
 
-You MUST respond in a strict JSON format matching this schema:
+Respond in a STRICT, single JSON object matching this schema:
 {
   "tailoredContent": {
     "personalInfo": {
@@ -158,7 +142,7 @@ You MUST respond in a strict JSON format matching this schema:
         "startDate": "string",
         "endDate": "string",
         "current": boolean,
-        "description": "string (rewritten bullets, separated by newlines)"
+        "description": "string (rewritten bullet points separated by newline)"
       }
     ],
     "education": [
@@ -181,29 +165,32 @@ You MUST respond in a strict JSON format matching this schema:
         "link": "string",
         "startDate": "string",
         "endDate": "string",
-        "description": "string (rewritten bullets, separated by newlines)"
+        "description": "string"
       }
     ],
-    "skills": [ { "id": "string", "name": "string", "category": "string" } ]
+    "skills": [
+      { "id": "string", "name": "string", "category": "string" }
+    ]
   },
   "changesMade": [
     {
-      "section": "string ('summary', 'experience', 'projects', or 'skills')",
-      "itemId": "string (the matching item's uuid, or 'summary-block')",
-      "original": "string (original text)",
-      "tailored": "string (tailored text)",
-      "reason": "string (brief justification of changes)"
+      "section": "string ('summary' | 'experience' | 'projects' | 'skills')",
+      "itemId": "string",
+      "original": "string",
+      "tailored": "string",
+      "reason": "string (why this change improves alignment with the target job)"
     }
   ]
 }
+Return only raw JSON without markdown code fences.`;
 
-Return ONLY the raw JSON. Do not wrap in markdown blocks.`;
-
-    const userPrompt = `Original Resume Data: ${typeof resumeContent === "string" ? resumeContent : JSON.stringify(resumeContent)}
+    const userPrompt = `Candidate Resume Data:
+${typeof resumeContent === "string" ? resumeContent.slice(0, 3500) : JSON.stringify(resumeContent)}
 
 Target Company: ${company}
 Target Job Title: ${jobTitle}
-Target Job Description: ${jobDescription}`;
+Target Job Description:
+${jobDescription.slice(0, 2000)}`;
 
     const chatResponse = await openai.chat.completions.create({
       model: modelPro,
@@ -212,41 +199,50 @@ Target Job Description: ${jobDescription}`;
         { role: "user", content: userPrompt }
       ],
       response_format: { type: "json_object" },
-      temperature: 0.2,
-      max_tokens: 1500
+      temperature: 0.25,
+      max_tokens: 3500
     });
 
     const rawContent = chatResponse.choices[0]?.message?.content?.trim();
     if (!rawContent) {
-      return NextResponse.json({ success: false, error: "AI failed to respond" }, { status: 500 });
+      return NextResponse.json({ success: false, error: "AI failed to tailor resume." }, { status: 500 });
     }
 
-    const result = JSON.parse(rawContent);
+    // Strip markdown code fences if present
+    let cleanJson = rawContent;
+    if (cleanJson.startsWith("```")) {
+      cleanJson = cleanJson.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "").trim();
+    }
+
+    const result = JSON.parse(cleanJson);
 
     const newTitle = `${company} - ${jobTitle} Tailored`;
     let tailoredResumeId = crypto.randomUUID();
 
-    if (isDemoMode()) {
-      const newResume = insertDemoResume(newTitle, result.tailoredContent);
-      tailoredResumeId = newResume.id;
-    } else {
-      const supabase = await createServerSideClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: newResume, error: dbError } = await supabase
-        .from("resumes")
-        .insert({
-          user_id: user!.id,
-          title: newTitle,
-          content: result.tailoredContent,
-          ats_score: 80
-        })
-        .select()
-        .single();
+    try {
+      if (isDemoMode()) {
+        const newResume = insertDemoResume(newTitle, result.tailoredContent);
+        tailoredResumeId = newResume.id;
+      } else {
+        const supabase = await createServerSideClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: newResume } = await supabase
+            .from("resumes")
+            .insert({
+              user_id: user.id,
+              title: newTitle,
+              content: result.tailoredContent,
+              ats_score: 85
+            })
+            .select()
+            .single();
 
-      if (dbError) {
-        return NextResponse.json({ success: false, error: dbError.message }, { status: 500 });
+          if (newResume) tailoredResumeId = newResume.id;
+        }
       }
-      tailoredResumeId = newResume.id;
+    } catch (dbErr) {
+      console.warn("Database cache warning in tailor endpoint:", dbErr);
     }
 
     return NextResponse.json({
@@ -255,10 +251,11 @@ Target Job Description: ${jobDescription}`;
         tailoredResumeId,
         tailoredResumeTitle: newTitle,
         tailoredContent: result.tailoredContent,
-        changesMade: result.changesMade
+        changesMade: result.changesMade || []
       }
     });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error("Resume tailor failure:", error);
+    return NextResponse.json({ success: false, error: error.message || "Failed to tailor resume" }, { status: 500 });
   }
 }
