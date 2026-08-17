@@ -77,10 +77,12 @@ export default function RoastPage() {
     "[SUCCESS] Critique package retrieved. Compiling burn report."
   ];
 
+  const [isExtractingFile, setIsExtractingFile] = React.useState(false);
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setIsRoasting(true);
+    setIsExtractingFile(true);
     setError(null);
     try {
       const fData = new FormData();
@@ -98,7 +100,7 @@ export default function RoastPage() {
     } catch {
       setError("File upload connection failed.");
     } finally {
-      setIsRoasting(false);
+      setIsExtractingFile(false);
     }
   };
 
@@ -110,17 +112,15 @@ export default function RoastPage() {
     setIsRoasting(true);
     setError(null);
     setRoastResult(null);
-    setTerminalLines([]);
+    setTerminalLines([
+      "guest@hicejo:~$ roast-resume --target candidate_profile",
+      "[INFO] Initializing Hicejo Roasting Suite v2.1...",
+      "[INFO] Extracting candidate details and experience strings..."
+    ]);
 
-    // 1. Run terminal typing animation
-    for (let i = 0; i < terminalSequence.length; i++) {
-      setTerminalLines((prev) => [...prev, terminalSequence[i]]);
-      await new Promise((resolve) => setTimeout(resolve, 600));
-    }
-
-    // 2. Fetch roast data from API
     try {
-      const res = await fetch("/api/ai/roast", {
+      // Trigger API in parallel with progress updates
+      const roastPromise = fetch("/api/ai/roast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -128,9 +128,25 @@ export default function RoastPage() {
           resumeText: sourceType === "text" ? resumeText : undefined
         })
       });
+
+      // Quick diagnostic progression lines
+      setTimeout(() => {
+        setTerminalLines((prev) => [
+          ...prev,
+          "[WARN] Cliché alert: Found buzzwords & unsubstantiated claims.",
+          "[INFO] Analyzing metrics & bullet density...",
+          "[INFO] Packaging payload to Tough Recruiter AI agent..."
+        ]);
+      }, 400);
+
+      const res = await roastPromise;
       const result = await res.json();
 
       if (result.success && result.data) {
+        setTerminalLines((prev) => [
+          ...prev,
+          "[SUCCESS] Critique package retrieved. Compiling burn report."
+        ]);
         setRoastResult(result.data);
       } else {
         setError(result.error || "Failed to roast resume.");
@@ -232,12 +248,17 @@ export default function RoastPage() {
                           Resume Text Content
                         </label>
                         <label className="flex items-center gap-1 text-[10px] text-primary hover:underline cursor-pointer font-medium uppercase tracking-wider">
-                          <Upload className="h-3 w-3" />
-                          <span>Upload File (PDF/Word/Text)</span>
+                          {isExtractingFile ? (
+                            <RotateCw className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Upload className="h-3 w-3" />
+                          )}
+                          <span>{isExtractingFile ? "Extracting..." : "Upload File (PDF/Word/Text)"}</span>
                           <input
                             type="file"
                             accept=".txt,.pdf,.docx"
                             onChange={handleFileUpload}
+                            disabled={isExtractingFile}
                             className="hidden"
                           />
                         </label>

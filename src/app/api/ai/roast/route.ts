@@ -107,8 +107,23 @@ Analyze the resume data and respond in a strict, single JSON format matching thi
 }
 Return only the raw JSON. Do not wrap in markdown blocks.`;
 
+    let formattedResumeText = "";
+    if (typeof resumeContent === "string") {
+      formattedResumeText = resumeContent;
+    } else if (typeof resumeContent === "object" && resumeContent !== null) {
+      formattedResumeText = [
+        resumeContent.personalInfo?.fullName ? `Candidate: ${resumeContent.personalInfo.fullName}` : "",
+        resumeContent.summary ? `Summary: ${resumeContent.summary}` : "",
+        resumeContent.experience?.length ? `Experience:\n${resumeContent.experience.map((e: any) => `- ${e.position} at ${e.company}: ${e.description}`).join("\n")}` : "",
+        resumeContent.education?.length ? `Education:\n${resumeContent.education.map((e: any) => `- ${e.degree} in ${e.fieldOfStudy} from ${e.school}`).join("\n")}` : "",
+        resumeContent.projects?.length ? `Projects:\n${resumeContent.projects.map((p: any) => `- ${p.name} (${p.role}): ${p.description}`).join("\n")}` : "",
+        resumeContent.skills?.length ? `Skills: ${resumeContent.skills.map((s: any) => s.name).join(", ")}` : ""
+      ].filter(Boolean).join("\n\n");
+    }
+
     const userPrompt = `Resume Title: ${resumeTitle}
-Resume Content: ${typeof resumeContent === "string" ? resumeContent : JSON.stringify(resumeContent)}`;
+Resume Content:
+${formattedResumeText || "Empty resume with no accomplishments"}`;
 
     const chatResponse = await openai.chat.completions.create({
       model: modelMini,
@@ -117,8 +132,8 @@ Resume Content: ${typeof resumeContent === "string" ? resumeContent : JSON.strin
         { role: "user", content: userPrompt }
       ],
       response_format: { type: "json_object" },
-      temperature: 0.7,
-      max_tokens: 1000
+      temperature: 0.4,
+      max_tokens: 800
     });
 
     const rawContent = chatResponse.choices[0]?.message?.content?.trim();
