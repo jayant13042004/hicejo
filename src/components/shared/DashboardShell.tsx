@@ -24,7 +24,7 @@ export function DashboardShell({ children, title = "Overview", featureKey }: Das
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Top Header */}
-        <header className="flex h-16 items-center justify-between px-8 border-b border-border/40 bg-card shrink-0">
+        <header className="no-print flex h-16 items-center justify-between px-8 border-b border-border/40 bg-card shrink-0">
           <div className="flex items-center gap-4">
             <h1 className="text-xl font-bold tracking-tight">{title}</h1>
           </div>

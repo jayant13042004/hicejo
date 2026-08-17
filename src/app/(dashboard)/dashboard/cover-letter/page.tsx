@@ -6,21 +6,21 @@ import {
   FileUp,
   Clipboard,
   Check,
-  Printer,
   RefreshCw,
   Sparkles,
   ArrowRight,
-  FileText,
   Upload,
   Edit3,
   Eye,
   Download,
   FileCheck,
-  Save
+  Save,
+  X
 } from "lucide-react";
 import { DashboardShell } from "@/components/shared/DashboardShell";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { consumeCredit } from "@/lib/credits";
 
 interface ResumeOption {
@@ -64,10 +64,14 @@ export default function CoverLetterPage() {
   const [uploadedFileName, setUploadedFileName] = React.useState<string | null>(null);
   const [letterContent, setLetterContent] = React.useState<string | null>(null);
   const [isEditing, setIsEditing] = React.useState(false);
-  const [isDownloadingPDF, setIsDownloadingPDF] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
   const [isCopied, setIsCopied] = React.useState(false);
   const [saveSuccessMessage, setSaveSuccessMessage] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // PDF Download Modal states
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = React.useState(false);
+  const [downloadFileName, setDownloadFileName] = React.useState("");
+  const [isDownloadingPDF, setIsDownloadingPDF] = React.useState(false);
 
   // Fetch resumes list on mount
   React.useEffect(() => {
@@ -82,7 +86,7 @@ export default function CoverLetterPage() {
           }
         }
       } catch (err) {
-        console.error("Failed to load drafts:", err);
+        console.error("Failed to load resumes:", err);
       }
     };
     loadResumes();
@@ -104,7 +108,7 @@ export default function CoverLetterPage() {
       const result = await res.json();
       if (result.success && result.text) {
         setResumeText(result.text);
-        setSourceType("text"); // Switch to text tab so the user sees their extracted text
+        setSourceType("text");
       } else {
         setError(result.error || "Failed to extract text from file.");
       }
@@ -112,7 +116,7 @@ export default function CoverLetterPage() {
       setError("File upload connection failed. Please paste text directly.");
     } finally {
       setIsExtractingFile(false);
-      e.target.value = ""; // Reset input so re-uploading works
+      e.target.value = "";
     }
   };
 
@@ -120,14 +124,14 @@ export default function CoverLetterPage() {
     setSourceType("text");
     setResumeText(SAMPLE_RESUME_TEXT);
     setCompany("Stripe");
-    setJobTitle("Senior Full Stack Engineer");
-    setJobDescription("We are looking for a Senior Full Stack Engineer to lead frontend architecture and developer workflows. Must have strong experience with React, TypeScript, Next.js, Node.js, scalable APIs, and cross-functional team collaboration.");
+    setJobTitle("Staff Frontend Engineer");
+    setJobDescription("We are looking for a Staff Frontend Engineer to scale global checkout interfaces using TypeScript, React, and Next.js. Responsibilities include optimizing latency, designing reusable UI components, and collaborating across product squads.");
   };
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (sourceType === "draft" && !selectedResumeId) {
-      setError("Please select a saved resume draft or paste your resume text.");
+      setError("Please select a saved resume or switch to 'Paste / Upload Text'.");
       return;
     }
     if (sourceType === "text" && !resumeText.trim()) {
@@ -183,43 +187,53 @@ export default function CoverLetterPage() {
     }
   };
 
-  const handleDirectDownloadPDF = async () => {
-    const letterEl = document.getElementById("letter-print-area");
-    if (!letterEl || !letterContent) return;
+  const handleOpenDownloadModal = () => {
+    const defaultName = `${(company || "Target").trim().replace(/[^a-zA-Z0-9_-]/g, "_")}_Cover_Letter`;
+    setDownloadFileName(defaultName);
+    setIsDownloadModalOpen(true);
+  };
+
+  const handleExecutePDFDownload = async () => {
+    if (!letterContent) return;
 
     setIsDownloadingPDF(true);
     try {
       const html2canvas = (await import("html2canvas")).default;
       const { jsPDF } = await import("jspdf");
 
-      const cloned = letterEl.cloneNode(true) as HTMLElement;
-      cloned.querySelectorAll(".no-print").forEach((el) => el.remove());
-      cloned.style.boxShadow = "none";
-      cloned.style.border = "none";
-      cloned.style.margin = "0";
-      cloned.style.width = "794px"; // 210mm
-      cloned.style.minHeight = "1123px"; // 297mm
-      cloned.style.backgroundColor = "#ffffff";
-      cloned.style.color = "#09090b";
-
+      // 1. Create a pristine standalone container
       const container = document.createElement("div");
       container.style.position = "fixed";
       container.style.left = "-9999px";
       container.style.top = "0";
       container.style.width = "794px";
-      container.appendChild(cloned);
+      container.style.minHeight = "1123px";
+      container.style.backgroundColor = "#ffffff";
+      container.style.color = "#09090b";
+      container.style.padding = "50px 60px";
+      container.style.boxSizing = "border-box";
+      container.style.fontFamily = "Georgia, Garamond, serif";
+      container.style.fontSize = "14px";
+      container.style.lineHeight = "1.7";
+      container.style.whiteSpace = "pre-line";
+      container.style.textAlign = "justify";
+      container.innerText = letterContent;
+
       document.body.appendChild(container);
 
-      const canvas = await html2canvas(cloned, {
-        scale: 2.5,
+      // 2. High-DPI canvas capture
+      const canvas = await html2canvas(container, {
+        scale: 2,
         useCORS: true,
         backgroundColor: "#ffffff",
         logging: false,
+        width: 794,
         windowWidth: 794
       });
 
       document.body.removeChild(container);
 
+      // 3. Output to pure A4 PDF
       const imgData = canvas.toDataURL("image/jpeg", 0.98);
       const pdf = new jsPDF({
         orientation: "portrait",
@@ -229,24 +243,25 @@ export default function CoverLetterPage() {
       });
 
       pdf.addImage(imgData, "JPEG", 0, 0, 210, 297, undefined, "FAST");
-      const filename = `${company ? company.replace(/[^a-zA-Z0-9_-]/g, "_") : "Target"}_Cover_Letter.pdf`;
+      const filename = `${downloadFileName.trim() || "Cover_Letter"}.pdf`;
       pdf.save(filename);
+      setIsDownloadModalOpen(false);
     } catch (err) {
       console.error("PDF download failed:", err);
-      window.print();
+      alert("Encountered an issue exporting PDF. Please try again.");
     } finally {
       setIsDownloadingPDF(false);
     }
   };
 
   const handleSaveEdits = () => {
-    setSaveSuccessMessage("Edits saved to current view");
+    setSaveSuccessMessage("Edits saved to view");
     setIsEditing(false);
     setTimeout(() => setSaveSuccessMessage(null), 2500);
   };
 
   return (
-    <DashboardShell title="Cover Letter Generator">
+    <DashboardShell title="Cover Letter Generator" featureKey="cover_letter">
       <div className="space-y-8">
         <div>
           <p className="text-muted-foreground text-sm">
@@ -269,7 +284,7 @@ export default function CoverLetterPage() {
                   onClick={handleLoadSample}
                   className="text-xs text-primary hover:underline font-semibold cursor-pointer"
                 >
-                  Load Sample Job
+                  Load Sample
                 </button>
               </CardHeader>
               <CardContent>
@@ -386,7 +401,7 @@ export default function CoverLetterPage() {
 
                       <textarea
                         rows={5}
-                        placeholder="Paste your resume text here..."
+                        placeholder="Paste the raw text of your resume here..."
                         value={resumeText}
                         onChange={(e) => setResumeText(e.target.value)}
                         className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-xs placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none font-mono leading-relaxed"
@@ -394,7 +409,7 @@ export default function CoverLetterPage() {
                     </div>
                   )}
 
-                  {/* Company Name */}
+                  {/* Target Company Name */}
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Target Company Name
@@ -504,16 +519,11 @@ export default function CoverLetterPage() {
 
                     <Button
                       size="sm"
-                      onClick={handleDirectDownloadPDF}
-                      disabled={isDownloadingPDF}
+                      onClick={handleOpenDownloadModal}
                       className="bg-gradient-to-r from-primary to-violet-600 gap-1.5 text-xs font-semibold shadow-xs h-8"
                     >
-                      {isDownloadingPDF ? (
-                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Download className="h-3.5 w-3.5" />
-                      )}
-                      <span>{isDownloadingPDF ? "Exporting..." : "Download PDF"}</span>
+                      <Download className="h-3.5 w-3.5" />
+                      <span>Download PDF</span>
                     </Button>
                   </div>
                 </div>
@@ -560,13 +570,86 @@ export default function CoverLetterPage() {
                   Ready to Generate Cover Letter
                 </h3>
                 <p className="text-xs text-muted-foreground max-w-sm mt-1 leading-relaxed">
-                  Fill in the company name, role, and job description on the left, then click <strong>&quot;Generate Cover Letter&quot;</strong>. You will be able to edit the generated letter freely before downloading.
+                  Provide your target company, role, and requirements on the left, then click <strong>&quot;Generate Cover Letter&quot;</strong> to craft a compelling, tailored letter.
                 </p>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Direct PDF Download Modal */}
+      <AnimatePresence>
+        {isDownloadModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl p-6 space-y-5 text-foreground"
+            >
+              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                    <Download className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-foreground">Download Cover Letter PDF</h3>
+                    <p className="text-xs text-muted-foreground">Save pure A4 document directly to your device</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsDownloadModalOpen(false)}
+                  className="text-muted-foreground hover:text-foreground text-sm cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  PDF File Name
+                </label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="text"
+                    value={downloadFileName}
+                    onChange={(e) => setDownloadFileName(e.target.value)}
+                    placeholder="Stripe_Cover_Letter"
+                    className="font-mono text-xs"
+                    autoFocus
+                  />
+                  <span className="text-xs font-mono text-muted-foreground font-semibold">.pdf</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsDownloadModalOpen(false)}
+                  disabled={isDownloadingPDF}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleExecutePDFDownload}
+                  disabled={isDownloadingPDF || !downloadFileName.trim()}
+                  className="bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-700 gap-1.5 font-bold"
+                >
+                  {isDownloadingPDF ? (
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5" />
+                  )}
+                  <span>{isDownloadingPDF ? "Generating PDF..." : "Download Now"}</span>
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </DashboardShell>
   );
 }

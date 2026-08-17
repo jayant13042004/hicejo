@@ -48,7 +48,7 @@ export function Sidebar() {
     <motion.div
       animate={{ width: isCollapsed ? 72 : 260 }}
       transition={{ type: "spring", stiffness: 300, damping: 25 }}
-      className="relative flex flex-col h-screen border-r border-border/40 bg-card text-foreground select-none"
+      className="no-print relative flex flex-col h-screen border-r border-border/40 bg-card text-foreground select-none"
     >
       {/* Collapse button */}
       <button
