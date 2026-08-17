@@ -11,8 +11,8 @@ export function getAIClient() {
         apiKey: geminiKey,
         baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
       }),
-      modelMini: "gemini-2.5-flash",
-      modelPro: "gemini-2.5-pro",
+      modelMini: "gemini-3.6-flash",
+      modelPro: "gemini-3.6-flash",
       isConfigured: true
     };
   }

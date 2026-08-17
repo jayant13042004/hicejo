@@ -11,7 +11,9 @@ import {
   TrendingUp,
   RefreshCw,
   Search,
-  Upload
+  Upload,
+  Layers,
+  Target
 } from "lucide-react";
 import { DashboardShell } from "@/components/shared/DashboardShell";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -33,6 +35,7 @@ interface ScanResult {
 
 export default function CheckerPage() {
   const [resumes, setResumes] = React.useState<ResumeOption[]>([]);
+  const [scanMode, setScanMode] = React.useState<"general" | "targeted">("general");
   const [sourceType, setSourceType] = React.useState<"draft" | "text">("draft");
   const [selectedResumeId, setSelectedResumeId] = React.useState("");
   const [resumeText, setResumeText] = React.useState("");
@@ -49,11 +52,12 @@ export default function CheckerPage() {
       try {
         const res = await fetch("/api/resume");
         const result = await res.json();
-        if (result.success && result.data) {
+        if (result.success && result.data && result.data.length > 0) {
           setResumes(result.data);
-          if (result.data.length > 0) {
-            setSelectedResumeId(result.data[0].id);
-          }
+          setSelectedResumeId(result.data[0].id);
+        } else {
+          // If no drafts exist, default to text mode automatically
+          setSourceType("text");
         }
       } catch (err) {
         console.error(err);
@@ -89,8 +93,14 @@ export default function CheckerPage() {
 
   const handleScan = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (sourceType === "draft" && !selectedResumeId) return;
-    if (sourceType === "text" && !resumeText.trim()) return;
+    if (sourceType === "draft" && !selectedResumeId) {
+      setError("Please select a resume draft or paste your resume text.");
+      return;
+    }
+    if (sourceType === "text" && !resumeText.trim()) {
+      setError("Please paste or upload your resume text content.");
+      return;
+    }
 
     setIsScanning(true);
     setError(null);
@@ -102,9 +112,10 @@ export default function CheckerPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           resumeId: sourceType === "draft" ? selectedResumeId : undefined,
-          resumeText: sourceType === "text" ? resumeText : undefined,
-          jobTitle: jobTitle || "General Audit",
-          jobDescription: jobDescription || ""
+          resumeText: sourceType === "text" ? resumeText.trim() : undefined,
+          checkWithoutJd: scanMode === "general",
+          jobTitle: scanMode === "targeted" ? (jobTitle || "Target Role") : undefined,
+          jobDescription: scanMode === "targeted" ? (jobDescription || "") : undefined
         })
       });
       const result = await res.json();
@@ -135,7 +146,7 @@ export default function CheckerPage() {
         {/* Intro */}
         <div>
           <p className="text-muted-foreground text-sm">
-            Scan your resume against specific target postings to expose structural flaws and missing terminology, or run a general formatting audit.
+            Evaluate your resume for ATS compliance, structural integrity, and keywords. Run a general standard audit or compare directly with a target job description.
           </p>
         </div>
 
@@ -146,15 +157,48 @@ export default function CheckerPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Scan Configurator</CardTitle>
-                <CardDescription>Setup details to compare credentials.</CardDescription>
+                <CardDescription>Select audit mode and provide your resume details.</CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleScan} className="space-y-4">
+                <form onSubmit={handleScan} className="space-y-5">
                   {error && (
                     <div className="rounded-lg bg-destructive/15 p-3 text-sm text-destructive font-medium border border-destructive/20">
                       {error}
                     </div>
                   )}
+
+                  {/* Mode Selector Toggle */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Audit Mode
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 bg-muted/60 p-1 rounded-xl text-xs font-medium">
+                      <button
+                        type="button"
+                        onClick={() => setScanMode("general")}
+                        className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-center transition-all cursor-pointer ${
+                          scanMode === "general"
+                            ? "bg-card shadow-sm text-foreground font-bold border border-border/40"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <Layers className="h-3.5 w-3.5 text-primary" />
+                        <span>Check Without JD</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setScanMode("targeted")}
+                        className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-center transition-all cursor-pointer ${
+                          scanMode === "targeted"
+                            ? "bg-card shadow-sm text-foreground font-bold border border-border/40"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <Target className="h-3.5 w-3.5 text-violet-500" />
+                        <span>Targeted Job Match</span>
+                      </button>
+                    </div>
+                  </div>
 
                   {/* Input Source Toggle */}
                   <div className="space-y-2">
@@ -208,7 +252,7 @@ export default function CheckerPage() {
                       ) : (
                         <div className="text-xs text-muted-foreground py-2 px-1 flex items-center gap-2">
                           <FileText className="h-4 w-4" />
-                          <span>No resumes found. Create a draft in Builder first.</span>
+                          <span>No resumes found. Paste text or create a draft in Builder first.</span>
                         </div>
                       )}
                     </div>
@@ -230,7 +274,7 @@ export default function CheckerPage() {
                         </label>
                       </div>
                       <textarea
-                        rows={6}
+                        rows={7}
                         placeholder="Paste the raw text of your resume here..."
                         value={resumeText}
                         onChange={(e) => setResumeText(e.target.value)}
@@ -240,37 +284,47 @@ export default function CheckerPage() {
                     </div>
                   )}
 
-                  {/* Target Title Input */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Target Job Title (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Senior React Developer"
-                      value={jobTitle}
-                      onChange={(e) => setJobTitle(e.target.value)}
-                      className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    />
-                  </div>
+                  {/* Target Fields only if Targeted mode is active */}
+                  {scanMode === "targeted" ? (
+                    <div className="space-y-4 pt-2 border-t border-border/40">
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                          Target Job Title
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Senior React Developer"
+                          value={jobTitle}
+                          onChange={(e) => setJobTitle(e.target.value)}
+                          className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        />
+                      </div>
 
-                  {/* Target Description Input */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Target Job Posting Description (Optional)
-                    </label>
-                    <textarea
-                      rows={6}
-                      placeholder="Paste the raw description, responsibilities, and requirements here... (Leave empty for general audit)"
-                      value={jobDescription}
-                      onChange={(e) => setJobDescription(e.target.value)}
-                      className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-                    />
-                  </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                          Target Job Description
+                        </label>
+                        <textarea
+                          rows={5}
+                          placeholder="Paste the job requirements and responsibilities here..."
+                          value={jobDescription}
+                          onChange={(e) => setJobDescription(e.target.value)}
+                          className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground border border-border/40 flex items-start gap-2">
+                      <Layers className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                      <span>
+                        <strong>General Audit Mode:</strong> Audits standard ATS parseability, section headers, readability, action verbs, and quantified metrics without requiring a job posting.
+                      </span>
+                    </div>
+                  )}
 
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-primary to-violet-600 gap-2"
+                    className="w-full bg-gradient-to-r from-primary to-violet-600 gap-2 font-semibold"
                     isLoading={isScanning}
                     disabled={
                       (sourceType === "draft" && resumes.length === 0) ||
@@ -278,7 +332,7 @@ export default function CheckerPage() {
                     }
                   >
                     <Search className="h-4 w-4" />
-                    <span>{jobDescription.trim() ? "Analyze Match Compatibility" : "Run General ATS Audit"}</span>
+                    <span>{scanMode === "general" ? "Check ATS Score (No JD)" : "Analyze Match Against JD"}</span>
                   </Button>
                 </form>
               </CardContent>
@@ -298,9 +352,11 @@ export default function CheckerPage() {
                 >
                   <RefreshCw className="h-10 w-10 text-primary animate-spin" />
                   <div className="space-y-1">
-                    <p className="font-semibold text-foreground">Analyzing Match Metrics...</p>
+                    <p className="font-semibold text-foreground">
+                      {scanMode === "general" ? "Auditing ATS Compliance..." : "Analyzing Match Metrics..."}
+                    </p>
                     <p className="text-xs text-muted-foreground max-w-xs">
-                      Parsing credentials and scoring alignment gaps. Takes about 5 seconds.
+                      Gemini is evaluating structure, keywords, and narrative metrics. Takes about 3–5 seconds.
                     </p>
                   </div>
                 </motion.div>
@@ -314,9 +370,9 @@ export default function CheckerPage() {
                   className="flex flex-col items-center justify-center py-24 text-center border border-dashed border-border rounded-2xl bg-card/25"
                 >
                   <ShieldCheck className="h-12 w-12 text-muted-foreground/60 mb-4" />
-                  <p className="text-sm font-semibold text-muted-foreground">Results Display</p>
+                  <p className="text-sm font-semibold text-muted-foreground">Audit Results</p>
                   <p className="text-xs text-muted-foreground/80 mt-1 max-w-xs">
-                    Fill out the forms on the left and trigger analysis to review diagnostics.
+                    Choose an audit mode and click scan on the left to review your ATS grade and recommendations.
                   </p>
                 </motion.div>
               )}
@@ -360,7 +416,7 @@ export default function CheckerPage() {
                         <span className="absolute text-3xl font-extrabold">{scanResult.score}%</span>
                       </div>
                       <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-4">
-                        ATS Score Match
+                        {scanMode === "general" ? "General ATS Score" : "Job Match Score"}
                       </p>
                     </Card>
 
@@ -383,7 +439,7 @@ export default function CheckerPage() {
                       <Card className="p-4 space-y-2">
                         <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
                           <Sparkles className="h-4 w-4" />
-                          <span>Narrative critique</span>
+                          <span>Executive Feedback</span>
                         </div>
                         <p className="text-xs text-muted-foreground leading-relaxed">
                           {scanResult.narrativeCheck}
@@ -398,7 +454,7 @@ export default function CheckerPage() {
                     <Card>
                       <CardHeader className="py-4">
                         <CardTitle className="text-sm font-bold text-destructive uppercase tracking-wider">
-                          Missing Keywords
+                          {scanMode === "general" ? "Missing Key Elements" : "Missing Role Keywords"}
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="flex flex-wrap gap-1.5 pb-4">
@@ -411,7 +467,7 @@ export default function CheckerPage() {
                           </span>
                         ))}
                         {scanResult.missingKeywords.length === 0 && (
-                          <span className="text-xs text-muted-foreground">None identified. Perfect match!</span>
+                          <span className="text-xs text-muted-foreground">None identified. Excellent coverage!</span>
                         )}
                       </CardContent>
                     </Card>
@@ -420,7 +476,7 @@ export default function CheckerPage() {
                     <Card>
                       <CardHeader className="py-4">
                         <CardTitle className="text-sm font-bold text-emerald-500 uppercase tracking-wider">
-                          Matched Keywords
+                          {scanMode === "general" ? "Detected Strengths" : "Matched Keywords"}
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="flex flex-wrap gap-1.5 pb-4">
@@ -433,7 +489,7 @@ export default function CheckerPage() {
                           </span>
                         ))}
                         {scanResult.matchedKeywords.length === 0 && (
-                          <span className="text-xs text-muted-foreground">No matches found. Check formatting.</span>
+                          <span className="text-xs text-muted-foreground">No matches found.</span>
                         )}
                       </CardContent>
                     </Card>
