@@ -1,6 +1,6 @@
 # Project Master Plan: Hicejo (AI Career Platform)
 
-This document serves as the strategic blueprint for **Hicejo**, the operating system for getting hired. Hicejo is designed to transition users from the "I need a job" phase to the "I got hired" phase, supporting them with advanced AI utilities throughout their entire career journey.
+This document serves as the strategic blueprint and technical record for **Hicejo**, the operating system for getting hired. Hicejo is designed to transition users from the "I need a job" phase to the "I got hired" phase, supporting them with advanced AI utilities throughout their entire career journey.
 
 ---
 
@@ -17,150 +17,78 @@ Hicejo is the ultimate AI Career Platform. We are building the **operating syste
 
 ---
 
-## 2. Target Audience & User Personas
+## 2. Technical Architecture & Setup
 
-### Target Audience
-* **Active Job Seekers**: Professionals actively looking for a new role due to layoffs, career transitions, or career growth.
-* **New Graduates**: University students entering a highly competitive entry-level job market.
-* **Tech and Knowledge Workers**: Software engineers, product managers, designers, marketers, and analysts looking for high-paying roles.
+Hicejo is built using a modern, scalable web stack optimized for performance, SEO, and speed:
 
-### User Personas
-
-#### Persona A: Sarah Jenkins (The Mid-Career Transitioner)
-* **Age**: 32
-* **Current Role**: Marketing Specialist
-* **Target Role**: Product Marketing Manager (Tech Sector)
-* **Pain Points**: Resumes keep getting rejected by ATS. Struggles to translate traditional marketing metrics into tech product marketing terms. Hasn't interviewed in 5 years.
-* **Goal**: Transition to tech, optimize her resume for PMM keywords, track applications in one place, and gain confidence in system-design-like marketing case studies.
-
-#### Persona B: Marcus Chen (The New Graduate)
-* **Age**: 22
-* **Education**: B.S. in Computer Science
-* **Target Role**: Junior Software Engineer
-* **Pain Points**: Minimal professional experience besides internships. Competes with thousands of other grads. Does not know how to highlight academic projects effectively.
-* **Goal**: Build a strong, clean resume that passes tech screening, practice mock coding/system design reviews, and automate cover letters.
+* **Core Framework**: Next.js 16.3 (using App Router and Turbopack compiler)
+* **Styling**: Tailwind CSS (customized fluid typography scale from 12px to 16px with proportional relative `em` formatting, global Dark/Light theme mode).
+* **Database & Auth**: Supabase (utilizing SSR cookie clients, PostgreSQL schemas, and Row-Level Security).
+* **State Management**: Zustand (client-side state store featuring complete historical undo/redo push states).
+* **AI Completion Engine**: Unified client routing to Google AI Studio's **Gemini 2.5 Pro** (for deep reasoning, details importing) and **Gemini 2.5 Flash** (for low-latency tasks) via an OpenAI-compatibility gateway.
+* **Telemetry**: Integrated Google Analytics 4 and PostHog analytics providers with robust placeholder suppression.
 
 ---
 
-## 3. User Journeys
+## 3. Features Implemented Till Now
 
-### Journey 1: The Initial Onboarding and Resume Check (Sarah)
-1. **Discovery**: Sarah signs up on Hicejo via Google Auth.
-2. **Onboarding**: Hicejo asks Sarah about her target industry, role level, and links her LinkedIn.
-3. **Upload**: Sarah uploads her current PDF resume.
-4. **Roast & Score**: Hicejo performs a "Resume Roast," identifying formatting flaws, grammatical issues, and giving a quick ATS compatibility score.
-5. **Interactive Fixes**: Sarah edits her resume in the AI Resume Builder, accepting recommendations for better action verbs and quantified achievements.
-6. **Download**: Sarah downloads her optimized, modern PDF resume.
+### 1. Interactive AI Resume Builder
+* **Tabbed Configuration Sidebar**: Form tabs for Contact Info, Professional Summary, Work History, Education, Projects, Skills, and Design Settings.
+* **Drag-and-Drop Reordering**: Users can dynamically rearrange resume sections (e.g. moving Skills above Work History) and instantly see the output on screen.
+* **Proportional Relative Scales**: Choose between Small (12px), Medium (14px), and Large (16px) font systems. Section headings, line heights, and margins scale proportionally using relative `em` styles.
+* **Categorized Skills**: Add skills grouped by classification categories (e.g., Languages, Frameworks, Libraries).
+* **A4 Print Output**: Styled with CSS print media rules (`@page { margin: 0; }` with visual division overflow markers) for clean, watermarked-free PDF downloads.
 
-### Journey 2: High-Volume Tailored Applications (Marcus)
-1. **Targeting**: Marcus finds a Software Engineer role at Stripe.
-2. **Tailoring**: Marcus pastes the job description into Hicejo's Resume Tailor.
-3. **AI Review**: The AI identifies gaps in Marcus's CS resume compared to Stripe's requirements (e.g., REST API experience, system scalability).
-4. **Optimization**: With one click, Hicejo rewrites bullet points from his CS projects to highlight Stripe's requested skills, generating a tailored PDF and matching Cover Letter.
-5. **Tracking**: The application is automatically logged into the Saved Resumes list.
+### 2. Multi-Format Document Parser
+* **Upload Extractor API**: A server route (`/api/parse-file`) utilizing `pdf-parse` (for PDF files) and `mammoth` (for DOCX Word files) to parse text entirely using code, avoiding AI costs for raw extraction.
+* **AI Schema Mapper**: Takes the parsed raw text and maps it into a structured builder-compliant JSON schema using Gemini.
+* **Universal Upload Inputs**: Available in the Builder Import modal and across all optimizer dashboards, letting users paste raw text or upload `.pdf`, `.docx`, or `.txt` files.
 
----
+### 3. ATS Resume Checker
+* **Contextual Audit**: Compares your resume against a target job description, scoring overall match percentage, readability metrics, and layout structures.
+* **General ATS Audit**: If the target job posting is left blank, the scanner automatically shifts to audit general resume formatting (clichés, metric quantifications, formatting consistency).
+* **Keyword Matching**: Visual indicator lists displaying matched keywords (green) and missing keywords (red).
 
-## 4. Complete Feature List & Roadmap
+### 4. Resume Roast Room
+* **Terminal CLI Simulator**: Animated command line console interface showing mock audit compilation logs in developer-style themes.
+* **Roast & Remedy Cards**: Split cards containing sarcastic critiques (The Roast) paired with direct instructions on how to rewrite them (The Remedy).
 
-### MVP Features (Phase 1 to Phase 7)
-1. **Authentication**: Supabase Auth (Email/Password & Social OAuth logins).
-2. **Dashboard**: Centralized hub showing application status, score history, quick actions, and premium alerts.
-3. **Profile Manager**: Core user data, career goals, target titles, target salaries, and target industries.
-4. **AI Resume Builder**: Rich editor with automated bullet points generator, structural validation, and formatting tools.
-5. **ATS Resume Checker**: Detailed parser scoring keyword match, readability, formatting, and structural issues.
-6. **Resume Tailor**: Paste target job description to match skills, adapt bullet points, and measure alignment.
-7. **Cover Letter Generator**: High-converting, tailored cover letters matching the user's resume and job description.
-8. **Resume Roast**: Playful yet highly critical, actionable review of the user's resume, highlighting styling and narrative issues.
-9. **Saved Resumes & Profile History**: Cloud storage of custom drafts, previous roasts, and generated cover letters.
-10. **Resume Download**: High-fidelity PDF generation matching clean design principles (single-page or multi-page formats).
+### 5. Resume Tailor
+* **AI Rewrites**: Automatically rephrases professional summaries and work experience achievements to match target job descriptions.
+* **Comparison Diff Cards**: Shows original bullet points side-by-side with the tailored suggestions for review before applying.
 
-### Future Features (Phase 10+)
-1. **Interview Copilot**: Voice-to-text interactive AI interviewer tailored to specific companies (e.g., Google SWE, Stripe PM) with audio feedback.
-2. **Automated Job Tracker**: Kanban board visualizing stages (Applied, Interviewing, Offered, Rejected) with automatic reminder emails.
-3. **LinkedIn Profile Optimizer**: AI-driven profile checker suggesting headline, about, and experience rewrites to maximize recruiter search hits.
-4. **Career Coach AI**: 24/7 chat advisor answering salary negotiation queries, career pivots, and skill paths.
-5. **Dynamic Portfolio Builder**: Convert resume details into a hosted, responsive portfolio site.
-6. **Recruiter & Team Dashboard**: Multi-user portal allowing recruiters to analyze applicant compatibility scores directly.
+### 6. Cover Letter Generator
+* **Tailored Compilations**: Creates structured business-standard cover letters matching your resume details to a job posting.
+* **Export Actions**: Quick triggers to print to PDF or copy the generated letter to the clipboard.
+
+### 7. Google OAuth & Email Sign-In
+* **Dual Auth Providers**: Supports signups/logins via email/password or Google OAuth credentials.
+* **Auth Callback Route**: Server-side routing at `/auth/callback` to securely manage token exchanges and session cookie headers.
 
 ---
 
-## 5. Product Roadmap
+## 4. Upcoming Features & Roadmap
 
-```mermaid
-gantt
-    title Hicejo Product Roadmap
-    dateFormat  YYYY-MM-DD
-    section MVP
-    Phase 1 - Design & Core Setup :active, p1, 2026-08-08, 10d
-    Phase 2 - AI Resume Builder   : p2, after p1, 14d
-    Phase 3 & 4 - ATS & Tailor    : p3, after p2, 10d
-    Phase 5 & 6 - Cover Letter & Roast : p4, after p3, 7d
-    Phase 7 - Profiles & History  : p5, after p4, 7d
-    section Launch Preparation
-    Phase 8 - Analytics, SEO & Performance : p6, after p5, 7d
-    Phase 9 - UI Polish & Deployment : p7, after p6, 7d
-    section Post-Launch
-    Future Features - Interview Prep & Tracking : p8, after p7, 30d
-```
+### Phase 10: AI Voice Interview Copilot
+* **Interactive Mocking**: Real-time audio/voice mock interviews where the AI acts as a technical or behavioral interviewer.
+* **Custom Scenarios**: Mocking interview styles for specific target companies (e.g., Google coding, Stripe system design, Amazon leadership principles).
+* **Feedback Engine**: Evaluates responses for confidence, keyword integration, and structure, giving a full feedback scorecard.
+
+### Phase 11: Kanban Job Tracker Board
+* **Visual Pipeline**: Columns representing stages (Applied, Interviewing, Offer Received, Rejected, Archived).
+* **Auto-reminders**: Email reminders for interview prep, application follow-ups, and negotiation windows.
+
+### Phase 12: LinkedIn Profile Optimizer
+* **Profile Grader**: Checks LinkedIn profile exports against target job roles.
+* **Headline & About Wizard**: Suggests SEO-friendly headline revisions to maximize search appearances on LinkedIn Recruiter.
 
 ---
 
-## 6. Business Model, Pricing, & Monetization
+## 5. Deployment & Launch Strategy
 
-### Business Model
-Freemium SaaS targeting B2C job seekers, moving to a B2B model (partnerships with bootcamps, universities, and outplacement agencies).
-
-### Pricing Strategy
-* **Free Tier ($0/month)**:
-  * 1 Resume Draft.
-  * 3 AI ATS Checks.
-  * 1 Tailored Resume / Cover Letter generation.
-  * Standard PDF download.
-* **Pro Tier ($19/month or $99/year)**:
-  * Unlimited Resumes & Cover Letters.
-  * Unlimited ATS checks and deep tailoring.
-  * Unlimited Resume Roasts.
-  * Premium templates and custom PDF exports.
-  * Early access to Interview Copilot.
-* **Lifetime/Launch Tier ($149 one-time)**:
-  * Offered during Product Hunt launch window for initial cash infusion and early evangelist building.
-
----
-
-## 7. Marketing, Launch, & SEO Strategy
-
-### SEO Strategy
-* **Programmatic SEO**: Automatically generate landing pages targeting long-tail keywords (e.g., `optimize-resume-for-[company]-software-engineer` or `how-to-write-resume-for-[industry]`).
-* **Tool-Led Growth**: Embed a free "Instant Resume Grader" widget on high-traffic pages to capture email leads.
-* **Blog / Content Strategy**: High-quality editorial guides on career pivots, job-hunting hacks, and salary negotiation tactics.
-
-### Launch Strategy
-* **Launch Week Matrix**:
-  * **Product Hunt**: Target Tuesday launch. Engage high-influence hunters. Offer a discounted Lifetime deal.
-  * **Reddit Launch**: Run value-first threads on r/jobs, r/cscareerquestions, and r/resumes showing how to fix resumes using AI, linking to the tool.
-  * **LinkedIn Strategy**: Launch a narrative-driven founder sequence focusing on the "broken ATS" model and recruitment automation. Use interactive polls and custom infographics.
-
----
-
-## 8. Analytics & Success Metrics
-
-### Analytics Infrastructure
-* **Google Analytics 4**: Page views, geographic segmentation, traffic attribution, and blog performance.
-* **PostHog**: User behavior analytics, session recordings, heatmaps, and funnel tracking (e.g., Signup -> Resume Upload -> PDF Download).
-
-### Success Metrics
-* **North Star Metric**: Resume Export Rate (percentage of signups who successfully customize and download a resume).
-* **Key Performance Indicators (KPIs)**:
-  * Monthly Recurring Revenue (MRR)
-  * LTV:CAC Ratio (Customer Lifetime Value to Acquisition Cost)
-  * Day 7 and Day 30 User Retention
-  * Average ATS score improvement after tailoring
-
----
-
-## 9. Future Scaling Plan
-
-1. **Infrastructure**: Migrate to serverless databases and edge functions (Vercel Edge, Supabase connection pooling) to handle flash traffic from launches.
-2. **Security**: Achieve SOC 2 compliance to prepare for university and enterprise partnerships.
-3. **Custom LLM Fine-Tuning**: Move from generic OpenAI APIs to fine-tuned open-source models (e.g., Llama-3-70B fine-tuned on top-tier resumes) to reduce API costs by up to 60% and improve response speed.
+* **Local Sandbox Mode**: Enabled by default when database keys are missing. Loads mockup database values from `mock-db.json` so developers can test all features without configuration.
+* **Production Build Checklist**:
+  1. Add Supabase project credentials (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) to `.env.local`.
+  2. Set up Google Client ID and Secret values in Supabase Google Provider settings.
+  3. Add `GEMINI_API_KEY` to connect all features to Google AI Studio.
+  4. Ensure your redirect URLs in Supabase are updated to point to the production server.
