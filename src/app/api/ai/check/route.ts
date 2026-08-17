@@ -158,7 +158,8 @@ Target Job Description: ${jobDescription}`;
         { role: "user", content: userPrompt }
       ],
       response_format: { type: "json_object" },
-      temperature: 0.2
+      temperature: 0.1,
+      max_tokens: 800
     });
 
     const rawContent = chatResponse.choices[0]?.message?.content?.trim();

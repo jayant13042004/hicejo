@@ -117,7 +117,8 @@ Resume Content: ${typeof resumeContent === "string" ? resumeContent : JSON.strin
         { role: "user", content: userPrompt }
       ],
       response_format: { type: "json_object" },
-      temperature: 0.8
+      temperature: 0.7,
+      max_tokens: 1000
     });
 
     const rawContent = chatResponse.choices[0]?.message?.content?.trim();
