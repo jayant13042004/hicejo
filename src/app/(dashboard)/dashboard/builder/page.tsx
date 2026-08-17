@@ -25,7 +25,8 @@ import {
   RefreshCw,
   Scissors,
   Check,
-  FileCheck
+  FileCheck,
+  LayoutTemplate
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,8 @@ import { useResumeStore } from "@/store/useResumeStore";
 import { Skill } from "@/types/resume";
 import { DensityController } from "@/components/builder/DensityController";
 import { SmartBulletCompressorModal } from "@/components/builder/SmartBulletCompressorModal";
+import { StarterTemplatesModal } from "@/components/builder/StarterTemplatesModal";
+import { StarterTemplate } from "@/data/starterTemplates";
 
 // 5 Curated ATS Typography Styles
 const fontClassMap: Record<string, string> = {
@@ -102,6 +105,9 @@ function ResumeBuilderContent() {
   const [isDownloadModalOpen, setIsDownloadModalOpen] = React.useState(false);
   const [downloadFileName, setDownloadFileName] = React.useState("");
   const [isDownloadingPDF, setIsDownloadingPDF] = React.useState(false);
+
+  // Starter Templates Modal state
+  const [isTemplatesModalOpen, setIsTemplatesModalOpen] = React.useState(false);
 
   // Import Modal states
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false);
@@ -428,6 +434,16 @@ function ResumeBuilderContent() {
               <RotateCw className="h-4 w-4" />
             </button>
           </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsTemplatesModalOpen(true)}
+            className="gap-1.5 text-xs font-semibold border-primary/30 hover:border-primary text-foreground"
+          >
+            <LayoutTemplate className="h-3.5 w-3.5 text-primary" />
+            <span>Templates</span>
+          </Button>
 
           <Button
             variant="outline"
@@ -1555,6 +1571,16 @@ function ResumeBuilderContent() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Starter Templates Modal */}
+      <StarterTemplatesModal
+        isOpen={isTemplatesModalOpen}
+        onClose={() => setIsTemplatesModalOpen(false)}
+        onSelectTemplate={(tmpl) => {
+          importResumeData(tmpl.data);
+          setTitle(`${tmpl.role} Resume`);
+        }}
+      />
     </div>
   );
 }

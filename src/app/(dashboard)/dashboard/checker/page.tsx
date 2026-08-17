@@ -18,6 +18,7 @@ import {
 import { DashboardShell } from "@/components/shared/DashboardShell";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { consumeCredit } from "@/lib/credits";
 
 interface ResumeOption {
   id: string;
@@ -122,6 +123,7 @@ export default function CheckerPage() {
 
       if (result.success && result.data) {
         setScanResult(result.data);
+        consumeCredit("ats_check");
       } else {
         setError(result.error || "Failed to scan resume.");
       }
@@ -141,7 +143,7 @@ export default function CheckerPage() {
     : circumference;
 
   return (
-    <DashboardShell title="Resume ATS Score Checker">
+    <DashboardShell title="Resume ATS Score Checker" featureKey="ats_check">
       <div className="space-y-8">
         {/* Intro */}
         <div>

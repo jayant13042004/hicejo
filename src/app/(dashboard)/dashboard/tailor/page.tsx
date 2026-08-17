@@ -19,6 +19,7 @@ import {
 import { DashboardShell } from "@/components/shared/DashboardShell";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { consumeCredit } from "@/lib/credits";
 
 interface ResumeOption {
   id: string;
@@ -169,6 +170,7 @@ export default function TailorPage() {
 
       if (result.success && result.data) {
         setTailorResult(result.data);
+        consumeCredit("tailor");
       } else {
         setError(result.error || "Failed to tailor resume. Please try again.");
       }
@@ -180,7 +182,7 @@ export default function TailorPage() {
   };
 
   return (
-    <DashboardShell title="Resume Tailor">
+    <DashboardShell title="Resume Tailor" featureKey="tailor">
       <div className="space-y-8">
         <div>
           <p className="text-muted-foreground text-sm">

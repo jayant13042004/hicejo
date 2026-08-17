@@ -18,6 +18,7 @@ import {
 import { DashboardShell } from "@/components/shared/DashboardShell";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { consumeCredit } from "@/lib/credits";
 
 interface ResumeOption {
   id: string;
@@ -172,6 +173,7 @@ export default function RoastPage() {
           "[SUCCESS] Critique package retrieved. Compiling burn report."
         ]);
         setRoastResult(result.data);
+        consumeCredit("roast");
       } else {
         setError(result.error || "Failed to roast resume. Please try again.");
       }
@@ -183,7 +185,7 @@ export default function RoastPage() {
   };
 
   return (
-    <DashboardShell title="Resume Roast Room">
+    <DashboardShell title="Resume Roast Room" featureKey="roast">
       <div className="space-y-8">
         {/* Intro Header */}
         <div>

@@ -23,8 +23,10 @@ export function Navbar({ userSession }: NavbarProps) {
   }
 
   const menuItems = [
-    { label: "Features", href: "#features" },
-    { label: "Pricing", href: "#pricing" },
+    { label: "ATS Checker", href: "/tools/ats-resume-checker" },
+    { label: "Resume Roast", href: "/tools/resume-roast" },
+    { label: "Resume Tailor", href: "/tools/resume-tailor" },
+    { label: "Templates", href: "/templates/software-engineer-resume" },
     { label: "Blog", href: "/blog" },
   ];
 

@@ -21,6 +21,7 @@ import {
 import { DashboardShell } from "@/components/shared/DashboardShell";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { consumeCredit } from "@/lib/credits";
 
 interface ResumeOption {
   id: string;
@@ -160,6 +161,7 @@ export default function CoverLetterPage() {
 
       if (result.success && result.data?.content) {
         setLetterContent(result.data.content);
+        consumeCredit("cover_letter");
       } else {
         setError(result.error || "Failed to generate cover letter.");
       }

@@ -4,13 +4,16 @@ import * as React from "react";
 import { Bell, Sun, Moon } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { useTheme } from "@/components/shared/ThemeProvider";
+import { CreditPill } from "@/components/shared/CreditPill";
+import { FeatureKey } from "@/lib/credits";
 
 interface DashboardShellProps {
   children: React.ReactNode;
   title?: string;
+  featureKey?: FeatureKey;
 }
 
-export function DashboardShell({ children, title = "Overview" }: DashboardShellProps) {
+export function DashboardShell({ children, title = "Overview", featureKey }: DashboardShellProps) {
   const { theme, toggleTheme } = useTheme();
 
   return (
@@ -25,7 +28,9 @@ export function DashboardShell({ children, title = "Overview" }: DashboardShellP
           <div className="flex items-center gap-4">
             <h1 className="text-xl font-bold tracking-tight">{title}</h1>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Daily Credit Pill */}
+            <CreditPill currentFeature={featureKey} />
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
