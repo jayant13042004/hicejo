@@ -44,7 +44,7 @@ export function FitIndicatorBar({
             >
               <AlertTriangle className="h-3.5 w-3.5 shrink-0 animate-pulse" />
               <span>
-                ⚠ {fitAnalysis.overflowLines} {fitAnalysis.overflowLines === 1 ? "LINE" : "LINES"} OVERFLOWING ({fitAnalysis.overflowPercentage}% OVERFLOW)
+                ⚠ {fitAnalysis.overflowLines} {fitAnalysis.overflowLines === 1 ? "LINE" : "LINES"} OVERFLOWING
               </span>
             </motion.div>
           ) : isPerfect ? (

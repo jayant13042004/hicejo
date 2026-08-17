@@ -56,10 +56,11 @@ export function FitAnalysisDrawer({
 
   return (
     <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: "auto" }}
-      exit={{ opacity: 0, height: 0 }}
-      className="overflow-hidden border border-border/70 rounded-2xl bg-card p-5 space-y-5 shadow-xs"
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -6 }}
+      transition={{ duration: 0.2 }}
+      className="w-full my-2 border border-border/70 rounded-2xl bg-card p-5 space-y-5 shadow-sm shrink-0"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">

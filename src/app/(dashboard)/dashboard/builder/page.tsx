@@ -104,6 +104,7 @@ function ResumeBuilderContent() {
 
   // Fit Analysis and Auto-Optimizer states
   const resumeDocumentRef = React.useRef<HTMLDivElement | null>(null);
+  const resumeContentRef = React.useRef<HTMLDivElement | null>(null);
   const [fitAnalysis, setFitAnalysis] = React.useState<FitAnalysis>({
     status: "fits",
     pageCount: 1,
@@ -111,7 +112,7 @@ function ResumeBuilderContent() {
     overflowLines: 0,
     overflowPercentage: 0,
     contentHeightPx: 800,
-    targetPageHeightPx: 1040,
+    targetPageHeightPx: 1020,
     readabilityGrade: "Excellent",
     atsSafetyGrade: "Excellent",
     contentDensity: "Optimal"
@@ -173,21 +174,23 @@ function ResumeBuilderContent() {
   // Real-time A4 DOM Height & Fit Calculation
   React.useEffect(() => {
     const calculateFit = () => {
-      if (!resumeDocumentRef.current) return;
-      const el = resumeDocumentRef.current;
-      const contentHeightPx = el.scrollHeight;
-      // Target single A4 available content height in pixels (297mm approx 1122.5px minus margins)
-      const targetPageHeightPx = 1040;
+      if (!resumeContentRef.current) return;
+      const contentEl = resumeContentRef.current;
+      const contentHeightPx = contentEl.scrollHeight || contentEl.offsetHeight;
+
+      // Available printable content height for 1 A4 page:
+      // Total A4 height (297mm ≈ 1122.5px) minus top/bottom padding (12mm + 15mm = 27mm ≈ 102px) = ~1020px.
+      const availablePageContentHeightPx = 1020;
       
-      const utilization = Math.min(200, Math.round((contentHeightPx / targetPageHeightPx) * 100));
-      const isOverflowing = contentHeightPx > targetPageHeightPx + 4;
-      const overflowLines = isOverflowing ? Math.max(1, Math.round((contentHeightPx - targetPageHeightPx) / 19)) : 0;
-      const overflowPercentage = isOverflowing ? Math.max(1, Math.round(((contentHeightPx - targetPageHeightPx) / targetPageHeightPx) * 100)) : 0;
+      const isOverflowing = contentHeightPx > availablePageContentHeightPx + 4;
+      const utilization = Math.min(100, Math.max(10, Math.round((contentHeightPx / availablePageContentHeightPx) * 100)));
+      const overflowLines = isOverflowing ? Math.max(1, Math.ceil((contentHeightPx - availablePageContentHeightPx) / 20)) : 0;
+      const overflowPercentage = isOverflowing ? Math.max(1, Math.round(((contentHeightPx - availablePageContentHeightPx) / availablePageContentHeightPx) * 100)) : 0;
 
       let status: FitAnalysis["status"] = "fits";
       if (isOverflowing) status = "overflowing";
       else if (utilization < 75) status = "underutilized";
-      else if (utilization >= 85 && utilization <= 99) status = "perfect";
+      else if (utilization >= 75 && utilization <= 99) status = "perfect";
 
       const currentDensity = data.design?.density || "normal";
       const currentFontSize = data.design?.fontSize || "md";
@@ -209,7 +212,7 @@ function ResumeBuilderContent() {
         overflowLines,
         overflowPercentage,
         contentHeightPx,
-        targetPageHeightPx,
+        targetPageHeightPx: availablePageContentHeightPx,
         readabilityGrade,
         atsSafetyGrade: "Excellent",
         contentDensity,
@@ -219,8 +222,8 @@ function ResumeBuilderContent() {
 
     calculateFit();
     const observer = new ResizeObserver(calculateFit);
-    if (resumeDocumentRef.current) {
-      observer.observe(resumeDocumentRef.current);
+    if (resumeContentRef.current) {
+      observer.observe(resumeContentRef.current);
     }
     return () => observer.disconnect();
   }, [data]);
@@ -1057,14 +1060,16 @@ function ResumeBuilderContent() {
                   </div>
                 </div>
 
-                {/* Personal Details Header (Always at Top) */}
-                <div
-                  className="text-center border-b border-zinc-200 shrink-0"
-                  style={{
-                    paddingBottom: `${10 * sectionSpacingMultiplier}px`,
-                    marginBottom: `${12 * sectionSpacingMultiplier}px`
-                  }}
-                >
+                {/* Inner Content Measurer (Without min-height constraint) */}
+                <div ref={resumeContentRef} className="flex flex-col w-full flex-1">
+                  {/* Personal Details Header (Always at Top) */}
+                  <div
+                    className="text-center border-b border-zinc-200 shrink-0"
+                    style={{
+                      paddingBottom: `${10 * sectionSpacingMultiplier}px`,
+                      marginBottom: `${12 * sectionSpacingMultiplier}px`
+                    }}
+                  >
                   <h2 className="text-2xl font-extrabold tracking-tight uppercase text-zinc-950">
                     {data.personalInfo.fullName || "Your Full Name"}
                   </h2>
@@ -1221,6 +1226,7 @@ function ResumeBuilderContent() {
                 </div>
               </div>
             </div>
+          </div>
           </div>
         </div>
       </div>
