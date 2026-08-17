@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  ArrowLeft,
   UserRound,
   FileText,
   Briefcase,
@@ -359,7 +361,16 @@ function ResumeBuilderContent() {
     <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground">
       {/* Top Action Header */}
       <header className="h-16 border-b border-border/40 bg-card px-6 flex items-center justify-between shrink-0 no-print">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg border border-border/60 bg-muted/40 hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-xs"
+            title="Back to Dashboard"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Dashboard</span>
+          </Link>
+          <div className="h-5 w-[1px] bg-border/60 mx-1" />
           <input
             type="text"
             value={title}
