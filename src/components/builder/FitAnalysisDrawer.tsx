@@ -11,15 +11,13 @@ interface FitAnalysisDrawerProps {
   fitAnalysis: FitAnalysis;
   resumeData: ResumeData;
   onOpenCompressor: (bulletText: string, itemId: string, itemType: "experience" | "projects") => void;
-  onAutoOptimize: () => void;
 }
 
 export function FitAnalysisDrawer({
   isOpen,
   fitAnalysis,
   resumeData,
-  onOpenCompressor,
-  onAutoOptimize
+  onOpenCompressor
 }: FitAnalysisDrawerProps) {
   if (!isOpen) return null;
 
@@ -67,16 +65,6 @@ export function FitAnalysisDrawer({
           <Sparkles className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-bold tracking-tight">One-Page Fit & Readability Audit</h3>
         </div>
-        {isOverflowing && (
-          <Button
-            size="sm"
-            onClick={onAutoOptimize}
-            className="bg-gradient-to-r from-primary to-violet-600 text-xs h-7.5 px-3 gap-1.5"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Optimize Automatically</span>
-          </Button>
-        )}
       </div>
 
       {/* Grid of Key Diagnostic Metrics */}

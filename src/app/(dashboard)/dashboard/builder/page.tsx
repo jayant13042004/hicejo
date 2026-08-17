@@ -1026,7 +1026,6 @@ function ResumeBuilderContent() {
               itemId,
               itemType
             })}
-            onAutoOptimize={handleFixToOnePage}
           />
 
           {/* A4 Canvas Container with Scaled Visuals */}
