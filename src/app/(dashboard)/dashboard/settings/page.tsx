@@ -196,7 +196,7 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     label="Full Name"
-                    placeholder="Sarah Jenkins"
+                    placeholder="Your Full Name"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     required

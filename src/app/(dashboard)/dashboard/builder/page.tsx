@@ -415,37 +415,37 @@ function ResumeBuilderContent() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     label="Full Name"
-                    placeholder="Sarah Jenkins"
+                    placeholder="Your Full Name"
                     value={data.personalInfo.fullName}
                     onChange={(e) => updatePersonalInfo({ fullName: e.target.value })}
                   />
                   <Input
                     label="Email Address"
-                    placeholder="sarah@example.com"
+                    placeholder="you@example.com"
                     value={data.personalInfo.email}
                     onChange={(e) => updatePersonalInfo({ email: e.target.value })}
                   />
                   <Input
                     label="Phone Number"
-                    placeholder="(555) 019-2834"
+                    placeholder="(555) 123-4567"
                     value={data.personalInfo.phone}
                     onChange={(e) => updatePersonalInfo({ phone: e.target.value })}
                   />
                   <Input
                     label="Location (City, State)"
-                    placeholder="Chicago, IL"
+                    placeholder="City, State"
                     value={data.personalInfo.location}
                     onChange={(e) => updatePersonalInfo({ location: e.target.value })}
                   />
                   <Input
                     label="Personal Website Portfolio"
-                    placeholder="https://jenkins.dev"
+                    placeholder="https://yourportfolio.com"
                     value={data.personalInfo.website}
                     onChange={(e) => updatePersonalInfo({ website: e.target.value })}
                   />
                   <Input
                     label="LinkedIn Profile Link"
-                    placeholder="https://linkedin.com/in/sarahj"
+                    placeholder="https://linkedin.com/in/yourusername"
                     value={data.personalInfo.linkedin}
                     onChange={(e) => updatePersonalInfo({ linkedin: e.target.value })}
                   />
