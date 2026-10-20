@@ -474,16 +474,21 @@ export default function CoverLetterPage() {
 
                   {/* Target Job Description */}
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Job Description / Requirements
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        Job Description & Core Requirements
+                      </label>
+                      <span className="text-[10px] text-muted-foreground font-mono">
+                        {jobDescription.length > 0 ? `${jobDescription.length.toLocaleString()} chars • Complete JD` : "Paste full JD"}
+                      </span>
+                    </div>
                     <textarea
-                      rows={5}
-                      placeholder="Paste key responsibilities and qualifications from the job posting..."
+                      rows={6}
+                      placeholder="Paste the full job description (including overview, responsibilities, and qualifications)..."
                       value={jobDescription}
                       onChange={(e) => setJobDescription(e.target.value)}
                       required
-                      className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-xs placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none leading-relaxed"
+                      className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-xs placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y leading-relaxed min-h-[120px] font-sans"
                     />
                   </div>
 

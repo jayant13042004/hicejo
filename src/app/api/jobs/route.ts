@@ -117,8 +117,18 @@ async function fetchLiveRemotiveJobs(): Promise<JobListing[]> {
 
     const transformed: JobListing[] = json.jobs.map((j: any) => {
       const cleanDesc = (j.description || "")
-        .replace(/<[^>]*>?/gm, " ")
-        .replace(/\s+/g, " ")
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<\/(?:p|div|h[1-6]|tr)>/gi, "\n\n")
+        .replace(/<li[^>]*>/gi, "\n• ")
+        .replace(/<\/li>/gi, "")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&nbsp;/g, " ")
+        .replace(/<[^>]*>?/gm, "")
+        .replace(/\n\s*\n\s*\n/g, "\n\n")
         .trim();
 
       const lowerTitle = (j.title || "").toLowerCase();
@@ -143,7 +153,7 @@ async function fetchLiveRemotiveJobs(): Promise<JobListing[]> {
         maxSalary: expLevel === "senior" ? 210000 : expLevel === "entry" ? 115000 : 160000,
         currency: "USD",
         salaryPeriod: "yearly",
-        description: cleanDesc.slice(0, 900) + "...",
+        description: cleanDesc || `Remote role at ${j.company_name || "Tech Company"} for ${j.title}.`,
         descriptionHtml: j.description,
         requiredSkills: (j.tags && Array.isArray(j.tags) && j.tags.length > 0)
           ? j.tags.slice(0, 6)

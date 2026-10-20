@@ -7,7 +7,7 @@ export async function POST(request: Request) {
 
     const cleanRole = String(role).slice(0, 100);
     const cleanCompany = String(company).slice(0, 100);
-    const cleanJd = String(jobDescription).slice(0, 2000);
+    const cleanJd = String(jobDescription).slice(0, 15000);
 
     const { openai, modelMini, isConfigured } = getAIClient();
 

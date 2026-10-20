@@ -378,14 +378,14 @@ Return only raw JSON without markdown code fences.`;
       ? `Target Company: ${company || "Target Company"}
 Target Job Title: ${jobTitle || "Specified Target Role"}
 Target Job Description:
-${(jobDescription || "").slice(0, 3000)}
+${(jobDescription || "").slice(0, 15000)}
 
 Candidate Resume Title: ${resumeTitle}
 Candidate Resume Content:
-${(formattedResumeText || "Empty resume").slice(0, 4500)}`
+${(formattedResumeText || "Empty resume").slice(0, 15000)}`
       : `Candidate Resume Title: ${resumeTitle}
 Candidate Resume Content:
-${(formattedResumeText || "Empty resume").slice(0, 4500)}`;
+${(formattedResumeText || "Empty resume").slice(0, 15000)}`;
 
     const chatResponse = await openai.chat.completions.create({
       model: modelFast,

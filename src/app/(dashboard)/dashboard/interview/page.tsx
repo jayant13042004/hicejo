@@ -1603,14 +1603,16 @@ ${evaluationResult.areasForImprovement.map((a) => `• ${a}`).join("\n")}
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <label className="text-xs font-bold text-foreground">Job Description (JD)</label>
-                        <span className="text-[10px] text-muted-foreground">Optional</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          {jdInput.length > 0 ? `${jdInput.length.toLocaleString()} characters` : "Optional"}
+                        </span>
                       </div>
                       <textarea
-                        rows={5}
+                        rows={6}
                         placeholder="Paste the job description or role requirements here to tailor questions..."
                         value={jdInput}
                         onChange={(e) => setJdInput(e.target.value)}
-                        className="w-full rounded-xl border border-border bg-transparent p-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 leading-relaxed font-sans resize-none"
+                        className="w-full rounded-xl border border-border bg-transparent p-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 leading-relaxed font-sans resize-y min-h-[110px]"
                       />
                     </div>
                   </div>

@@ -63,13 +63,18 @@ export default function TailorPage() {
   const [error, setError] = React.useState<string | null>(null);
 
   // Prefill target position from active application context if available
+  const contextAppliedRef = React.useRef<string | null>(null);
   React.useEffect(() => {
-    if (activeJobContext && !company && !jobTitle && !jobDescription) {
-      if (activeJobContext.company) setCompany(activeJobContext.company);
-      if (activeJobContext.jobTitle) setJobTitle(activeJobContext.jobTitle);
-      if (activeJobContext.jobDescription) setJobDescription(activeJobContext.jobDescription);
+    if (activeJobContext?.jobTitle || activeJobContext?.company || activeJobContext?.jobDescription) {
+      const signature = `${activeJobContext.company || ""}|${activeJobContext.jobTitle || ""}|${(activeJobContext.jobDescription || "").slice(0, 50)}|${activeJobContext.lastUpdated || ""}`;
+      if (contextAppliedRef.current !== signature) {
+        contextAppliedRef.current = signature;
+        if (activeJobContext.company) setCompany(activeJobContext.company);
+        if (activeJobContext.jobTitle) setJobTitle(activeJobContext.jobTitle);
+        if (activeJobContext.jobDescription) setJobDescription(activeJobContext.jobDescription);
+      }
     }
-  }, [activeJobContext, company, jobTitle, jobDescription]);
+  }, [activeJobContext]);
 
   const handleOpenInBuilder = () => {
     if (!tailorResult) return;
@@ -366,17 +371,27 @@ export default function TailorPage() {
 
                   {/* Job Description */}
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Target Job Description / Keywords
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        Target Job Description & Core Requirements
+                      </label>
+                      <span className="text-[10px] text-muted-foreground font-mono">
+                        {jobDescription.length > 0
+                          ? `${jobDescription.length.toLocaleString()} chars • Complete JD`
+                          : "Paste full JD for max keyword match"}
+                      </span>
+                    </div>
                     <textarea
-                      rows={5}
-                      placeholder="Paste the job description or specific technical requirements..."
+                      rows={8}
+                      placeholder="Paste the complete job description (including overview, responsibilities, technical qualifications, and team details)..."
                       value={jobDescription}
                       onChange={(e) => setJobDescription(e.target.value)}
                       required
-                      className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-xs placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none leading-relaxed"
+                      className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-xs placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y leading-relaxed min-h-[140px] font-sans"
                     />
+                    <p className="text-[11px] text-muted-foreground">
+                      Our tailoring engine matches all keywords and system constraints from the full JD into your bullets and skills.
+                    </p>
                   </div>
 
                   <Button

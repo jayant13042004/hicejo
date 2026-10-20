@@ -105,8 +105,8 @@ export async function POST(request: Request) {
     const cleanRole = String(role).slice(0, 100).trim() || "Software Engineer";
     const cleanCompany = String(company || "").slice(0, 100).trim();
     const cleanSkill = String(skill).slice(0, 100).trim();
-    const cleanJd = String(jobDescription).slice(0, 4000).trim();
-    const cleanResume = String(resumeText).slice(0, 2500).trim();
+    const cleanJd = String(jobDescription).slice(0, 15000).trim();
+    const cleanResume = String(resumeText).slice(0, 10000).trim();
     const cleanRoundType = String(roundType || "full_loop").trim();
     const cleanCustomFocus = String(customFocus || "").slice(0, 2000).trim();
     const cleanScratchpad = String(scratchpadCode || "").slice(0, 3000).trim();

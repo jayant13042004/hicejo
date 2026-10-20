@@ -34,8 +34,8 @@ export async function POST(request: Request) {
     cleanCompany = String(company).slice(0, 100).trim();
     const cleanSkill = String(skill).slice(0, 100).trim();
     const cleanLevel = String(experienceLevel).slice(0, 50).trim() || "Mid-Level";
-    cleanJd = String(jobDescription).slice(0, 4500).trim();
-    const cleanResume = String(resumeText).slice(0, 3000).trim();
+    cleanJd = String(jobDescription).slice(0, 15000).trim();
+    const cleanResume = String(resumeText).slice(0, 10000).trim();
     cleanRoundType = String(roundType || "full_loop").trim();
     const cleanCustomFocus = String(customFocus || "").slice(0, 2000).trim();
     const roleCategory = detectRoleCategory(cleanRole);

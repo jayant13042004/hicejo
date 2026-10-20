@@ -538,16 +538,21 @@ export default function CheckerPage() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                          Target Job Description (Required for 8-Pillar Match)
-                        </label>
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                            Target Job Description (Required for 8-Pillar Match)
+                          </label>
+                          <span className="text-[10px] text-muted-foreground font-mono">
+                            {jobDescription.length > 0 ? `${jobDescription.length.toLocaleString()} characters` : "Full JD recommended"}
+                          </span>
+                        </div>
                         <textarea
-                          rows={6}
+                          rows={7}
                           placeholder="Paste the target job description, responsibilities, and requirements here..."
                           value={jobDescription}
                           onChange={(e) => setJobDescription(e.target.value)}
                           required
-                          className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-xs placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none leading-relaxed"
+                          className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-xs placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-y leading-relaxed min-h-[120px] font-sans"
                         />
                       </div>
                     </div>

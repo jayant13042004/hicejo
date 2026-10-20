@@ -92,8 +92,18 @@ export async function POST(req: NextRequest) {
           if (jobData.hiringOrganization?.name) extractedCompany = jobData.hiringOrganization.name;
           if (jobData.description) {
             extractedDescription = jobData.description
-              .replace(/<[^>]*>?/gm, " ")
-              .replace(/\s+/g, " ")
+              .replace(/<br\s*\/?>/gi, "\n")
+              .replace(/<\/(?:p|div|h[1-6]|tr)>/gi, "\n\n")
+              .replace(/<li[^>]*>/gi, "\n• ")
+              .replace(/<\/li>/gi, "")
+              .replace(/&amp;/g, "&")
+              .replace(/&lt;/g, "<")
+              .replace(/&gt;/g, ">")
+              .replace(/&quot;/g, '"')
+              .replace(/&#39;/g, "'")
+              .replace(/&nbsp;/g, " ")
+              .replace(/<[^>]*>?/gm, "")
+              .replace(/\n\s*\n\s*\n/g, "\n\n")
               .trim();
           }
           if (jobData.jobLocation?.address?.addressLocality) {

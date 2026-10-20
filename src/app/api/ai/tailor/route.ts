@@ -148,9 +148,13 @@ CRITICAL ANTI-AI-SLOP & HUMAN WRITING RULES:
 5. SUMMARY SECTION RULES:
    - NO generic fluff: Do NOT say "Results-oriented, passionate professional with a proven track record of excellence."
    - Write a crisp, 2 to 3 sentence summary stating exact domain, primary expertise, and key focus matching the target job.
-6. PRESERVE FACTUAL INTEGRITY:
+6. EXHAUSTIVE JD KEYWORD & TECHNICAL COMPETENCY MATCHING:
+   - Thoroughly parse the ENTIRE Target Job Description (including Responsibilities, Technical Requirements, Team Architecture, and Nice-to-Haves).
+   - Defensibly map and integrate the job's high-value keywords, architectures, methodologies (e.g. CI/CD, telemetry, unit testing, agile, microservices, distributed systems), and domain tools into the candidate's bullets, skills, and summary.
+   - Maximize ATS match rate while ensuring every achievement reads natural, believable, and authentic.
+7. PRESERVE FACTUAL INTEGRITY:
    - Keep candidate contact info, company names, school names, degrees, and dates factual and unchanged.
-7. Generate valid UUID strings for 'id' fields in experience, education, projects, and skills.
+8. Generate valid UUID strings for 'id' fields in experience, education, projects, and skills.
 
 Respond in a STRICT, single JSON object matching this schema:
 {
@@ -216,12 +220,12 @@ Respond in a STRICT, single JSON object matching this schema:
 Return only raw JSON without markdown code fences.`;
 
     const userPrompt = `Candidate Resume Data:
-${typeof resumeContent === "string" ? resumeContent.slice(0, 3500) : JSON.stringify(resumeContent)}
+${typeof resumeContent === "string" ? resumeContent.slice(0, 15000) : JSON.stringify(resumeContent)}
 
 Target Company: ${company}
 Target Job Title: ${jobTitle}
 Target Job Description:
-${jobDescription.slice(0, 2000)}`;
+${jobDescription.slice(0, 15000)}`;
 
     const chatResponse = await openai.chat.completions.create({
       model: modelPro,

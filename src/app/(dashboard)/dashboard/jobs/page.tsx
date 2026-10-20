@@ -35,7 +35,8 @@ import {
   Zap,
   Check,
   Copy,
-  Download
+  Download,
+  Edit3
 } from "lucide-react";
 import { DashboardShell } from "@/components/shared/DashboardShell";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,7 @@ import { UpgradeModal } from "@/components/shared/UpgradeModal";
 import { useResumeStore } from "@/store/useResumeStore";
 import { JobListing, JobSource, WorkplaceType, ExperienceLevel, JobFilterState, JobMatchAnalysis } from "@/types/jobs";
 import { analyzeJobMatch } from "@/lib/jobMatcher";
+import { CURATED_JOB_LISTINGS } from "@/data/curatedJobs";
 
 export interface JobRole {
   id: string;
@@ -185,6 +187,14 @@ export default function TargetJobsPage() {
     interviewQuestions: string[];
   } | null>(null);
 
+  // Edit / Paste Full JD Modal State
+  const [isEditJdModalOpen, setIsEditJdModalOpen] = React.useState(false);
+  const [editingJdText, setEditingJdText] = React.useState("");
+  const [editingJobId, setEditingJobId] = React.useState<string | null>(null);
+  const [editingJobTitle, setEditingJobTitle] = React.useState("");
+  const [editingJobCompany, setEditingJobCompany] = React.useState("");
+  const [copiedJd, setCopiedJd] = React.useState(false);
+
   // Check if any filter is active
   const hasActiveFilters =
     filters.query !== "" ||
@@ -286,25 +296,56 @@ export default function TargetJobsPage() {
         const parsed: JobRole[] = JSON.parse(stored);
         const realTargets = Array.isArray(parsed) ? parsed.filter((j: any) => !j.isSample && j.id !== "sample-target-role") : [];
         if (realTargets.length > 0) {
-          setSavedTargets(realTargets);
-          setSelectedJob(realTargets[0]);
+          // If any stored target has a legacy short placeholder, upgrade to the full comprehensive JD
+          const upgradedTargets = realTargets.map((target) => {
+            if (
+              target.company?.toLowerCase() === "bloomberg" &&
+              (!target.description || target.description.includes("Bloomberg engineers build mission-critical") || target.description.length < 500)
+            ) {
+              const curatedBloomberg = CURATED_JOB_LISTINGS.find((c) => c.id === "job-bloomberg-hybrid-entry");
+              if (curatedBloomberg) {
+                return {
+                  ...target,
+                  title: curatedBloomberg.title,
+                  location: curatedBloomberg.location,
+                  description: curatedBloomberg.description
+                };
+              }
+            }
+            return target;
+          });
+
+          setSavedTargets(upgradedTargets);
+          setSelectedJob(upgradedTargets[0]);
 
           const bookmarkSet = new Set<string>();
-          realTargets.forEach((t) => bookmarkSet.add(t.id));
+          upgradedTargets.forEach((t) => bookmarkSet.add(t.id));
           setBookmarkedJobIds(bookmarkSet);
+          try {
+            localStorage.setItem("hicejo_saved_targets", JSON.stringify(upgradedTargets));
+          } catch {}
           return;
         }
       }
     } catch {}
 
     if (activeJobContext?.jobTitle && activeJobContext.jobTitle !== "Software Engineer, Web Platforms") {
+      let initialDescription = activeJobContext.jobDescription || `Target role for ${activeJobContext.jobTitle} at ${activeJobContext.company}.`;
+      if (
+        activeJobContext.company?.toLowerCase() === "bloomberg" &&
+        (!activeJobContext.jobDescription || activeJobContext.jobDescription.includes("Bloomberg engineers build mission-critical") || activeJobContext.jobDescription.length < 500)
+      ) {
+        const curatedBloomberg = CURATED_JOB_LISTINGS.find((c) => c.id === "job-bloomberg-hybrid-entry");
+        if (curatedBloomberg) initialDescription = curatedBloomberg.description;
+      }
+
       const activeCustomJob: JobRole = {
         id: "active-target-job",
         title: activeJobContext.jobTitle,
         company: activeJobContext.company || "Target Company",
         location: "Remote / Hybrid",
         matchScore: activeJobContext.atsScore || 80,
-        description: activeJobContext.jobDescription || `Target role for ${activeJobContext.jobTitle} at ${activeJobContext.company}.`,
+        description: initialDescription,
         requirements: {
           strongMatches: ["Demonstrated core stack alignment for target role", "Project feature execution and development experience"],
           partialMatches: ["Infrastructure and automated testing workflows"],
@@ -390,6 +431,101 @@ export default function TargetJobsPage() {
     } finally {
       setIsSubmittingEmployerJob(false);
     }
+  };
+
+  // Copy Full JD
+  const handleCopyJd = (text: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedJd(true);
+    setTimeout(() => setCopiedJd(false), 2000);
+  };
+
+  // Open Edit / Paste Full JD Modal for Explore Listing
+  const handleOpenEditListingJd = (listing: JobListing) => {
+    setEditingJobId(listing.id);
+    setEditingJobTitle(listing.title);
+    setEditingJobCompany(listing.company);
+    setEditingJdText(listing.description);
+    setIsEditJdModalOpen(true);
+  };
+
+  // Open Edit / Paste Full JD Modal for Saved Target Role
+  const handleOpenEditTargetJd = (role: JobRole) => {
+    setEditingJobId(role.id);
+    setEditingJobTitle(role.title);
+    setEditingJobCompany(role.company);
+    setEditingJdText(role.description);
+    setIsEditJdModalOpen(true);
+  };
+
+  // Save updated JD
+  const handleSaveUpdatedJd = () => {
+    if (!editingJdText.trim() || !editingJobId) return;
+    const newDescription = editingJdText.trim();
+
+    // 1. Update listings
+    setListings((prev) =>
+      prev.map((l) =>
+        l.id === editingJobId
+          ? {
+              ...l,
+              description: newDescription
+            }
+          : l
+      )
+    );
+
+    // 2. Update selectedListing if matching
+    if (selectedListing && selectedListing.id === editingJobId) {
+      setSelectedListing((prev) =>
+        prev
+          ? {
+              ...prev,
+              description: newDescription
+            }
+          : null
+      );
+    }
+
+    // 3. Update savedTargets if present
+    setSavedTargets((prev) => {
+      const exists = prev.some((t) => t.id === editingJobId);
+      if (exists) {
+        const updated = prev.map((t) =>
+          t.id === editingJobId
+            ? { ...t, description: newDescription }
+            : t
+        );
+        try {
+          localStorage.setItem("hicejo_saved_targets", JSON.stringify(updated));
+        } catch {}
+        return updated;
+      }
+      return prev;
+    });
+
+    // 4. Update selectedJob if matching
+    if (selectedJob && selectedJob.id === editingJobId) {
+      setSelectedJob((prev) =>
+        prev
+          ? {
+              ...prev,
+              description: newDescription
+            }
+          : null
+      );
+    }
+
+    // 5. Update activeJobContext
+    setActiveJobContext({
+      jobTitle: editingJobTitle,
+      company: editingJobCompany,
+      jobDescription: newDescription,
+      lastUpdated: new Date().toISOString()
+    });
+
+    setIsEditJdModalOpen(false);
   };
 
   // Toggle saving listing to user target roles
@@ -1124,10 +1260,43 @@ export default function TargetJobsPage() {
 
                       {/* FULL JOB DESCRIPTION */}
                       <div className="space-y-2.5">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                          Job Description & Requirements
-                        </h3>
-                        <div className="text-xs text-foreground/90 leading-relaxed whitespace-pre-line font-sans p-4 rounded-xl border border-border/50 bg-background/50">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                              <FileText className="h-3.5 w-3.5 text-primary" />
+                              <span>Complete Job Description & Requirements</span>
+                            </h3>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/40">
+                              {selectedListing.description.length.toLocaleString()} characters
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenEditListingJd(selectedListing)}
+                              className="h-7 text-[11px] font-semibold gap-1.5 border-border hover:bg-muted cursor-pointer"
+                              title="Edit or paste the complete job description"
+                            >
+                              <Edit3 className="h-3 w-3" />
+                              <span>Edit / Paste Full JD</span>
+                            </Button>
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleCopyJd(selectedListing.description)}
+                              className="h-7 text-[11px] font-semibold gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer"
+                              title="Copy complete JD text to clipboard"
+                            >
+                              {copiedJd ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                              <span>{copiedJd ? "Copied!" : "Copy JD"}</span>
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="text-xs text-foreground/90 leading-relaxed whitespace-pre-line font-sans p-4 rounded-xl border border-border/50 bg-background/50 selection:bg-primary/20 max-h-[500px] overflow-y-auto">
                           {selectedListing.description}
                         </div>
                       </div>
@@ -1523,6 +1692,49 @@ export default function TargetJobsPage() {
                     </div>
                   )}
                 </div>
+
+                {/* FULL JOB DESCRIPTION FOR TARGET ROLE */}
+                <div className="border border-border/80 rounded-xl bg-card p-5 space-y-3 shadow-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-border/40">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                        <FileText className="h-3.5 w-3.5 text-primary" />
+                        <span>Complete Target Job Description</span>
+                      </h3>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/40">
+                        {selectedJob.description.length.toLocaleString()} characters
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleOpenEditTargetJd(selectedJob)}
+                        className="h-7 text-[11px] font-semibold gap-1.5 border-border hover:bg-muted cursor-pointer"
+                        title="Edit or paste the complete job description"
+                      >
+                        <Edit3 className="h-3 w-3" />
+                        <span>Edit / Paste Full JD</span>
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleCopyJd(selectedJob.description)}
+                        className="h-7 text-[11px] font-semibold gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer"
+                        title="Copy complete JD text to clipboard"
+                      >
+                        {copiedJd ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                        <span>{copiedJd ? "Copied!" : "Copy JD"}</span>
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-foreground/90 leading-relaxed whitespace-pre-line font-sans p-4 rounded-xl border border-border/50 bg-background/50 selection:bg-primary/20 max-h-[500px] overflow-y-auto">
+                    {selectedJob.description}
+                  </div>
+                </div>
               </Card>
             )}
           </div>
@@ -1876,6 +2088,79 @@ export default function TargetJobsPage() {
               </div>
             </form>
           </Card>
+        )}
+
+        {/* ========================================================= */}
+        {/* MODAL 4: EDIT OR PASTE FULL JOB DESCRIPTION               */}
+        {/* ========================================================= */}
+        {isEditJdModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+            <Card className="w-full max-w-2xl p-6 space-y-4 border-border bg-card shadow-2xl">
+              <div className="flex items-center justify-between pb-3 border-b border-border/40">
+                <div className="space-y-0.5">
+                  <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <span>Edit / Paste Full Job Description</span>
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {editingJobCompany ? `${editingJobCompany} — ` : ""}{editingJobTitle || "Target Role"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsEditJdModalOpen(false)}
+                  className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-xs text-muted-foreground space-y-1">
+                <p className="font-semibold text-foreground">💡 Complete JD Keyword Matching:</p>
+                <p>
+                  Paste the entire job description (including Overview, Responsibilities, Minimum Requirements, Preferred Qualifications, and Team Tech Stack). The Resume Tailor and ATS Scanner will match every keyword into your resume.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <label className="font-bold text-foreground">Full Job Description Text</label>
+                  <span className="font-mono text-[11px] text-muted-foreground">
+                    {editingJdText.length.toLocaleString()} characters • ~{editingJdText.trim().split(/\s+/).filter(Boolean).length} words
+                  </span>
+                </div>
+                <textarea
+                  rows={14}
+                  required
+                  placeholder="Paste the complete job description here..."
+                  value={editingJdText}
+                  onChange={(e) => setEditingJdText(e.target.value)}
+                  className="w-full rounded-xl border border-border bg-transparent p-3.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 font-sans leading-relaxed resize-y min-h-[220px]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/40">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditJdModalOpen(false)}
+                  className="text-xs h-9 cursor-pointer"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleSaveUpdatedJd}
+                  disabled={!editingJdText.trim()}
+                  size="sm"
+                  className="gap-1.5 text-xs font-bold bg-primary text-primary-foreground shadow-sm h-9 cursor-pointer"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  <span>Save Full Description & Sync</span>
+                </Button>
+              </div>
+            </Card>
+          </div>
         )}
 
         {/* 1-CLICK JOB APPLICATION KIT MODAL */}
