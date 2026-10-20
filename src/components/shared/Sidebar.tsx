@@ -16,7 +16,8 @@ import {
   ChevronRight,
   X,
   FileUp,
-  ShieldCheck
+  ShieldCheck,
+  Sparkles
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,7 @@ export const NAV_GROUPS: NavGroup[] = [
     group: "Apply",
     items: [
       { label: "Resume Builder", href: "/dashboard/builder", icon: FileText },
+      { label: "Tailor Resume", href: "/dashboard/tailor", icon: Sparkles },
       { label: "ATS Resume Checker", href: "/dashboard/checker", icon: ShieldCheck },
       { label: "Cover Letter", href: "/dashboard/cover-letter", icon: FileUp },
     ],
