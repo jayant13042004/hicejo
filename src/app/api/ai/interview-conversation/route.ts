@@ -5,6 +5,80 @@ import {
   isTechnicalRole
 } from "@/lib/interviewRoundCatalog";
 
+function generateSmartFallbackReply({
+  userMessage,
+  role,
+  company,
+  isTech,
+  turnCount
+}: {
+  userMessage: string;
+  role: string;
+  company: string;
+  isTech: boolean;
+  turnCount: number;
+}): string {
+  const lower = (userMessage || "").toLowerCase().trim();
+
+  // 1. Candidate says "I don't know", asks for the answer, gives up
+  if (
+    lower.includes("don't know") ||
+    lower.includes("dont know") ||
+    lower.includes("no idea") ||
+    lower.includes("not sure") ||
+    lower.includes("you tell me") ||
+    lower.includes("tell me this") ||
+    lower.includes("skip") ||
+    lower.includes("pass")
+  ) {
+    return isTech
+      ? `It's completely fine if you haven't worked with this specific pattern before. In a real engineering scenario, admitting gaps is much better than guessing. Let's break this down: how would you use a basic queue or semaphore to ensure no more than N tasks run concurrently?`
+      : `That's alright—in practical business scenarios, encountering unfamiliar frameworks happens. Let's simplify: what core metrics or baseline data would you first look for to understand the problem?`;
+  }
+
+  // 2. Candidate asks meta questions about the interview, JD, or company
+  if (
+    lower.includes("is this interview") ||
+    lower.includes("job description") ||
+    lower.includes("specific to") ||
+    lower.includes("are you an ai") ||
+    lower.includes("what company")
+  ) {
+    return `Yes, absolutely. This interview round is tailored specifically for the ${role} position${company ? ` at ${company}` : ""} based on the target requirements. Let's get back to the problem: how would you structure your approach to this challenge?`;
+  }
+
+  // 3. Candidate gives nonsense, joke, random gibberish, or very short text (< 12 chars without substance)
+  const isGibberish =
+    lower.length < 10 ||
+    lower.includes("ac and fan") ||
+    lower.includes("weather") ||
+    lower.includes("asdasd") ||
+    lower.includes("blah") ||
+    lower.includes("lol") ||
+    lower.includes("idk") ||
+    !/[a-zA-Z]{3,}/.test(lower);
+
+  if (isGibberish) {
+    return `That doesn't address the interview question. In an authentic evaluation for ${role}${company ? ` at ${company}` : ""}, we need to assess your technical depth and structured problem-solving. Let's refocus: how would you tackle the core requirements of this question?`;
+  }
+
+  // 4. Candidate gave a genuine response -> probe realistically without blindly praising
+  if (isTech) {
+    if (turnCount >= 4) {
+      return `To wrap up this technical discussion: if you had to scale this architecture to support 10x traffic with strict sub-millisecond p99 latency, what trade-offs would you make?`;
+    }
+    if (turnCount === 2) {
+      return `Understood. Now looking at edge cases: what happens when your downstream dependencies experience intermittent timeouts or backpressure? How does your design recover gracefully?`;
+    }
+    return `Looking at that approach, how do you handle concurrency, resource cleanup, and avoiding memory leaks during sudden load spikes?`;
+  } else {
+    if (turnCount >= 4) {
+      return `To conclude this dimension: looking back at this initiative, what primary KPI would you use to prove long-term ROI to senior executives?`;
+    }
+    return `When executing that strategy, how do you align conflicting stakeholder priorities while keeping project delivery on schedule?`;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const {
@@ -38,6 +112,12 @@ export async function POST(request: Request) {
     const cleanScratchpad = String(scratchpadCode || "").slice(0, 3000).trim();
     const cleanLanguage = String(scratchpadLanguage || "python").slice(0, 30).trim();
     const isTech = isTechnicalRole(cleanRole);
+
+    const lastCandidateMessage = String(
+      (messages || [])
+        .filter((m: { role: string }) => m.role === "candidate" || m.role === "user")
+        .slice(-1)[0]?.content || ""
+    ).trim();
 
     const availableRounds = getInterviewRoundsForRoleAndCompany(cleanRole, cleanCompany);
     const matchedRound =
@@ -74,21 +154,15 @@ export async function POST(request: Request) {
 
     const { openai, modelMini, isConfigured } = getAIClient();
 
-    // Fallback response for offline / demo mode
+    // Fallback response for offline / unconfigured mode
     if (!isConfigured) {
-      const topic = cleanSkill || cleanRole;
-      const fallbackReplies = isTech
-        ? [
-            `Thank you for sharing that breakdown. When implementing that with ${topic}, how did you ensure your architecture balanced delivery velocity with system reliability?`,
-            `That gives great insight into your decision-making. Could you dive deeper into a specific technical constraint, concurrency challenge, or bottleneck you encountered and how you resolved it?`,
-            `Excellent explanation. To wrap up this discussion: if you had to design this system completely from scratch today with 10x scale, what architectural trade-off would you reconsider?`
-          ]
-        : [
-            `Thank you for walking me through that approach. In that initiative for ${topic}, what specific quantitative metrics did you track to validate business impact?`,
-            `That provides great context on your execution. Can you share how you handled resistance or misalignment from key cross-functional stakeholders during that project?`,
-            `Very well articulated. Looking back, if you were to tackle this challenge again with tighter resource constraints, what would you prioritize differently?`
-          ];
-      const reply = fallbackReplies[(turnCount - 1) % fallbackReplies.length];
+      const reply = generateSmartFallbackReply({
+        userMessage: lastCandidateMessage,
+        role: cleanRole,
+        company: cleanCompany,
+        isTech,
+        turnCount
+      });
       return NextResponse.json({
         success: true,
         reply,
@@ -130,17 +204,25 @@ ${roundFocusDirective}
 
 Active Interview Round: ${activeRoundInfo ? `Round ${activeRoundInfo.roundNumber}: ${activeRoundInfo.title} (Objective: ${activeRoundInfo.objective})` : (activeRoundTitle || `Round ${currentRound}`)}
 
-YOUR OBJECTIVE:
-- Act like an authentic, highly experienced hiring manager for ${cleanRole}${cleanCompany ? ` at ${cleanCompany}` : ""}.
-- All questions, evaluations, and discussion must be strictly tailored to the ${cleanRole} role and the target job description requirements below.
-- Do NOT assume arbitrary domain specializations outside of what this role and job description call for.
-- Respond conversationally to what the candidate just shared:
-  1. Briefly validate and acknowledge what they said (1 natural sentence).
-  2. Ask an insightful, contextual follow-up probing question or smoothly advance to the next dimension (1-2 sentences).
-  ${cleanCustomFocus ? `3. FOCUS HEAVILY on the candidate's requested topics / past questions:\n${cleanCustomFocus}` : ""}
-  ${cleanScratchpad ? `4. CRITIQUE WRITTEN SOLUTION: The candidate wrote code/notes on the live scratchpad (${cleanLanguage}):\n\`\`\`${cleanLanguage}\n${cleanScratchpad}\n\`\`\`\nActively inspect their syntax, algorithmic complexity, variable names, logic, or edge cases in your response.` : ""}
-  ${cleanResume ? "5. When relevant, reference their mentioned background to probe specific claims." : ""}
-  ${cleanJd ? "6. GROUNDING IN TARGET JOB: Probe scenarios and domain challenges directly related to the tools and requirements mentioned in the Target Job Requirements." : ""}
+CRITICAL CANDIDATE EVALUATION & REACTION RULES (DO NOT BLINDLY PRAISE):
+- ALWAYS critically evaluate the relevance, depth, and accuracy of the candidate's latest message before responding:
+  1. IF THE CANDIDATE GIVES GIBBERISH, JOKES, OR AN IRRELEVANT / OFF-TOPIC ANSWER (e.g. mentions unrelated objects, random words, air conditioning, weather, personal chit-chat):
+     - DO NOT validate, flatter, or thank them. NEVER say "Great insight", "Excellent explanation", or "Thank you for sharing that breakdown".
+     - Firmly and professionally point out that the response is off-topic: "That doesn't address the interview question. In an interview for ${cleanRole}${cleanCompany ? ` at ${cleanCompany}` : ""}, we need to evaluate your structured problem-solving. Let's refocus on the problem: [Restate or simplify the core question]."
+  2. IF THE CANDIDATE SAYS "I DON'T KNOW", "YOU TELL ME", "NO IDEA", OR GIVES UP:
+     - DO NOT flatter them. NEVER say "That gives great insight into your decision-making".
+     - Candidly acknowledge it and provide an engineering hint or break the problem down: "It's fine if you haven't worked with this exact pattern before. Let's break it down into a simpler piece: [Provide a concrete hint or guided sub-question]."
+  3. IF THE CANDIDATE ASKS A META-QUESTION ABOUT THE INTERVIEW OR SETUP (e.g. asking if the interview is specific to the company or job description):
+     - Directly answer their question in 1 concise sentence confirming the ${cleanRole} role and ${cleanCompany || "company"} context, then smoothly steer back: "Yes, this round is tailored specifically to the ${cleanRole} position${cleanCompany ? ` at ${cleanCompany}` : ""} and your selected requirements. Let's return to the question: [Restate the problem]."
+  4. IF THE CANDIDATE GIVES A SHALLOW, INCOMPLETE, OR TECHNICALLY FLAWED ANSWER:
+     - Point out the specific technical flaw or missing edge case: "You mentioned [X], but that leaves [Y, e.g. memory leaks, race conditions, backpressure] unaddressed. How would you handle that specific failure mode?"
+  5. IF THE CANDIDATE GIVES A STRONG, RELEVANT ANSWER:
+     - Validate the specific technical decision they made, and probe deeper into production failure modes, concurrency, latency, or 10x scale.
+  ${cleanCustomFocus ? `6. FOCUS HEAVILY on the candidate's requested topics / past questions:\n${cleanCustomFocus}` : ""}
+  ${cleanScratchpad ? `7. CRITIQUE WRITTEN SOLUTION: The candidate wrote code/notes on the live scratchpad (${cleanLanguage}):\n\`\`\`${cleanLanguage}\n${cleanScratchpad}\n\`\`\`\nActively inspect their syntax, algorithmic complexity, variable names, logic, or edge cases in your response.` : ""}
+  ${cleanResume ? "8. When relevant, reference their mentioned background to probe specific claims." : ""}
+  ${cleanJd ? "9. GROUNDING IN TARGET JOB: Probe scenarios and domain challenges directly related to the tools and requirements mentioned in the Target Job Requirements." : ""}
+
 - Keep your total response CONCISE (${maxWords}) so the conversation stays snappy and focused.
 - Do NOT output bullet points, markdown headers, or emojis. Output natural conversational prose only.
 - If turnCount >= 4, begin wrapping up the interview round by asking a final reflection or wrap-up question.
@@ -171,12 +253,18 @@ ${cleanResume ? `Candidate Experience Context:\n${cleanResume}\n` : ""}`;
     const response = await openai.chat.completions.create({
       model: modelMini,
       messages: apiMessages,
-      temperature: 0.5,
+      temperature: 0.4,
       max_tokens: 250
     });
 
     const reply = response.choices[0]?.message?.content?.trim() || 
-      `That's a very solid breakdown. How did you handle measuring the actual production impact of that change?`;
+      generateSmartFallbackReply({
+        userMessage: lastCandidateMessage,
+        role: cleanRole,
+        company: cleanCompany,
+        isTech,
+        turnCount
+      });
 
     return NextResponse.json({
       success: true,
@@ -188,7 +276,7 @@ ${cleanResume ? `Candidate Experience Context:\n${cleanResume}\n` : ""}`;
     console.error("Interview conversation turn error:", err);
     return NextResponse.json({
       success: true,
-      reply: "Thank you for explaining that. Moving to the next dimension: how do you typically approach automated testing and deployment safety for critical systems?",
+      reply: "Let's pause on that point. Could you explain the primary concurrency or data structure choice you'd use here and why?",
       isClosing: false,
       followUpType: "transition"
     });

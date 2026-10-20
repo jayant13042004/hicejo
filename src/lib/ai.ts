@@ -1,12 +1,35 @@
 import { OpenAI } from "openai";
+import fs from "fs";
+import path from "path";
 
 let cachedGeminiClient: OpenAI | null = null;
 let cachedOpenAIClient: OpenAI | null = null;
 let cachedMockClient: OpenAI | null = null;
 
+function resolveEnvKey(varName: string): string | undefined {
+  if (process.env[varName]) {
+    return process.env[varName];
+  }
+  try {
+    const envPath = path.join(process.cwd(), ".env.local");
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, "utf8");
+      const match = content.match(new RegExp(`(?:^|\\n)\\s*${varName}\\s*=\\s*([^\\r\\n]+)`));
+      if (match && match[1]) {
+        const val = match[1].trim();
+        process.env[varName] = val;
+        return val;
+      }
+    }
+  } catch {
+    // ignore filesystem errors
+  }
+  return undefined;
+}
+
 export function getAIClient() {
-  const geminiKey = process.env.GEMINI_API_KEY;
-  const openAIKey = process.env.OPENAI_API_KEY;
+  const geminiKey = resolveEnvKey("GEMINI_API_KEY");
+  const openAIKey = resolveEnvKey("OPENAI_API_KEY");
 
   // 1. If Gemini API Key is configured, use high-speed active gemini-flash-lite-latest models via OpenAI compat
   if (geminiKey && !geminiKey.startsWith("placeholder")) {
