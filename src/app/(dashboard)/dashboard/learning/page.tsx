@@ -1134,33 +1134,51 @@ export default function LearningPage() {
                   )}
                 </div>
 
-                {/* Evidence Bridge (Turns learning into resume bullet point) */}
+                {/* Evidence Bridge (Reference template for after hands-on project work) */}
                 <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-primary">
                       <FolderGit2 className="h-3.5 w-3.5" />
-                      <span>Ready-to-Use Resume Evidence</span>
+                      <span>Resume Bullet Blueprint (Example)</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyBullet(selectedSkill.portfolioBullet)}
-                      className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      <Copy className="h-3 w-3" />
-                      <span>{copiedBullet ? "Copied!" : "Copy"}</span>
-                    </button>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                      Reference Template
+                    </span>
                   </div>
+
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Once you practice this skill or build a project using the resources above, use this bullet as a blueprint to quantify your actual project impact:
+                  </p>
 
                   <p className="text-xs text-foreground bg-card p-3 rounded-lg border border-border/60 font-mono text-[11px] leading-relaxed">
                     &quot;{selectedSkill.portfolioBullet}&quot;
                   </p>
 
-                  <Link href="/dashboard/builder" className="block">
-                    <Button variant="outline" size="sm" className="w-full text-xs font-bold h-8 gap-1.5 cursor-pointer">
-                      <span>Add to Active Resume Draft</span>
-                      <ArrowRight className="h-3 w-3" />
+                  <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-700 dark:text-amber-400 space-y-0.5">
+                    <span className="font-bold">⚠️ Authenticity Rule:</span>
+                    <p className="leading-relaxed">
+                      Only add bullet points to your resume after you actually build or practice with this tool so you can comfortably explain the implementation details during technical interview rounds.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCopyBullet(selectedSkill.portfolioBullet)}
+                      className="flex-1 text-xs font-bold h-8 gap-1.5 cursor-pointer"
+                    >
+                      <Copy className="h-3 w-3" />
+                      <span>{copiedBullet ? "Copied Blueprint!" : "Copy Bullet Template"}</span>
                     </Button>
-                  </Link>
+                    <Link href="/dashboard/builder" className="flex-1">
+                      <Button variant="ghost" size="sm" className="w-full text-xs font-semibold h-8 gap-1 cursor-pointer hover:bg-muted text-muted-foreground hover:text-foreground">
+                        <span>Open Builder</span>
+                        <ArrowRight className="h-3 w-3" />
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </Card>
             ) : (
