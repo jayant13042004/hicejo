@@ -408,5 +408,401 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
         lineHeight: 1.4
       }
     }
+  },
+  {
+    id: "devops-cloud-architect",
+    name: "Cloud & DevOps Solutions Architect",
+    role: "Senior DevOps / Platform Engineer",
+    category: "DevOps & Cloud",
+    description: "Designed for DevOps, SREs, and Cloud Architects showcasing Kubernetes orchestration, Terraform IaC, and 99.99% uptime achievements.",
+    data: {
+      personalInfo: {
+        fullName: "Jordan Taylor",
+        email: "jordan.taylor@example.com",
+        phone: "(555) 839-2019",
+        location: "Denver, CO",
+        website: "https://jordantaylor.cloud",
+        linkedin: "https://linkedin.com/in/jordantaylor-devops"
+      },
+      summary: "Results-driven Platform Engineer with 6+ years of experience architecting multi-region AWS and Kubernetes infrastructure. Proven track record reducing CI/CD build times by 65% and maintaining 99.99% SLA availability across 400+ microservices.",
+      experience: [
+        {
+          id: "exp-1",
+          company: "HashiCorp Cloud Ops",
+          position: "Senior Platform / DevOps Engineer",
+          location: "Remote",
+          startDate: "Jan 2022",
+          endDate: "Present",
+          current: true,
+          description: "• Engineered automated multi-region Kubernetes (EKS) clusters utilizing Terraform and Helm, cutting provisioning time from 4 days to 18 minutes.\n• Implemented GitHub Actions CI/CD pipelines with ArgoCD GitOps, increasing daily deployment frequency from 3 to 45 deployments with 0 downtime.\n• Reduced annual cloud compute expenditure by $320,000 (24%) via Karpenter autoscaling and spot instance orchestration."
+        },
+        {
+          id: "exp-2",
+          company: "Cloudflare Partner Networks",
+          position: "DevOps Engineer",
+          location: "Boulder, CO",
+          startDate: "May 2019",
+          endDate: "Dec 2021",
+          current: false,
+          description: "• Managed Prometheus and Grafana telemetry monitoring stack ingesting 25M metrics/minute with automated PagerDuty alert escalation.\n• Standardized Docker container base images, eliminating 80+ high-severity CVE vulnerabilities across 60 internal repositories."
+        }
+      ],
+      education: [
+        {
+          id: "edu-1",
+          school: "University of Colorado Boulder",
+          degree: "B.S. in Computer Systems Engineering",
+          fieldOfStudy: "Distributed Systems",
+          location: "Boulder, CO",
+          startDate: "2015",
+          endDate: "2019",
+          current: false
+        }
+      ],
+      projects: [
+        {
+          id: "proj-1",
+          name: "Terraform Multi-Cloud Boilerplate",
+          role: "Maintainer",
+          link: "https://github.com/jordantaylor/tf-multicloud",
+          startDate: "2023",
+          endDate: "2024",
+          description: "• Open-source Infrastructure-as-Code modules with 1,200+ GitHub stars and 50,000+ registry downloads."
+        }
+      ],
+      skills: [
+        { id: "sk-1", name: "AWS & Google Cloud Platform", category: "Cloud" },
+        { id: "sk-2", name: "Kubernetes (EKS / GKE) & Helm", category: "Orchestration" },
+        { id: "sk-3", name: "Terraform & Ansible (IaC)", category: "Infrastructure" },
+        { id: "sk-4", name: "Docker & Container Security", category: "Containers" },
+        { id: "sk-5", name: "GitHub Actions / GitLab CI / ArgoCD", category: "CI/CD" },
+        { id: "sk-6", name: "Prometheus / Grafana / Datadog", category: "Observability" }
+      ],
+      design: {
+        fontFamily: "font-mono",
+        fontSize: "md",
+        sectionOrder: ["summary", "experience", "projects", "education", "skills"],
+        density: "normal",
+        sectionSpacing: 1.0,
+        itemSpacing: 1.0,
+        lineHeight: 1.4
+      }
+    }
+  },
+  {
+    id: "ui-ux-designer",
+    name: "Product Designer & UX Researcher",
+    role: "Senior Product Designer (UI/UX)",
+    category: "Design & UX",
+    description: "Engineered for Product & UI/UX Designers featuring Figma design systems, usability research metrics, and cross-functional product delivery.",
+    data: {
+      personalInfo: {
+        fullName: "Maya Lin",
+        email: "maya.lin@example.com",
+        phone: "(555) 204-9811",
+        location: "San Francisco, CA",
+        website: "https://mayalin.design",
+        linkedin: "https://linkedin.com/in/mayalindesign"
+      },
+      summary: "Senior Product Designer with 5+ years crafting human-centered SaaS and mobile experiences. Expert in scalable Figma design systems, quantitative usability testing, and cross-functional collaboration that boosted onboarding completion by 34%.",
+      experience: [
+        {
+          id: "exp-1",
+          company: "Figma Community Labs",
+          position: "Senior UI/UX Product Designer",
+          location: "San Francisco, CA",
+          startDate: "Mar 2022",
+          endDate: "Present",
+          current: true,
+          description: "• Led end-to-end design for B2B collaboration workspace, raising weekly active user retention by 26% across 500K accounts.\n• Architected enterprise multi-brand design system with 240+ WCAG AAA tokens and components, reducing design-to-code drift by 40%.\n• Moderated 50+ remote unmoderated usability sessions via UserTesting, synthesizing insights that cut product checkout drop-off by 19%."
+        },
+        {
+          id: "exp-2",
+          company: "Canva Studio Partner",
+          position: "UI/UX Designer",
+          location: "San Francisco, CA",
+          startDate: "Jun 2019",
+          endDate: "Feb 2022",
+          current: false,
+          description: "• Redesigned mobile navigation IA for iOS and Android apps with 4.8-star App Store rating across 100K+ reviews.\n• Partnered with front-end engineers to ensure pixel-perfect CSS implementation and micro-interaction animations."
+        }
+      ],
+      education: [
+        {
+          id: "edu-1",
+          school: "Rhode Island School of Design (RISD)",
+          degree: "B.F.A. in Graphic & Interactive Design",
+          fieldOfStudy: "Human-Computer Interaction",
+          location: "Providence, RI",
+          startDate: "2015",
+          endDate: "2019",
+          current: false
+        }
+      ],
+      projects: [
+        {
+          id: "proj-1",
+          name: "OpenUI Tokens Library",
+          role: "Lead Creator",
+          link: "https://openuilib.dev",
+          startDate: "2023",
+          endDate: "2024",
+          description: "• Universal design token schema used by over 3,000 Figma community designers."
+        }
+      ],
+      skills: [
+        { id: "sk-1", name: "Figma / FigJam / Tokens Studio", category: "Design Tools" },
+        { id: "sk-2", name: "Design Systems & Token Architecture", category: "System Design" },
+        { id: "sk-3", name: "User Research & Usability Testing", category: "Research" },
+        { id: "sk-4", name: "Wireframing & High-Fidelity Prototyping", category: "Prototyping" },
+        { id: "sk-5", name: "HTML5 / CSS3 / Tailwind / Micro-interactions", category: "Technical" }
+      ],
+      design: {
+        fontFamily: "font-geometric",
+        fontSize: "md",
+        sectionOrder: ["summary", "experience", "projects", "education", "skills"],
+        density: "normal",
+        sectionSpacing: 1.0,
+        itemSpacing: 1.0,
+        lineHeight: 1.4
+      }
+    }
+  },
+  {
+    id: "cybersecurity-analyst",
+    name: "Cybersecurity & InfoSec Specialist",
+    role: "Senior Security Operations / Threat Analyst",
+    category: "Security & IT",
+    description: "Formulated for SOC Analysts, Security Engineers, and Pen Testers highlighting threat detection, NIST compliance, and zero-day containment.",
+    data: {
+      personalInfo: {
+        fullName: "Darius Thorne",
+        email: "darius.thorne@example.com",
+        phone: "(555) 714-3829",
+        location: "Washington, DC",
+        website: "https://darius-sec.io",
+        linkedin: "https://linkedin.com/in/darius-thorne-infosec"
+      },
+      summary: "CISSP-certified Information Security Analyst with 6+ years specializing in SOC operations, incident response, SIEM engineering, and vulnerability remediation. Proven success reducing mean time to detect (MTTD) by 55% across 20,000 enterprise endpoints.",
+      experience: [
+        {
+          id: "exp-1",
+          company: "CrowdStrike Security Ops",
+          position: "Senior Security Operations Analyst",
+          location: "Reston, VA",
+          startDate: "Feb 2022",
+          endDate: "Present",
+          current: true,
+          description: "• Spearheaded incident triage and forensics across 25,000 corporate endpoints, achieving a 99.8% incident SLA containment rate.\n• Engineered 60+ custom Splunk and Falcon detection rules mapping to MITRE ATT&CK framework, decreasing false positives by 42%.\n• Executed automated SOAR playbooks in Python, accelerating phishing containment from 45 minutes to 30 seconds."
+        },
+        {
+          id: "exp-2",
+          company: "Booz Allen Hamilton",
+          position: "Cybersecurity Analyst",
+          location: "McLean, VA",
+          startDate: "Jul 2018",
+          endDate: "Jan 2022",
+          current: false,
+          description: "• Conducted quarterly vulnerability assessments (Qualys/Nessus) and remediation audits for federal enterprise clients under NIST 800-53.\n• Performed red/blue team penetration testing exercises identifying 14 critical privilege escalation attack vectors."
+        }
+      ],
+      education: [
+        {
+          id: "edu-1",
+          school: "George Mason University",
+          degree: "B.S. in Cybersecurity Engineering",
+          fieldOfStudy: "Network Defense & Cryptography",
+          location: "Fairfax, VA",
+          startDate: "2014",
+          endDate: "2018",
+          current: false
+        }
+      ],
+      projects: [
+        {
+          id: "proj-1",
+          name: "ThreatHunter CLI",
+          role: "Author",
+          link: "https://github.com/dthorne/threathunter",
+          startDate: "2023",
+          endDate: "2023",
+          description: "• Automated IOC scanner analyzing PCAP files and memory dumps against AlienVault OTX intelligence."
+        }
+      ],
+      skills: [
+        { id: "sk-1", name: "SIEM (Splunk, Sentinel, Elastic)", category: "Detection" },
+        { id: "sk-2", name: "EDR (CrowdStrike, SentinelOne)", category: "Detection" },
+        { id: "sk-3", name: "Incident Response & Digital Forensics", category: "Operations" },
+        { id: "sk-4", name: "NIST 800-53 / ISO 27001 / SOC 2", category: "Compliance" },
+        { id: "sk-5", name: "Python / Bash / PowerShell Scripting", category: "Automation" }
+      ],
+      design: {
+        fontFamily: "font-mono",
+        fontSize: "md",
+        sectionOrder: ["summary", "experience", "projects", "education", "skills"],
+        density: "normal",
+        sectionSpacing: 1.0,
+        itemSpacing: 1.0,
+        lineHeight: 1.4
+      }
+    }
+  },
+  {
+    id: "finance-investment-analyst",
+    name: "Financial Analyst & Corporate Finance",
+    role: "Senior Financial Analyst (M&A / FP&A)",
+    category: "Finance & Banking",
+    description: "Built for Investment Banking Analysts, FP&A Managers, and FinTech leads with DCF valuation, variance modeling, and audit success.",
+    data: {
+      personalInfo: {
+        fullName: "Victoria Sterling",
+        email: "victoria.sterling@example.com",
+        phone: "(555) 918-4022",
+        location: "New York, NY",
+        website: "https://vsterling-finance.com",
+        linkedin: "https://linkedin.com/in/victoriasterling-cfa"
+      },
+      summary: "CFA charterholder and Senior Financial Analyst with 5+ years in financial planning & analysis (FP&A) and corporate M&A advisory. Expert in 3-statement financial modeling, LBO valuations, and executive board reporting driving $15M+ capital allocation decisions.",
+      experience: [
+        {
+          id: "exp-1",
+          company: "Goldman Sachs Asset Management",
+          position: "Senior Financial Analyst (FP&A & Advisory)",
+          location: "New York, NY",
+          startDate: "Aug 2021",
+          endDate: "Present",
+          current: true,
+          description: "• Developed dynamic multi-scenario financial forecasts for a $140M operating budget, reducing quarterly variance from 8.2% to 1.8%.\n• Modeled discounted cash flow (DCF) and leveraged buyout (LBO) valuations for 4 completed strategic acquisitions valued at $85M.\n• Automated monthly executive P&L dashboard in Power BI and SQL, saving 22 analyst hours per close cycle."
+        },
+        {
+          id: "exp-2",
+          company: "Morgan Stanley Wealth",
+          position: "Financial Analyst",
+          location: "New York, NY",
+          startDate: "Jul 2019",
+          endDate: "Jul 2021",
+          current: false,
+          description: "• Built quantitative risk assessment models analyzing equity and fixed income portfolios managing $450M in AUM.\n• Prepared comprehensive due diligence briefing decks presented directly to institutional investment committees."
+        }
+      ],
+      education: [
+        {
+          id: "edu-1",
+          school: "New York University (Stern)",
+          degree: "B.S. in Finance & Statistics",
+          fieldOfStudy: "Corporate Valuation",
+          location: "New York, NY",
+          startDate: "2015",
+          endDate: "2019",
+          current: false
+        }
+      ],
+      projects: [
+        {
+          id: "proj-1",
+          name: "SaaS Valuation Benchmark Index",
+          role: "Author",
+          link: "https://saasbenchmarkindex.com",
+          startDate: "2023",
+          endDate: "2024",
+          description: "• Quarterly tracking of 65 public SaaS enterprise multiples (EV/ARR) cited by venture funds."
+        }
+      ],
+      skills: [
+        { id: "sk-1", name: "3-Statement Financial Modeling", category: "Core Modeling" },
+        { id: "sk-2", name: "DCF / LBO / Comparable Company Analysis", category: "Valuation" },
+        { id: "sk-3", name: "Advanced Excel (VBA / Macros) & Financial Modeling", category: "Analytics" },
+        { id: "sk-4", name: "SQL & Power BI / Tableau", category: "Analytics" },
+        { id: "sk-5", name: "Capital Allocation & Variance Analysis", category: "FP&A" }
+      ],
+      design: {
+        fontFamily: "font-executive",
+        fontSize: "md",
+        sectionOrder: ["summary", "experience", "education", "projects", "skills"],
+        density: "normal",
+        sectionSpacing: 1.0,
+        itemSpacing: 1.0,
+        lineHeight: 1.4
+      }
+    }
+  },
+  {
+    id: "executive-engineering-director",
+    name: "Engineering Director & VP of Tech",
+    role: "Director of Engineering / VP of Technology",
+    category: "Executive Leadership",
+    description: "Tailored for VPs of Engineering and Tech Directors leading multi-team orgs (40+ engineers), $10M+ tech budgets, and digital transformations.",
+    data: {
+      personalInfo: {
+        fullName: "Robert H. Caldwell",
+        email: "robert.caldwell@example.com",
+        phone: "(555) 438-1920",
+        location: "San Jose, CA",
+        website: "https://rcaldwell-exec.tech",
+        linkedin: "https://linkedin.com/in/robert-caldwell-vp"
+      },
+      summary: "Transformational Engineering Executive with 12+ years scaling high-performing software organizations from 15 to 75+ engineers. Proven leadership managing $12M annual R&D budgets, modernizing legacy monolithic platforms to microservices, and driving 99.99% system reliability.",
+      experience: [
+        {
+          id: "exp-1",
+          company: "Salesforce Platform Engineering",
+          position: "Director of Engineering",
+          location: "San Francisco, CA",
+          startDate: "Jan 2021",
+          endDate: "Present",
+          current: true,
+          description: "• Scaled engineering organization across 5 squads (48 engineers, 4 managers) while reducing voluntary annual attrition to under 4%.\n• Oversaw $14M annual cloud infrastructure and software tooling budget, optimizing vendor contracts to save $1.8M annually.\n• Championed agile engineering maturity, increasing sprint velocity predictability by 38% and reducing critical production bugs by 52%."
+        },
+        {
+          id: "exp-2",
+          company: "Twilio API Systems",
+          position: "Senior Engineering Manager",
+          location: "San Francisco, CA",
+          startDate: "Mar 2017",
+          endDate: "Dec 2020",
+          current: false,
+          description: "• Managed 2 squads (18 engineers) building real-time messaging pipelines processing 4B+ events per month.\n• Spearheaded zero-trust security re-architecture, achieving SOC 2 Type II and FedRAMP compliance ahead of schedule."
+        }
+      ],
+      education: [
+        {
+          id: "edu-1",
+          school: "Stanford University",
+          degree: "M.S. in Computer Science & Management",
+          fieldOfStudy: "Software Systems Engineering",
+          location: "Stanford, CA",
+          startDate: "2010",
+          endDate: "2012",
+          current: false
+        }
+      ],
+      projects: [
+        {
+          id: "proj-1",
+          name: "Engineering Leadership Playbook",
+          role: "Author",
+          link: "https://engleadershipbook.org",
+          startDate: "2023",
+          endDate: "2024",
+          description: "• Framework for career ladders, OKR alignment, and engineering compensation benchmarks."
+        }
+      ],
+      skills: [
+        { id: "sk-1", name: "Engineering Org Scaling (50+ Engineers)", category: "Leadership" },
+        { id: "sk-2", name: "Budget & P&L Management ($10M+)", category: "Executive" },
+        { id: "sk-3", name: "Technical Strategy & Cloud Architecture", category: "Architecture" },
+        { id: "sk-4", name: "Executive Hiring & Mentorship", category: "People" },
+        { id: "sk-5", name: "SOC 2 / ISO 27001 / FedRAMP Governance", category: "Governance" }
+      ],
+      design: {
+        fontFamily: "font-executive",
+        fontSize: "md",
+        sectionOrder: ["summary", "experience", "education", "projects", "skills"],
+        density: "normal",
+        sectionSpacing: 1.0,
+        itemSpacing: 1.0,
+        lineHeight: 1.4
+      }
+    }
   }
 ];

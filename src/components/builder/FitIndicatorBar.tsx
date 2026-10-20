@@ -2,13 +2,15 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Target, RefreshCw } from "lucide-react";
+import { Sparkles, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Target, RefreshCw, Printer } from "lucide-react";
 import { FitAnalysis } from "@/types/resume";
 import { Button } from "@/components/ui/button";
 
 interface FitIndicatorBarProps {
   fitAnalysis: FitAnalysis;
   onFixToOnePage: () => void;
+  onFillPage?: () => void;
+  onPrint?: () => void;
   isFixing: boolean;
   isAnalysisOpen: boolean;
   onToggleAnalysis: () => void;
@@ -17,6 +19,8 @@ interface FitIndicatorBarProps {
 export function FitIndicatorBar({
   fitAnalysis,
   onFixToOnePage,
+  onFillPage,
+  onPrint,
   isFixing,
   isAnalysisOpen,
   onToggleAnalysis,
@@ -99,7 +103,7 @@ export function FitIndicatorBar({
               size="sm"
               onClick={onFixToOnePage}
               disabled={isFixing}
-              className="bg-gradient-to-r from-violet-600 via-primary to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-sm text-xs gap-1.5 h-7.5 px-3 font-semibold"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs text-xs gap-1.5 h-7.5 px-3 font-semibold"
             >
               {isFixing ? (
                 <RefreshCw className="h-3.5 w-3.5 animate-spin" />
@@ -109,6 +113,39 @@ export function FitIndicatorBar({
               <span>✨ Fix to 1 Page</span>
             </Button>
           </motion.div>
+        )}
+
+        {/* Fill 1 Page (100%) Button to eliminate bottom white space */}
+        {!isOverflowing && onFillPage && (
+          <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }}>
+            <Button
+              size="sm"
+              onClick={onFillPage}
+              disabled={isFixing}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs text-xs gap-1.5 h-7.5 px-3 font-semibold"
+              title="Expand typography and spacing so your resume fills 100% of the page with no trailing white space"
+            >
+              {isFixing ? (
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" />
+              )}
+              <span>📐 Fill 1 Page (100%)</span>
+            </Button>
+          </motion.div>
+        )}
+
+        {/* Optional Secondary Print / Vector dialog button */}
+        {onPrint && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onPrint}
+            className="h-7.5 px-2 text-xs text-muted-foreground hover:text-foreground cursor-pointer rounded-lg border border-border/40 hover:bg-muted/50"
+            title="Open browser print dialog (for vector print)"
+          >
+            <Printer className="h-3.5 w-3.5" />
+          </Button>
         )}
       </div>
     </div>

@@ -15,42 +15,23 @@ import {
   Download,
   FileCheck,
   Save,
-  X
+  X,
+  FileText
 } from "lucide-react";
 import { DashboardShell } from "@/components/shared/DashboardShell";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { consumeCredit } from "@/lib/credits";
+import { useResumeStore } from "@/store/useResumeStore";
 
 interface ResumeOption {
   id: string;
   title: string;
 }
-
-const SAMPLE_RESUME_TEXT = `Alex Johnson | Senior Full Stack Engineer
-San Francisco, CA | (555) 019-2834 | alex.johnson@example.com | linkedin.com/in/alexj-tech
-
-PROFESSIONAL SUMMARY
-Full Stack Engineer with 6+ years of experience specializing in React, Next.js, TypeScript, Node.js, and cloud architecture. Proven track record of scaling high-throughput distributed applications and building responsive, accessible web interfaces.
-
-EXPERIENCE
-Lead Full Stack Developer — Apex Cloud Technologies (2022 - Present)
-• Architected core customer-facing dashboards in Next.js/React, improving page load speeds by 42%.
-• Engineered event-driven microservices in Node.js/TypeScript handling 15M+ daily requests.
-• Led agile squad of 6 engineers, standardizing design tokens and component test coverage to 90%.
-
-Software Engineer — Nova Global Solutions (2019 - 2022)
-• Developed responsive user interfaces with TypeScript, React, and Tailwind CSS.
-• Built RESTful and GraphQL APIs integrated with PostgreSQL and Redis caching.
-
-EDUCATION
-B.S. in Computer Science — California State University (2015 - 2019)
-
-SKILLS
-React, Next.js, TypeScript, Node.js, Express, PostgreSQL, Redis, Docker, AWS, Tailwind CSS`;
-
 export default function CoverLetterPage() {
+  const { activeJobContext } = useResumeStore();
+
   const [resumes, setResumes] = React.useState<ResumeOption[]>([]);
   const [sourceType, setSourceType] = React.useState<"draft" | "text">("draft");
   const [selectedResumeId, setSelectedResumeId] = React.useState("");
@@ -58,6 +39,15 @@ export default function CoverLetterPage() {
   const [company, setCompany] = React.useState("");
   const [jobTitle, setJobTitle] = React.useState("");
   const [jobDescription, setJobDescription] = React.useState("");
+
+  // Prefill from active application context if available
+  React.useEffect(() => {
+    if (activeJobContext) {
+      if (activeJobContext.company) setCompany((prev) => prev || activeJobContext.company || "");
+      if (activeJobContext.jobTitle) setJobTitle((prev) => prev || activeJobContext.jobTitle || "");
+      if (activeJobContext.jobDescription) setJobDescription((prev) => prev || activeJobContext.jobDescription || "");
+    }
+  }, [activeJobContext]);
 
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [isExtractingFile, setIsExtractingFile] = React.useState(false);
@@ -120,13 +110,6 @@ export default function CoverLetterPage() {
     }
   };
 
-  const handleLoadSample = () => {
-    setSourceType("text");
-    setResumeText(SAMPLE_RESUME_TEXT);
-    setCompany("Stripe");
-    setJobTitle("Staff Frontend Engineer");
-    setJobDescription("We are looking for a Staff Frontend Engineer to scale global checkout interfaces using TypeScript, React, and Next.js. Responsibilities include optimizing latency, designing reusable UI components, and collaborating across product squads.");
-  };
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,44 +180,54 @@ export default function CoverLetterPage() {
     if (!letterContent) return;
 
     setIsDownloadingPDF(true);
+    if (isEditing) {
+      setIsEditing(false);
+    }
+
     try {
-      const html2canvas = (await import("html2canvas")).default;
+      // 1. Allow React a brief tick to update DOM if isEditing was toggled
+      await new Promise((resolve) => setTimeout(resolve, 80));
+
+      const letterEl = document.getElementById("letter-print-area");
       const { jsPDF } = await import("jspdf");
 
-      // 1. Create a pristine standalone container
-      const container = document.createElement("div");
-      container.style.position = "fixed";
-      container.style.left = "-9999px";
-      container.style.top = "0";
-      container.style.width = "794px";
-      container.style.minHeight = "1123px";
-      container.style.backgroundColor = "#ffffff";
-      container.style.color = "#09090b";
-      container.style.padding = "50px 60px";
-      container.style.boxSizing = "border-box";
-      container.style.fontFamily = "Georgia, Garamond, serif";
-      container.style.fontSize = "14px";
-      container.style.lineHeight = "1.7";
-      container.style.whiteSpace = "pre-line";
-      container.style.textAlign = "justify";
-      container.innerText = letterContent;
+      let dataUrl: string | null = null;
 
-      document.body.appendChild(container);
+      if (letterEl) {
+        const prevShadow = letterEl.style.boxShadow;
+        const prevBorder = letterEl.style.border;
+        letterEl.style.boxShadow = "none";
+        letterEl.style.border = "none";
 
-      // 2. High-DPI canvas capture
-      const canvas = await html2canvas(container, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-        width: 794,
-        windowWidth: 794
-      });
+        try {
+          const { toPng } = await import("html-to-image");
+          dataUrl = await toPng(letterEl, {
+            quality: 0.98,
+            pixelRatio: 2,
+            backgroundColor: "#ffffff",
+            filter: (node: HTMLElement) => {
+              if (node.classList && (node.classList.contains("no-print") || node.hasAttribute("data-no-print"))) {
+                return false;
+              }
+              return true;
+            }
+          });
+        } catch (imgErr) {
+          console.warn("toPng failed on cover letter, using html2canvas fallback:", imgErr);
+          const html2canvas = (await import("html2canvas")).default;
+          const canvas = await html2canvas(letterEl, {
+            scale: 2,
+            backgroundColor: "#ffffff",
+            useCORS: true,
+            logging: false
+          });
+          dataUrl = canvas.toDataURL("image/jpeg", 0.98);
+        } finally {
+          letterEl.style.boxShadow = prevShadow;
+          letterEl.style.border = prevBorder;
+        }
+      }
 
-      document.body.removeChild(container);
-
-      // 3. Output to pure A4 PDF
-      const imgData = canvas.toDataURL("image/jpeg", 0.98);
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
@@ -242,13 +235,34 @@ export default function CoverLetterPage() {
         compress: true
       });
 
-      pdf.addImage(imgData, "JPEG", 0, 0, 210, 297, undefined, "FAST");
+      if (dataUrl) {
+        pdf.addImage(dataUrl, "PNG", 0, 0, 210, 297, undefined, "FAST");
+      } else {
+        // Pure text fallback to ensure it is never blank
+        pdf.setFont("times", "normal");
+        pdf.setFontSize(11);
+        const splitText = pdf.splitTextToSize(letterContent, 170);
+        pdf.text(splitText, 20, 25);
+      }
+
       const filename = `${downloadFileName.trim() || "Cover_Letter"}.pdf`;
       pdf.save(filename);
       setIsDownloadModalOpen(false);
     } catch (err) {
       console.error("PDF download failed:", err);
-      alert("Encountered an issue exporting PDF. Please try again.");
+      try {
+        const { jsPDF } = await import("jspdf");
+        const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+        pdf.setFont("times", "normal");
+        pdf.setFontSize(11);
+        const splitText = pdf.splitTextToSize(letterContent, 170);
+        pdf.text(splitText, 20, 25);
+        pdf.save(`${downloadFileName.trim() || "Cover_Letter"}.pdf`);
+        setIsDownloadModalOpen(false);
+      } catch (fallbackErr) {
+        console.error("Critical PDF failure:", fallbackErr);
+        alert("Encountered an issue exporting PDF. Please try copying the text.");
+      }
     } finally {
       setIsDownloadingPDF(false);
     }
@@ -262,10 +276,13 @@ export default function CoverLetterPage() {
 
   return (
     <DashboardShell title="Cover Letter Generator" featureKey="cover_letter">
-      <div className="space-y-8">
-        <div>
-          <p className="text-muted-foreground text-sm">
-            Generate high-converting, professional cover letters tailored to your target company and job description. Edit and customize directly before downloading.
+      <div className="space-y-6">
+        <div className="pb-4 border-b border-border/60">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+            Targeted Cover Letter Generator
+          </h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Synthesize your proven achievements into a concise, professional letter tailored to the target role.
           </p>
         </div>
 
@@ -279,15 +296,23 @@ export default function CoverLetterPage() {
                   <CardTitle className="text-base">Generator Configurator</CardTitle>
                   <CardDescription className="text-xs">Setup parameters to target job postings.</CardDescription>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleLoadSample}
-                  className="text-xs text-primary hover:underline font-semibold cursor-pointer"
-                >
-                  Load Sample
-                </button>
               </CardHeader>
               <CardContent>
+                {activeJobContext && (
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary font-medium mb-4">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 shrink-0 text-primary" />
+                      <span>
+                        Target: <strong>{activeJobContext.jobTitle || "Role"}</strong> {activeJobContext.company ? `@ ${activeJobContext.company}` : ""}
+                      </span>
+                    </div>
+                    {activeJobContext.atsScore !== undefined && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary font-mono font-bold shrink-0">
+                        {activeJobContext.atsScore}% Match
+                      </span>
+                    )}
+                  </div>
+                )}
                 <form onSubmit={handleGenerate} className="space-y-4">
                   {error && (
                     <motion.div
@@ -456,7 +481,7 @@ export default function CoverLetterPage() {
 
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-700 shadow-md gap-2 font-bold"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs gap-2 font-bold"
                     isLoading={isGenerating}
                     disabled={isGenerating || isExtractingFile}
                   >
@@ -520,7 +545,7 @@ export default function CoverLetterPage() {
                     <Button
                       size="sm"
                       onClick={handleOpenDownloadModal}
-                      className="bg-gradient-to-r from-primary to-violet-600 gap-1.5 text-xs font-semibold shadow-xs h-8"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 text-xs font-semibold shadow-xs h-8"
                     >
                       <Download className="h-3.5 w-3.5" />
                       <span>Download PDF</span>
@@ -562,16 +587,29 @@ export default function CoverLetterPage() {
                 </div>
               </div>
             ) : (
-              <div className="h-[460px] rounded-2xl border border-dashed border-border flex flex-col items-center justify-center p-8 text-center bg-card/20">
-                <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-4">
-                  <Sparkles className="h-6 w-6" />
+              <div className="border border-border/80 rounded-xl bg-card p-8 flex flex-col items-center justify-center text-center space-y-4 min-h-[460px]">
+                <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-foreground">
+                  <FileText className="h-5 w-5" />
                 </div>
-                <h3 className="font-bold text-base text-foreground">
-                  Ready to Generate Cover Letter
-                </h3>
-                <p className="text-xs text-muted-foreground max-w-sm mt-1 leading-relaxed">
-                  Provide your target company, role, and requirements on the left, then click <strong>&quot;Generate Cover Letter&quot;</strong> to craft a compelling, tailored letter.
-                </p>
+                <div className="space-y-1">
+                  <h3 className="text-sm font-bold text-foreground">
+                    Awaiting Target Role Configuration
+                  </h3>
+                  <p className="text-xs text-muted-foreground max-w-sm mx-auto leading-relaxed">
+                    Select your resume draft and input the job requirements on the left to generate an authentic, evidence-backed cover letter.
+                  </p>
+                </div>
+                <div className="w-full max-w-sm p-4 rounded-lg bg-secondary/30 border border-border/50 text-left space-y-2 text-[11px] text-muted-foreground">
+                  <div className="flex items-center gap-1.5 font-semibold text-foreground">
+                    <span>Generated Document Structure:</span>
+                  </div>
+                  <div className="space-y-1">
+                    <p>• Header & Contact details aligned with resume</p>
+                    <p>• High-conviction opening tying candidate background to role</p>
+                    <p>• 2 targeted achievement narratives with quantified results</p>
+                    <p>• Professional closing and mutual next steps</p>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -636,7 +674,7 @@ export default function CoverLetterPage() {
                   size="sm"
                   onClick={handleExecutePDFDownload}
                   disabled={isDownloadingPDF || !downloadFileName.trim()}
-                  className="bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-700 gap-1.5 font-bold"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 font-bold"
                 >
                   {isDownloadingPDF ? (
                     <RefreshCw className="h-3.5 w-3.5 animate-spin" />

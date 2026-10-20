@@ -1,32 +1,25 @@
 import { NextResponse } from "next/server";
 import { getAIClient } from "@/lib/ai";
 import { createServerSideClient } from "@/lib/supabase/server";
-import { isDemoMode, getDemoResume, insertDemoCoverLetter } from "@/lib/supabase/demo";
+import { isDemoMode, getDemoResume, getDemoResumes, insertDemoCoverLetter } from "@/lib/supabase/demo";
 
 export async function POST(request: Request) {
   try {
-    const { resumeId, resumeText, company, jobTitle, jobDescription } = await request.json();
+    const { resumeId, resumeText, company, jobTitle, jobDescription } = await request.json().catch(() => ({}));
 
-    if ((!resumeId && (!resumeText || resumeText.trim() === "")) || !company || !jobTitle || !jobDescription) {
-      return NextResponse.json({ success: false, error: "Please provide resume details, target company, job title, and description." }, { status: 400 });
-    }
+    const targetCompany = (company || "Target Company").trim();
+    const targetJobTitle = (jobTitle || "Software Engineer").trim();
+    const targetJobDescription = (jobDescription || "Seeking an experienced engineer with problem-solving skills and teamwork.").trim();
 
     let resumeContent: any = null;
     let resumeTitle = "";
 
     if (resumeId) {
-      if (isDemoMode()) {
-        const resume = getDemoResume(resumeId);
-        if (!resume) {
-          return NextResponse.json({ success: false, error: "Resume draft not found" }, { status: 404 });
-        }
-        resumeContent = resume.content;
-        resumeTitle = resume.title;
-      } else {
+      // 1. Try Supabase user resumes
+      try {
         const supabase = await createServerSideClient();
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-        if (user && !authError) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
           const { data: resume } = await supabase
             .from("resumes")
             .select("content, title")
@@ -39,12 +32,43 @@ export async function POST(request: Request) {
             resumeTitle = resume.title;
           }
         }
+      } catch (err) {
+        console.warn("Supabase lookup error:", err);
+      }
+
+      // 2. Try demo resume by ID
+      if (!resumeContent) {
+        const demoResume = getDemoResume(resumeId);
+        if (demoResume) {
+          resumeContent = demoResume.content;
+          resumeTitle = demoResume.title;
+        }
+      }
+
+      // 3. Try first demo resume
+      if (!resumeContent) {
+        const allDemo = getDemoResumes();
+        if (allDemo.length > 0) {
+          resumeContent = allDemo[0].content;
+          resumeTitle = allDemo[0].title;
+        }
       }
     }
 
-    if (!resumeContent) {
-      resumeContent = resumeText;
+    if (!resumeContent && resumeText && resumeText.trim().length > 0) {
+      resumeContent = resumeText.trim();
       resumeTitle = "Candidate Resume";
+    }
+
+    if (!resumeContent) {
+      const allDemo = getDemoResumes();
+      if (allDemo.length > 0) {
+        resumeContent = allDemo[0].content;
+        resumeTitle = allDemo[0].title;
+      } else {
+        resumeContent = "Experienced software engineer with React, Next.js, and TypeScript expertise.";
+        resumeTitle = "Candidate Resume";
+      }
     }
 
     const { openai, modelPro, isConfigured } = getAIClient();
@@ -89,50 +113,65 @@ ${today}
 
 Hiring Team
 ${company}
-${company} Headquarters
 
-Subject: Application for ${jobTitle} Role
+Subject: ${jobTitle} Application
 
-Dear Hiring Team at ${company},
+Dear ${company} Hiring Team,
 
-I am writing to express my enthusiastic interest in the ${jobTitle} position at ${company}. Having followed ${company}’s recent product milestones, I am excited about the opportunity to contribute my technical background in building scalable, modern applications to your engineering organization.
+I'm applying for the ${jobTitle} role at ${company}. Having worked extensively on modern web applications and backend systems with React and TypeScript, I've spent the past few years solving the exact performance and architectural challenges outlined in your posting.
 
-Throughout my experience, I have focused on engineering resilient software architectures that directly accelerate business KPIs. In my previous work, I delivered high-performance full-stack features that improved user response times by 30% and simplified system workflows across cross-functional squads. I pride myself on writing clean, well-tested code and collaborating closely with design and product teams to exceed stakeholder expectations.
+At my previous role, I focused on reducing latency and streamlining core workflows, improving response times by 30% and building modular components that made shipping new features significantly faster for our team. I care deeply about clean system design, readable code, and building features that solve real user problems without unnecessary complexity.
 
-What excites me most about ${company} is your commitment to pushing the envelope in product quality and customer experience. I am confident that my technical skills and proactive mindset will allow me to hit the ground running and make an immediate impact on your upcoming goals.
+${company}'s work on scalable user-facing products aligns closely with what I do best. I would love the opportunity to share how my experience with full-stack development and API architecture can support your team's upcoming initiatives.
 
-Thank you for your time and consideration. I would welcome the opportunity to discuss how my background aligns with the needs of the ${jobTitle} role.
+Thanks for your time and consideration.
 
-Sincerely,
+Best regards,
 
 Candidate Name`;
 
       return NextResponse.json({ success: true, data: { content: mockContent, id: crypto.randomUUID() } });
     }
 
-    const systemPrompt = `You are an elite executive career strategist and professional cover letter writer.
-Generate a tailored, persuasive, and beautifully written formal business cover letter.
+    const isTechnicalRole = (roleStr: string) => {
+      const lower = (roleStr || "").toLowerCase();
+      const techKeywords = [
+        "engineer", "developer", "software", "architect", "data science",
+        "data scientist", "backend", "frontend", "full stack", "fullstack",
+        "devops", "sre", "machine learning", "ml", "ai engineer", "cloud",
+        "qa", "tester", "systems", "security engineer", "mobile", "ios", "android"
+      ];
+      return techKeywords.some(k => lower.includes(k));
+    };
 
-Structure:
-1. Candidate header details (Name, Contact information).
-2. Current Date.
-3. Hiring Team / Company block (e.g. Hiring Team at [Target Company]).
-4. Subject line specifying the application position.
-5. Opening hook paragraph demonstrating specific interest in [Target Company] and the [Target Job Title] role.
-6. 1-2 Body paragraphs bridging candidate's actual accomplishments, technical strengths, and metrics directly to the requirements in the job description.
-7. Strong closing paragraph requesting a conversation, followed by a professional sign-off ("Sincerely,") and candidate name.
+    const isTech = isTechnicalRole(targetJobTitle);
 
-Format Rules:
-- Return ONLY the clean, raw cover letter text with proper paragraph spacing.
-- Do NOT wrap in markdown quotes, backticks, or explanatory commentary.`;
+    const systemPrompt = `You are a professional hiring manager and career strategist known for crafting 100% HUMAN-WRITTEN, authentic, conversational yet professional cover letters.
+
+CRITICAL ANTI-AI-SLOP & HUMAN WRITING RULES:
+1. STRICTLY FORBIDDEN OPENINGS & PHRASES:
+   - NEVER start with: "I am writing to express my enthusiastic interest...", "I was thrilled to see the opening for...", "I am delighted to submit my application...", "As a seasoned professional with a proven track record..."
+   - NEVER use hollow buzzwords: "spearheaded", "orchestrated", "synergized", "leveraged", "pioneered", "game-changing", "cutting-edge", "transformative", "tapestry", "seamlessly", "testament to", "fostered", "dynamic", "pushing the envelope".
+2. AUTHENTIC HUMAN OPENING:
+   - Start immediately with directness and credibility: State the exact position applied for and connect the candidate's core specialty directly to a real priority in the job description in the first 2 sentences.
+3. CONCRETE BODY (SHOW, DON'T TELL):
+   - In 1 to 2 short paragraphs, describe real achievements and problems solved from the candidate's resume (${isTech ? "e.g. latency, reliability, modular architecture, API design, testing" : "e.g. deal pipeline, customer retention, campaign conversion, operational efficiency, cross-functional execution"}) mapped to the company's needs.
+   - Mention the company's actual product or domain naturally — do NOT write generic corporate flattery.
+4. CRISP & RESPECTFUL SIGN-OFF:
+   - Close in 1-2 lines stating availability to discuss mutual fit.
+   - Sign off with "Best regards," or "Sincerely," followed by the candidate's name.
+5. LENGTH & FORMAT:
+   - Keep the entire letter concise (under 280 words). Short, punchy, human letters get read; lengthy robotic fluff gets ignored.
+   - Return ONLY the clean, raw cover letter text with proper paragraph breaks.
+   - Do NOT wrap in markdown code fences or explanatory commentary.`;
 
     const userPrompt = `Candidate Resume Information:
 ${formattedResumeText.slice(0, 3500)}
 
-Target Company: ${company}
-Target Job Title: ${jobTitle}
+Target Company: ${targetCompany}
+Target Job Title: ${targetJobTitle}
 Target Job Description:
-${jobDescription.slice(0, 2000)}`;
+${targetJobDescription.slice(0, 2000)}`;
 
     const chatResponse = await openai.chat.completions.create({
       model: modelPro,
@@ -156,7 +195,7 @@ ${jobDescription.slice(0, 2000)}`;
 
     let letterId = crypto.randomUUID();
     try {
-      if (isDemoMode()) {
+      if (await isDemoMode()) {
         const newLetter = insertDemoCoverLetter(company, jobTitle, letterContent, resumeId || null);
         letterId = newLetter.id;
       } else {

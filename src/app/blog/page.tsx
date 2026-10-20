@@ -25,7 +25,7 @@ export default function BlogIndexPage() {
               <span>Career Advice & ATS Guides</span>
             </div>
             <h1 className="text-3xl md:text-5xl font-black tracking-tight text-foreground">
-              Master the Modern <span className="bg-gradient-to-r from-primary to-violet-600 bg-clip-text text-transparent">Job Search</span>
+              Master the Modern <span className="underline decoration-primary decoration-4 underline-offset-8">Job Search</span>
             </h1>
             <p className="text-muted-foreground text-sm md:text-base max-w-xl mx-auto">
               Actionable guides, ATS algorithm breakdowns, and resume writing frameworks written by hiring experts.

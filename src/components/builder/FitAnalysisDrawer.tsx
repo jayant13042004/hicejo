@@ -107,7 +107,7 @@ export function FitAnalysisDrawer({
         <div className="p-3 rounded-xl bg-muted/40 border border-border/40 space-y-1">
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Content Density</p>
           <div className="flex items-center gap-1.5">
-            <Layers className="h-4 w-4 text-violet-500 shrink-0" />
+            <Layers className="h-4 w-4 text-foreground shrink-0" />
             <p className="text-sm font-bold text-foreground">{fitAnalysis.contentDensity}</p>
           </div>
           <p className="text-[10px] text-muted-foreground">Vertical flow</p>

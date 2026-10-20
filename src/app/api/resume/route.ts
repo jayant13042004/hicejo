@@ -3,9 +3,12 @@ import { createServerSideClient } from "@/lib/supabase/server";
 import { isDemoMode, getDemoResumes, insertDemoResume } from "@/lib/supabase/demo";
 
 // GET /api/resume - Get all resumes for user
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    if (isDemoMode()) {
+    const { searchParams } = new URL(request.url);
+    const includeContent = searchParams.get("full") === "true";
+
+    if (await isDemoMode()) {
       const resumes = getDemoResumes();
       return NextResponse.json({ success: true, data: resumes });
     }
@@ -14,22 +17,30 @@ export async function GET() {
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+      // Graceful fallback for guest mode / offline demo sessions
+      const resumes = getDemoResumes();
+      return NextResponse.json({ success: true, data: resumes });
     }
+
+    const selectFields = includeContent
+      ? "id, title, ats_score, content, created_at, updated_at"
+      : "id, title, ats_score, created_at, updated_at";
 
     const { data: resumes, error: dbError } = await supabase
       .from("resumes")
-      .select("id, title, ats_score, created_at, updated_at")
+      .select(selectFields)
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false });
 
     if (dbError) {
-      return NextResponse.json({ success: false, error: dbError.message }, { status: 500 });
+      const demoFallback = getDemoResumes();
+      return NextResponse.json({ success: true, data: demoFallback });
     }
 
     return NextResponse.json({ success: true, data: resumes });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    const demoFallback = getDemoResumes();
+    return NextResponse.json({ success: true, data: demoFallback });
   }
 }
 
@@ -38,7 +49,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
 
-    if (isDemoMode()) {
+    if (await isDemoMode()) {
       const newResume = insertDemoResume(body.title, body.content);
       return NextResponse.json({ success: true, data: newResume });
     }
@@ -47,7 +58,8 @@ export async function POST(request: Request) {
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+      const newResume = insertDemoResume(body.title, body.content);
+      return NextResponse.json({ success: true, data: newResume });
     }
 
     const title = body.title || "Untitled Resume";

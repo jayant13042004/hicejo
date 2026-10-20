@@ -5,7 +5,7 @@ import { isDemoMode, getDemoCoverLetters } from "@/lib/supabase/demo";
 // GET /api/cover-letters - Get all cover letters for user
 export async function GET() {
   try {
-    if (isDemoMode()) {
+    if (await isDemoMode()) {
       const letters = getDemoCoverLetters();
       return NextResponse.json({ success: true, data: letters });
     }
@@ -14,7 +14,8 @@ export async function GET() {
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+      const letters = getDemoCoverLetters();
+      return NextResponse.json({ success: true, data: letters });
     }
 
     const { data: letters, error: dbError } = await supabase

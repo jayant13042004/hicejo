@@ -20,6 +20,7 @@ import { DashboardShell } from "@/components/shared/DashboardShell";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { consumeCredit } from "@/lib/credits";
+import { useResumeStore } from "@/store/useResumeStore";
 
 interface ResumeOption {
   id: string;
@@ -41,30 +42,12 @@ interface TailorResult {
   changesMade: TailorChange[];
 }
 
-const SAMPLE_RESUME_TEXT = `Alex Johnson | Senior Full Stack Engineer
-San Francisco, CA | (555) 019-2834 | alex.johnson@example.com | linkedin.com/in/alexj-tech
 
-PROFESSIONAL SUMMARY
-Full Stack Engineer with 6+ years of experience specializing in React, Next.js, TypeScript, Node.js, and cloud architecture. Proven track record of scaling high-throughput distributed applications and building responsive, accessible web interfaces.
-
-EXPERIENCE
-Lead Full Stack Developer — Apex Cloud Technologies (2022 - Present)
-• Architected core customer-facing dashboards in Next.js/React, improving page load speeds by 42%.
-• Engineered event-driven microservices in Node.js/TypeScript handling 15M+ daily requests.
-• Led agile squad of 6 engineers, standardizing design tokens and component test coverage to 90%.
-
-Software Engineer — Nova Global Solutions (2019 - 2022)
-• Developed responsive user interfaces with TypeScript, React, and Tailwind CSS.
-• Built RESTful and GraphQL APIs integrated with PostgreSQL and Redis caching.
-
-EDUCATION
-B.S. in Computer Science — California State University (2015 - 2019)
-
-SKILLS
-React, Next.js, TypeScript, Node.js, Express, PostgreSQL, Redis, Docker, AWS, Tailwind CSS`;
 
 export default function TailorPage() {
   const router = useRouter();
+  const { setActiveJobContext, loadTailoredDraft, activeJobContext } = useResumeStore();
+
   const [resumes, setResumes] = React.useState<ResumeOption[]>([]);
   const [sourceType, setSourceType] = React.useState<"draft" | "text">("draft");
   const [selectedResumeId, setSelectedResumeId] = React.useState("");
@@ -78,6 +61,41 @@ export default function TailorPage() {
   const [uploadedFileName, setUploadedFileName] = React.useState<string | null>(null);
   const [tailorResult, setTailorResult] = React.useState<TailorResult | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+
+  // Prefill target position from active application context if available
+  React.useEffect(() => {
+    if (activeJobContext && !company && !jobTitle && !jobDescription) {
+      if (activeJobContext.company) setCompany(activeJobContext.company);
+      if (activeJobContext.jobTitle) setJobTitle(activeJobContext.jobTitle);
+      if (activeJobContext.jobDescription) setJobDescription(activeJobContext.jobDescription);
+    }
+  }, [activeJobContext, company, jobTitle, jobDescription]);
+
+  const handleOpenInBuilder = () => {
+    if (!tailorResult) return;
+    loadTailoredDraft(
+      tailorResult.tailoredResumeId,
+      tailorResult.tailoredResumeTitle,
+      tailorResult.tailoredContent,
+      {
+        company: company.trim(),
+        jobTitle: jobTitle.trim(),
+        jobDescription: jobDescription.trim(),
+        sourceTool: "tailor"
+      }
+    );
+    router.push(`/dashboard/builder?id=${tailorResult.tailoredResumeId}`);
+  };
+
+  const handleGenerateCoverLetter = () => {
+    setActiveJobContext({
+      company: company.trim(),
+      jobTitle: jobTitle.trim(),
+      jobDescription: jobDescription.trim(),
+      sourceTool: "tailor"
+    });
+    router.push("/dashboard/cover-letter");
+  };
 
   // Fetch resumes list on mount
   React.useEffect(() => {
@@ -126,13 +144,6 @@ export default function TailorPage() {
     }
   };
 
-  const handleLoadSample = () => {
-    setSourceType("text");
-    setResumeText(SAMPLE_RESUME_TEXT);
-    setCompany("Stripe");
-    setJobTitle("Staff Frontend Engineer");
-    setJobDescription("We are looking for a Staff Frontend Engineer to scale global checkout interfaces using TypeScript, React, and Next.js. Responsibilities include optimizing latency, designing reusable UI components, and collaborating across product squads.");
-  };
 
   const handleTailor = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -200,13 +211,6 @@ export default function TailorPage() {
                   <CardTitle className="text-base">Tailoring Configurator</CardTitle>
                   <CardDescription className="text-xs">Setup parameters to target custom positions.</CardDescription>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleLoadSample}
-                  className="text-xs text-primary hover:underline font-semibold cursor-pointer"
-                >
-                  Load Sample
-                </button>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleTailor} className="space-y-4">
@@ -377,7 +381,7 @@ export default function TailorPage() {
 
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-700 shadow-md gap-2 font-bold"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs gap-2 font-bold"
                     isLoading={isProcessing}
                     disabled={isProcessing || isExtractingFile}
                   >
@@ -409,13 +413,52 @@ export default function TailorPage() {
                     </h3>
                   </div>
 
-                  <Button
-                    onClick={() => router.push(`/dashboard/builder?id=${tailorResult.tailoredResumeId}`)}
-                    className="bg-primary text-primary-foreground gap-1.5 text-xs font-semibold shrink-0"
-                  >
-                    <span>Open in Builder</span>
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </Button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGenerateCoverLetter}
+                      className="gap-1.5 text-xs font-semibold"
+                    >
+                      <FileText className="h-3.5 w-3.5 text-primary" />
+                      <span>Draft Cover Letter</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleOpenInBuilder}
+                      className="bg-primary text-primary-foreground gap-1.5 text-xs font-bold shadow-xs"
+                    >
+                      <span>Open in Builder</span>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Tailoring Impact Overview */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl border border-border/70 bg-card/60 backdrop-blur-xs">
+                  <div className="p-3.5 rounded-lg border border-border/60 bg-muted/30 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Original Draft</span>
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded bg-muted text-muted-foreground border border-border/50">Baseline</span>
+                    </div>
+                    <p className="text-xs font-semibold text-foreground">Standard Experience Narrative</p>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                      General career statements prior to job-specific keyword and scope alignment.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 space-y-1.5 ring-1 ring-emerald-500/25">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Tailored Version</span>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                        {tailorResult.changesMade.length} Updates Applied
+                      </span>
+                    </div>
+                    <p className="text-xs font-semibold text-foreground">Target-Matched for {company}</p>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                      Keywords and measurable achievements integrated to match {jobTitle} requirements.
+                    </p>
+                  </div>
                 </div>
 
                 {/* Diff Review List */}

@@ -3,8 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Sparkles, ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { Sparkles, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -16,12 +16,15 @@ export default function LoginPage() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
+  const [resetMessage, setResetMessage] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [isResetting, setIsResetting] = React.useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+    setResetMessage(null);
 
     const { error: authError } = await supabase.auth.signInWithPassword({
       email,
@@ -37,6 +40,30 @@ export default function LoginPage() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email || !email.includes("@")) {
+      setError("Please enter your email address above to receive a password reset link.");
+      return;
+    }
+    setIsResetting(true);
+    setError(null);
+    setResetMessage(null);
+    try {
+      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/dashboard/settings`,
+      });
+      if (resetErr) {
+        setError(resetErr.message);
+      } else {
+        setResetMessage("Password reset email sent! Check your inbox.");
+      }
+    } catch {
+      setError("Failed to send reset email. Please try again later.");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setError(null);
@@ -46,6 +73,7 @@ export default function LoginPage() {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
+
     if (authError) {
       setError(authError.message);
       setIsLoading(false);
@@ -53,17 +81,20 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen w-screen items-center justify-center bg-background px-4">
+    <div className="relative flex min-h-screen w-screen items-center justify-center bg-background px-4">
+      {/* Background radial gradient */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent pointer-events-none" />
+
       {/* Back to Home Link */}
-      <Link
-        href="/"
+      <Link 
+        href="/" 
         className="absolute left-4 top-4 md:left-8 md:top-8 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
         <span>Back to Home</span>
       </Link>
 
-      <Card className="w-full max-w-md border-border/50">
+      <Card className="w-full max-w-md border-border/60 shadow-xl bg-card/60 backdrop-blur-xl relative z-10">
         <CardHeader className="space-y-2 text-center">
           <div className="flex justify-center mb-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/20">
@@ -72,14 +103,41 @@ export default function LoginPage() {
           </div>
           <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
           <CardDescription>
-            Enter your credentials below to log into your account
+            Sign in to access your resumes, scans, and job context
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* 1-Click Instant Guest Access */}
+          <Button
+            type="button"
+            onClick={() => {
+              document.cookie = "sb-mock-session=true; path=/; max-age=86400;";
+              router.refresh();
+              router.push("/dashboard");
+            }}
+            className="w-full bg-foreground text-background hover:bg-foreground/90 font-bold h-11 gap-2 shadow-sm cursor-pointer"
+          >
+            <Sparkles className="h-4 w-4 text-amber-400" />
+            <span>⚡ Continue as Guest (No Signup Needed)</span>
+          </Button>
+
+          <div className="relative flex items-center justify-center my-2">
+            <span className="absolute w-full h-px bg-border/80" />
+            <span className="relative px-3 text-[10px] text-muted-foreground uppercase bg-card font-bold">
+              Or Sign In With Email
+            </span>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="rounded-lg bg-destructive/15 p-3 text-sm text-destructive font-medium border border-destructive/20">
                 {error}
+              </div>
+            )}
+            {resetMessage && (
+              <div className="rounded-lg bg-emerald-500/15 p-3 text-sm text-emerald-500 font-medium border border-emerald-500/20 flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>{resetMessage}</span>
               </div>
             )}
             <Input
@@ -91,16 +149,29 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-            <Input
-              id="password"
-              type="password"
-              label="Password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            <Button type="submit" className="w-full bg-gradient-to-r from-primary to-violet-600" isLoading={isLoading}>
+            <div className="space-y-1">
+              <Input
+                id="password"
+                type="password"
+                label="Password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <div className="flex justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={isResetting}
+                  className="text-xs text-primary hover:underline font-medium cursor-pointer"
+                >
+                  {isResetting ? "Sending reset..." : "Forgot password?"}
+                </button>
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold" isLoading={isLoading}>
               Sign In
             </Button>
             
@@ -114,7 +185,7 @@ export default function LoginPage() {
             <Button
               type="button"
               variant="outline"
-              className="w-full gap-2 border-border/80 hover:bg-muted"
+              className="w-full gap-2 border-border/80 hover:bg-muted font-medium"
               onClick={handleGoogleSignIn}
               disabled={isLoading}
             >
@@ -127,29 +198,24 @@ export default function LoginPage() {
               <span>Sign in with Google</span>
             </Button>
 
-            <div className="relative flex items-center justify-center my-4">
-              <span className="absolute w-full h-px bg-border/80" />
-              <span className="relative px-3 text-xs text-muted-foreground uppercase bg-card font-semibold animate-pulse">
-                Sandbox Mode
-              </span>
+            {/* Sandbox Mode / Offline preview button de-emphasized */}
+            <div className="pt-2 text-center">
+              <button
+                type="button"
+                className="text-[11px] text-muted-foreground/80 hover:text-foreground underline transition-colors cursor-pointer"
+                onClick={() => {
+                  document.cookie = "sb-mock-session=true; path=/; max-age=86400;";
+                  router.refresh();
+                  router.push("/dashboard");
+                }}
+              >
+                Offline Developer / Sandbox Preview
+              </button>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full border-dashed hover:border-primary/45 hover:bg-primary/5 gap-2"
-              onClick={() => {
-                document.cookie = "sb-mock-session=true; path=/; max-age=86400;";
-                router.refresh();
-                router.push("/dashboard");
-              }}
-            >
-              <Sparkles className="h-4 w-4 text-primary" />
-              <span>Explore in Demo Mode</span>
-            </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex justify-center text-sm">
-          <span className="text-muted-foreground mr-1">Don't have an account?</span>
+        <CardFooter className="flex justify-center text-sm border-t border-border/30 pt-4">
+          <span className="text-muted-foreground mr-1">Don&apos;t have an account?</span>
           <Link href="/register" className="font-semibold text-primary hover:underline">
             Create account
           </Link>

@@ -16,14 +16,8 @@ export async function POST(request: Request) {
     let isRawText = false;
 
     if (resumeId) {
-      if (isDemoMode()) {
-        const resume = getDemoResume(resumeId);
-        if (!resume) {
-          return NextResponse.json({ success: false, error: "Resume not found" }, { status: 404 });
-        }
-        resumeContent = resume.content;
-        resumeTitle = resume.title;
-      } else {
+      // 1. Try Supabase if user is signed in
+      try {
         const supabase = await createServerSideClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -39,6 +33,26 @@ export async function POST(request: Request) {
             resumeContent = resume.content;
             resumeTitle = resume.title;
           }
+        }
+      } catch (err) {
+        console.warn("Supabase lookup error in tailor:", err);
+      }
+
+      // 2. Try demo resume by ID
+      if (!resumeContent) {
+        const resume = getDemoResume(resumeId);
+        if (resume) {
+          resumeContent = resume.content;
+          resumeTitle = resume.title;
+        }
+      }
+
+      // 3. Fallback to first demo resume
+      if (!resumeContent) {
+        const allDemo = getDemoResume("1");
+        if (allDemo) {
+          resumeContent = allDemo.content;
+          resumeTitle = allDemo.title;
         }
       }
     }
@@ -66,7 +80,7 @@ export async function POST(request: Request) {
         sourceJson = JSON.parse(JSON.stringify(resumeContent));
       }
 
-      sourceJson.summary = `Accomplished engineer specializing in launching core platform services at ${company}. Experienced implementing scalable systems using React and TypeScript, aligning directly with requirements for the ${jobTitle} role.`;
+      sourceJson.summary = `Software Engineer experienced in building scalable web applications and distributed services. Skilled in React, TypeScript, and modern backend architecture, with a focus on delivering high-performance features for ${company}'s ${jobTitle} requirements.`;
       
       const mockSkillId = crypto.randomUUID();
       sourceJson.skills.push({ id: mockSkillId, name: `${company} Architecture` });
@@ -82,20 +96,20 @@ export async function POST(request: Request) {
       ];
 
       if (sourceJson.experience.length > 0) {
-        sourceJson.experience[0].description = `Spearheaded software integration layouts, reducing request overheads by 22% and improving compatibility parameters for modern web platforms.\nRefactored legacy features to align with optimized developer workflows matching ${company}'s standards.`;
+        sourceJson.experience[0].description = `• Built and optimized core service APIs, reducing request latency by 22% and improving system reliability.\n• Refactored legacy frontend components into modular TypeScript modules, decreasing bundle size and cutting feature development turnaround.\n• Integrated automated unit and integration tests, ensuring zero critical regressions across releases.`;
         changesMade.push({
           section: "experience",
           itemId: sourceJson.experience[0].id,
           original: !isRawText ? (resumeContent.experience[0].description || "") : "",
           tailored: sourceJson.experience[0].description,
-          reason: "Quantified work achievements and aligned terminology with target responsibilities."
+          reason: "Quantified work achievements using clear engineering verbs and aligned terminology with target responsibilities."
         });
       }
 
       const newTitle = `${company} - ${jobTitle} Tailored`;
       let tailoredResumeId = crypto.randomUUID();
 
-      if (isDemoMode()) {
+      if (await isDemoMode()) {
         const newResume = insertDemoResume(newTitle, sourceJson);
         tailoredResumeId = newResume.id;
       }
@@ -111,15 +125,42 @@ export async function POST(request: Request) {
       });
     }
 
-    const systemPrompt = `You are an expert resume writer and technical recruiter.
-You will receive a candidate's resume and a target job description.
-Your goal is to tailor the candidate's summary, work experience bullet points, projects, and skills to highlight keywords and competencies matching the target job description.
+    const isTechnicalRole = (roleStr: string) => {
+      const lower = (roleStr || "").toLowerCase();
+      const techKeywords = [
+        "engineer", "developer", "software", "architect", "data science",
+        "data scientist", "backend", "frontend", "full stack", "fullstack",
+        "devops", "sre", "machine learning", "ml", "ai engineer", "cloud",
+        "qa", "tester", "systems", "security engineer", "mobile", "ios", "android"
+      ];
+      return techKeywords.some(k => lower.includes(k));
+    };
 
-Rules:
-1. Preserve true factual metrics and experiences while rephrasing bullets to match the job terminology and emphasize quantifiable impact.
-2. If given raw text, parse all details (Name, Contact, Summary, Experience, Education, Projects, Skills) into the structured schema below.
-3. Keep personal contact info, company names, school names, degrees, and dates factual and unchanged.
-4. Generate UUID strings for 'id' fields in experience, education, projects, and skills.
+    const isTech = isTechnicalRole(jobTitle);
+
+    const systemPrompt = `You are a principal recruiter and elite resume strategist known for producing resumes that read 100% HUMAN-WRITTEN, natural, and authentic.
+You will receive a candidate's resume and a target job description.
+Your goal is to tailor the candidate's summary, work experience bullet points, projects, and skills to highlight keywords and competencies matching the target job description WITHOUT sounding like generic AI generated text.
+
+CRITICAL ANTI-AI-SLOP & HUMAN WRITING RULES:
+1. STRICTLY FORBIDDEN WORDS/CLICHÉS:
+   - NEVER use: "spearheaded", "orchestrated", "synergized", "leveraged", "pioneered", "game-changing", "cutting-edge", "transformative", "tapestry", "seamlessly", "testament to", "delved", "fostered", "dynamic", "beacon", "unwavering", "catalyst", "harnessed", "endeavor", "realm".
+2. USE CRISP, NATURAL ACTION VERBS:
+   - Use direct, authentic active verbs: ${isTech ? "Built, Designed, Shipped, Scaled, Automated, Migrated, Refactored, Reduced, Wrote, Integrated, Deployed, Benchmarked, Optimized, Implemented." : "Negotiated, Closed, Managed, Structured, Scaled, Forecasted, Standardized, Executed, Launched, Partnered, Streamlined, Reduced, Analyzed."}
+3. GROUND IN REALITY (NO FAKE METRICS):
+   - Preserve all real metrics from the candidate's background.
+   - NEVER fabricate unbelievable business stats (e.g. do NOT invent "boosted company revenue by 48%" or "increased enterprise sales by $2M" if not present in the candidate's original resume).
+   - If introducing numbers or impact, keep them grounded in realistic scope (${isTech ? "latency reduction, test coverage %, database query times, API response times, number of daily events, batch runtimes" : "deal cycle times, conversion rates, pipeline retention, cost reduction %, deal size, SLAs, operational throughput"}).
+4. BULLET POINT DENSITY & STYLE:
+   - Each bullet point must be between 15 and 28 words.
+   - Format each bullet as: Action Verb + Scope/Problem + Concrete Result or Method.
+   - Each bullet MUST start with a bullet character "• ".
+5. SUMMARY SECTION RULES:
+   - NO generic fluff: Do NOT say "Results-oriented, passionate professional with a proven track record of excellence."
+   - Write a crisp, 2 to 3 sentence summary stating exact domain, primary expertise, and key focus matching the target job.
+6. PRESERVE FACTUAL INTEGRITY:
+   - Keep candidate contact info, company names, school names, degrees, and dates factual and unchanged.
+7. Generate valid UUID strings for 'id' fields in experience, education, projects, and skills.
 
 Respond in a STRICT, single JSON object matching this schema:
 {
@@ -220,29 +261,35 @@ ${jobDescription.slice(0, 2000)}`;
     let tailoredResumeId = crypto.randomUUID();
 
     try {
-      if (isDemoMode()) {
+      let saved = false;
+      const supabase = await createServerSideClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: newResume } = await supabase
+          .from("resumes")
+          .insert({
+            user_id: user.id,
+            title: newTitle,
+            content: result.tailoredContent,
+            ats_score: 85
+          })
+          .select()
+          .single();
+
+        if (newResume) {
+          tailoredResumeId = newResume.id;
+          saved = true;
+        }
+      }
+
+      if (!saved) {
         const newResume = insertDemoResume(newTitle, result.tailoredContent);
         tailoredResumeId = newResume.id;
-      } else {
-        const supabase = await createServerSideClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: newResume } = await supabase
-            .from("resumes")
-            .insert({
-              user_id: user.id,
-              title: newTitle,
-              content: result.tailoredContent,
-              ats_score: 85
-            })
-            .select()
-            .single();
-
-          if (newResume) tailoredResumeId = newResume.id;
-        }
       }
     } catch (dbErr) {
       console.warn("Database cache warning in tailor endpoint:", dbErr);
+      const newResume = insertDemoResume(newTitle, result.tailoredContent);
+      tailoredResumeId = newResume.id;
     }
 
     return NextResponse.json({

@@ -88,7 +88,28 @@ export default function RegisterPage() {
             Join Hicejo to optimize your career search funnel
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* 1-Click Instant Guest Access */}
+          <Button
+            type="button"
+            onClick={() => {
+              document.cookie = "sb-mock-session=true; path=/; max-age=86400;";
+              router.refresh();
+              router.push("/dashboard");
+            }}
+            className="w-full bg-foreground text-background hover:bg-foreground/90 font-bold h-11 gap-2 shadow-sm cursor-pointer"
+          >
+            <Sparkles className="h-4 w-4 text-amber-400" />
+            <span>⚡ Continue as Guest (No Signup Needed)</span>
+          </Button>
+
+          <div className="relative flex items-center justify-center my-2">
+            <span className="absolute w-full h-px bg-border/80" />
+            <span className="relative px-3 text-[10px] text-muted-foreground uppercase bg-card font-bold">
+              Or Create Account With Email
+            </span>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="rounded-lg bg-destructive/15 p-3 text-sm text-destructive font-medium border border-destructive/20">
@@ -130,9 +151,20 @@ export default function RegisterPage() {
               required
               disabled={success}
             />
-            <Button type="submit" className="w-full bg-gradient-to-r from-primary to-violet-600" isLoading={isLoading} disabled={success}>
+            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold" isLoading={isLoading} disabled={success}>
               Create Account
             </Button>
+
+            <p className="text-[11px] text-center text-muted-foreground leading-relaxed">
+              By creating an account, you agree to our{" "}
+              <Link href="/terms" className="text-primary hover:underline font-medium">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="text-primary hover:underline font-medium">
+                Privacy Policy
+              </Link>.
+            </p>
 
             <div className="relative flex items-center justify-center my-2">
               <span className="absolute w-full h-px bg-border/80" />

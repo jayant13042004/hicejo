@@ -1,265 +1,415 @@
-"use client";
-
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { Sparkles, ShieldCheck, Flame, FileUp, FileText, ArrowRight, Zap, Target, CheckCircle2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  ArrowRight,
+  Check,
+  FileText,
+  Flame,
+  LockKeyhole,
+  ShieldCheck,
+  Sparkles,
+  Target,
+} from "lucide-react";
 import { Navbar } from "@/components/shared/Navbar";
+import { BrandMark } from "@/components/shared/BrandMark";
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.15 },
+const tools = [
+  {
+    number: "01",
+    icon: FileText,
+    title: "Build a clear, polished resume",
+    description:
+      "Build a focused resume from your real experience, then export a clean, selectable PDF.",
+    href: "/templates",
+    linkLabel: "Explore resume templates",
   },
-};
+  {
+    number: "02",
+    icon: Target,
+    title: "Check your fit for a role",
+    description:
+      "Compare your resume with a job description and find the gaps worth addressing.",
+    href: "/tools/ats-resume-checker",
+    linkLabel: "Check a resume",
+  },
+  {
+    number: "03",
+    icon: Sparkles,
+    title: "Tailor each application",
+    description:
+      "Adapt your resume and cover letter to the role without losing your voice or overstating your experience.",
+    href: "/tools/resume-tailor",
+    linkLabel: "Tailor your resume",
+  },
+];
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { type: "spring" as const, stiffness: 300, damping: 20 },
-  },
-};
+const freeIncludes = [
+  "Resume drafts and templates",
+  "Daily resume checks",
+  "Resume roast evaluations",
+  "PDF export",
+];
+
+const proIncludes = [
+  "Unlimited resume drafts",
+  "Unlimited resume checks",
+  "Resume tailoring and cover letters",
+  "More room to refine every application",
+];
+
+function ProductPreview() {
+  return (
+    <div className="home-preview" aria-label="Illustrative Hicejo resume workspace">
+      <div className="home-preview-toolbar">
+        <div className="home-window-controls" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
+        <span className="home-preview-label">Hicejo workspace</span>
+        <span className="home-preview-status">
+          <span />
+          Your work, saved
+        </span>
+      </div>
+
+      <div className="home-preview-body">
+        <aside className="home-preview-rail" aria-hidden="true">
+          <div className="home-rail-mark">
+            <Sparkles size={17} strokeWidth={1.8} />
+          </div>
+          <span className="home-rail-icon home-rail-icon-active">
+            <FileText size={17} />
+          </span>
+          <span className="home-rail-icon">
+            <Target size={17} />
+          </span>
+          <span className="home-rail-icon">
+            <ShieldCheck size={17} />
+          </span>
+        </aside>
+
+        <div className="home-preview-content">
+          <div className="home-preview-heading">
+            <div>
+              <p className="home-overline">YOUR RESUME</p>
+              <h2>Product designer</h2>
+            </div>
+            <span className="home-preview-tag">Sample workspace</span>
+          </div>
+
+          <div className="home-document-layout">
+            <div className="home-resume-sheet">
+              <div className="home-resume-heading">
+                <span className="home-resume-avatar">AM</span>
+                <div>
+                  <strong>Alex Morgan</strong>
+                  <span>Product Designer</span>
+                </div>
+                <span className="home-resume-more">···</span>
+              </div>
+              <div className="home-resume-contact">
+                <span>San Francisco, CA</span>
+                <span>alexmorgan.design</span>
+              </div>
+              <div className="home-resume-section">
+                <b>EXPERIENCE</b>
+                <div className="home-resume-role">
+                  <strong>Senior Product Designer</strong>
+                  <span>Northstar · 2022 — Present</span>
+                  <i className="home-resume-line home-resume-line-long" />
+                  <i className="home-resume-line" />
+                  <i className="home-resume-line home-resume-line-short" />
+                </div>
+                <div className="home-resume-role">
+                  <strong>Product Designer</strong>
+                  <span>Studio Field · 2019 — 2022</span>
+                  <i className="home-resume-line home-resume-line-long" />
+                  <i className="home-resume-line home-resume-line-short" />
+                </div>
+              </div>
+              <div className="home-resume-section home-resume-skills">
+                <b>SELECTED SKILLS</b>
+                <div>
+                  <span>Prototyping</span>
+                  <span>Research</span>
+                  <span>Systems thinking</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="home-insight-card">
+              <div className="home-insight-icon">
+                <Target size={16} />
+              </div>
+              <div className="home-insight-copy">
+                <span>ROLE ALIGNMENT</span>
+                <strong>Make your impact easier to see</strong>
+              </div>
+              <div className="home-insight-rule">
+                <span />
+              </div>
+              <p>
+                Your experience is relevant. Add a specific outcome to make it
+                stronger.
+              </p>
+              <div className="home-insight-action">
+                <span>Review suggestion</span>
+                <ArrowRight size={14} />
+              </div>
+              <span className="home-sample-note">Example suggestion</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="home-preview-foot">
+        <span><LockKeyhole size={13} /> You decide what to change</span>
+        <span>A sample of the Hicejo workspace</span>
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
-
-  const features = [
-    {
-      icon: FileText,
-      title: "AI Resume Builder",
-      desc: "Draft clean, bulletproof resumes with automated achievement expanders and dynamic templates.",
-      color: "from-blue-500/20 to-indigo-500/20",
-      accent: "text-blue-500",
-    },
-    {
-      icon: ShieldCheck,
-      title: "Resume ATS Score Checker",
-      desc: "Identify keyword matching errors and layout flaws using the same algorithms recruiters use.",
-      color: "from-emerald-500/20 to-teal-500/20",
-      accent: "text-emerald-500",
-    },
-    {
-      icon: Target,
-      title: "Resume Tailor",
-      desc: "Instantly adapt your experience bullet points to match any specific job description.",
-      color: "from-violet-500/20 to-purple-500/20",
-      accent: "text-violet-500",
-    },
-    {
-      icon: FileUp,
-      title: "Cover Letter Generator",
-      desc: "Write engaging, high-conversion cover letters customized to your target role with one click.",
-      color: "from-pink-500/20 to-rose-500/20",
-      accent: "text-pink-500",
-    },
-    {
-      icon: Flame,
-      title: "Resume Roast",
-      desc: "Receive raw, sarcastic, and highly actionable feedback exposing structural design weaknesses.",
-      color: "from-amber-500/20 to-orange-500/20",
-      accent: "text-amber-500",
-    },
-    {
-      icon: Zap,
-      title: "Saved Resumes Gallery",
-      desc: "Keep history logs of custom tailoring iterations and download ready PDFs.",
-      color: "from-cyan-500/20 to-sky-500/20",
-      accent: "text-cyan-500",
-    },
-  ];
-
   return (
     <>
       <Navbar />
-      <div className="flex-1 bg-background text-foreground overflow-y-auto">
-        {/* Hero Section */}
-        <section className="relative overflow-hidden pt-20 pb-28 md:pt-32 md:pb-40">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent pointer-events-none" />
-          
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center relative z-10">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/5 text-xs font-semibold text-primary mb-6"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>Introducing the Operating System for Getting Hired</span>
-            </motion.div>
-
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.5 }}
-              className="text-4xl sm:text-6xl font-extrabold tracking-tight max-w-4xl mx-auto leading-none bg-gradient-to-b from-foreground to-foreground/75 bg-clip-text text-transparent"
-            >
-              Accelerate Your Career with <br />
-              <span className="bg-gradient-to-r from-primary via-violet-500 to-secondary bg-clip-text text-transparent">
-                Intelligence-Driven Resumes
-              </span>
-            </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-              className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
-            >
-              Stop sending generic resumes into the applicant tracking black box. Hicejo helps you build, roast, tailor, and track your application funnel.
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.5 }}
-              className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
-            >
-              <Link href="/register" className="w-full sm:w-auto">
-                <Button size="lg" className="w-full bg-gradient-to-r from-primary to-violet-600 shadow-lg shadow-primary/25">
-                  <span>Start Building Free</span>
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link href="#features" className="w-full sm:w-auto">
-                <Button variant="outline" size="lg" className="w-full">
-                  Explore Features
-                </Button>
-              </Link>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Feature Grid Section */}
-        <section id="features" className="py-24 border-t border-border/40 bg-card/20 relative">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Everything You Need To Secure Offers</h2>
-              <p className="mt-4 text-muted-foreground">
-                We packed the tools recruiters use directly into Hicejo. Analyze keywords, build drafts, and generate responses instantly.
+      <main className="home-page">
+        <section className="home-hero">
+          <div className="home-hero-grid" aria-hidden="true" />
+          <div className="home-hero-inner">
+            <div className="home-hero-copy">
+              <p className="home-eyebrow">
+                <span className="home-eyebrow-spark"><Sparkles size={13} /></span>
+                Resume tools for your next move
               </p>
-            </div>
-
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-100px" }}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-            >
-              {features.map((feat, index) => {
-                const Icon = feat.icon;
-                return (
-                  <motion.div key={index} variants={itemVariants}>
-                    <Card hoverEffect className="h-full">
-                      <CardContent className="p-8 space-y-4">
-                        <div className={`inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${feat.color} ${feat.accent}`}>
-                          <Icon className="h-6 w-6" />
-                        </div>
-                        <h3 className="text-xl font-bold">{feat.title}</h3>
-                        <p className="text-muted-foreground text-sm leading-relaxed">{feat.desc}</p>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                );
-              })}
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Pricing Section */}
-        <section id="pricing" className="py-24 border-t border-border/40">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Simple, Transparent Pricing</h2>
-              <p className="mt-4 text-muted-foreground">Get started for free, then upgrade to unlock unlimited AI processing power.</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              {/* Free Plan */}
-              <Card className="flex flex-col justify-between p-8 border-border/60">
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-xl font-bold">Standard Free</h3>
-                    <p className="text-sm text-muted-foreground mt-2">Perfect for starting your search.</p>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold">$0</span>
-                    <span className="text-muted-foreground">/month</span>
-                  </div>
-                  <ul className="space-y-3">
-                    {["1 Active Resume Draft", "3 AI ATS Keyword Scans", "1 Tailored Cover Letter", "Standard PDF Downloads"].map((feat, i) => (
-                      <li key={i} className="flex items-center gap-3 text-sm text-muted-foreground">
-                        <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                        <span>{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="mt-8">
-                  <Link href="/register">
-                    <Button variant="outline" className="w-full">Get Started Free</Button>
-                  </Link>
-                </div>
-              </Card>
-
-              {/* Pro Plan */}
-              <Card className="flex flex-col justify-between p-8 border-primary/40 relative overflow-hidden bg-primary/5">
-                <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-bl-lg uppercase tracking-wider">
-                  Popular
-                </div>
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-xl font-bold">Career Pro</h3>
-                    <p className="text-sm text-muted-foreground mt-2">For serious applicants seeking offers.</p>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold">$19</span>
-                    <span className="text-muted-foreground">/month</span>
-                  </div>
-                  <ul className="space-y-3">
-                    {[
-                      "Unlimited Resumes & Drafts",
-                      "Unlimited ATS Keywords Scanning",
-                      "Unlimited Custom Tailored Bullets",
-                      "Unlimited Cover Letter Generations",
-                      "Unlimited Resume Roasts",
-                      "Premium Formatting Templates",
-                    ].map((feat, i) => (
-                      <li key={i} className="flex items-center gap-3 text-sm text-foreground">
-                        <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                        <span>{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="mt-8">
-                  <Link href="/register">
-                    <Button className="w-full bg-gradient-to-r from-primary to-violet-600 shadow-md">
-                      Upgrade to Pro
-                    </Button>
-                  </Link>
-                </div>
-              </Card>
-            </div>
-          </div>
-        </section>
-
-        {/* Footer */}
-        <footer className="border-t border-border/40 bg-card py-12">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <Sparkles className="h-4 w-4" />
+              <h1>
+                Build a stronger
+                <br />
+                <em>resume for each role.</em>
+              </h1>
+              <p className="home-hero-description">
+                Create a clear resume, see how it matches a job description,
+                and get practical help improving your application and preparing
+                for interviews—without inventing experience.
+              </p>
+              <div className="home-hero-actions">
+                <Link href="/register" className="home-button home-button-primary">
+                  Build your resume <ArrowRight size={16} />
+                </Link>
+                <Link href="#how-it-works" className="home-button home-button-secondary">
+                  See how it works
+                </Link>
               </div>
-              <span className="font-bold">Hicejo</span>
+              <div className="home-hero-reassurance">
+                <Check size={14} />
+                <span>Free to start</span>
+                <span className="home-reassurance-dot">·</span>
+                <span>No credit card required</span>
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground">&copy; 2026 Hicejo Inc. All rights reserved.</p>
+            <div className="home-hero-art">
+              <div className="home-orbit home-orbit-one" aria-hidden="true" />
+              <div className="home-orbit home-orbit-two" aria-hidden="true" />
+              <ProductPreview />
+              <div className="home-hero-note">
+                <span className="home-note-icon"><ShieldCheck size={16} /></span>
+                <span><strong>Your experience stays yours.</strong><br />AI guidance grounded in your work.</span>
+              </div>
+            </div>
           </div>
-        </footer>
-      </div>
+          <div className="home-hero-bottom">
+            <span>Less guesswork.</span>
+            <span className="home-hero-bottom-line" />
+            <span>More clarity at every step.</span>
+          </div>
+        </section>
+
+        <section className="home-how section-shell" id="how-it-works">
+          <div className="home-section-intro">
+            <p className="home-overline">A CLEARER JOB SEARCH</p>
+            <h2>From first draft<br />to <em>interview-ready.</em></h2>
+            <p>
+              Build from your experience, compare your resume with a role, and
+              practice for the conversations that come next.
+            </p>
+          </div>
+          <div className="home-steps">
+            {[
+              { number: "01", title: "Build your resume", text: "Bring your real experience together in a clear, focused resume." },
+              { number: "02", title: "Match it to the role", text: "Compare your resume with a job description and spot what needs attention." },
+              { number: "03", title: "Prepare for interviews", text: "Refine your application and practice explaining the work you have actually done." },
+            ].map((step) => (
+              <article className="home-step" key={step.number}>
+                <span className="home-step-number">{step.number}</span>
+                <div className="home-step-marker" aria-hidden="true"><span /></div>
+                <h3>{step.title}</h3>
+                <p>{step.text}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="home-tools section-shell" id="product">
+          <div className="home-tools-heading">
+            <div>
+              <p className="home-overline">YOUR JOB SEARCH, IN ONE WORKSPACE</p>
+              <h2>Build. Match.<br /><em>Get ready.</em></h2>
+            </div>
+            <p>
+              Create and improve your resume, check it against a role, and get
+              focused support for applications and interview practice.
+            </p>
+          </div>
+          <div className="home-tool-grid">
+            {tools.map((tool) => {
+              const Icon = tool.icon;
+              return (
+                <article className="home-tool-card" key={tool.number}>
+                  <div className="home-tool-card-top">
+                    <span className="home-tool-icon"><Icon size={19} strokeWidth={1.7} /></span>
+                    <span className="home-tool-number">{tool.number}</span>
+                  </div>
+                  <h3>{tool.title}</h3>
+                  <p>{tool.description}</p>
+                  <Link href={tool.href} className="home-text-link">
+                    {tool.linkLabel} <ArrowRight size={15} />
+                  </Link>
+                </article>
+              );
+            })}
+          </div>
+          <Link href="/tools/resume-roast" className="home-extra-tool">
+            <span className="home-extra-tool-icon"><Flame size={16} /></span>
+            <span><strong>Want another perspective?</strong> Get direct, actionable feedback with Resume Roast.</span>
+            <span className="home-extra-tool-link">Take a look <ArrowRight size={14} /></span>
+          </Link>
+        </section>
+
+        <section className="home-principles">
+          <div className="home-principles-inner">
+            <div className="home-principles-copy">
+              <p className="home-overline">A LITTLE LESS AI NOISE</p>
+              <h2>Good help should make your work sound <em>more like you.</em></h2>
+              <p>
+                Your resume should reflect your experience—not a machine&apos;s
+                imagination. Hicejo helps you shape the evidence you already
+                have, so you can stand behind every word.
+              </p>
+              <Link href="/security" className="home-text-link home-light-link">
+                How we think about your data <ArrowRight size={15} />
+              </Link>
+            </div>
+            <div className="home-principle-list">
+              <div className="home-principle">
+                <span className="home-principle-icon"><ShieldCheck size={18} /></span>
+                <div>
+                  <h3>Evidence over exaggeration</h3>
+                  <p>Make real contributions clearer. Never pad a resume with invented achievements.</p>
+                </div>
+              </div>
+              <div className="home-principle">
+                <span className="home-principle-icon"><Target size={18} /></span>
+                <div>
+                  <h3>Guidance, not guesswork</h3>
+                  <p>Get specific suggestions you can assess, edit, and make your own.</p>
+                </div>
+              </div>
+              <div className="home-principle">
+                <span className="home-principle-icon"><LockKeyhole size={18} /></span>
+                <div>
+                  <h3>Your application, your call</h3>
+                  <p>You stay in control of what to change and what to share.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="home-pricing section-shell" id="pricing">
+          <div className="home-pricing-intro">
+            <p className="home-overline">STRAIGHTFORWARD PRICING</p>
+            <h2>Start where you are.</h2>
+            <p>Build a better application at your own pace. No pressure, no card to get started.</p>
+          </div>
+          <div className="home-price-grid">
+            <article className="home-price-card">
+              <p className="home-price-name">Free</p>
+              <p className="home-price-description">The essentials for getting started.</p>
+              <p className="home-price-amount">$0 <span>/ month</span></p>
+              <Link href="/register" className="home-button home-button-secondary home-price-button">
+                Get started free <ArrowRight size={15} />
+              </Link>
+              <ul>
+                {freeIncludes.map((item) => (
+                  <li key={item}><Check size={15} />{item}</li>
+                ))}
+              </ul>
+            </article>
+            <article className="home-price-card home-price-card-featured">
+              <span className="home-price-label">For the active search</span>
+              <p className="home-price-name">Career Pro</p>
+              <p className="home-price-description">More room to focus on the right opportunity.</p>
+              <p className="home-price-amount">$12 <span>/ month</span></p>
+              <Link href="/register" className="home-button home-button-primary home-price-button">
+                Explore Career Pro <ArrowRight size={15} />
+              </Link>
+              <ul>
+                {proIncludes.map((item) => (
+                  <li key={item}><Check size={15} />{item}</li>
+                ))}
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section className="home-final-cta">
+          <div className="home-final-cta-inner">
+            <span className="home-final-spark"><Sparkles size={18} /></span>
+            <p className="home-overline">YOUR NEXT MOVE, ON YOUR TERMS</p>
+            <h2>Ready to make your experience<br />easier to see?</h2>
+            <p>Start with what you have. Build from there.</p>
+            <Link href="/register" className="home-button home-button-light">
+              Start building for free <ArrowRight size={16} />
+            </Link>
+          </div>
+        </section>
+      </main>
+      <footer className="home-footer">
+        <div className="home-footer-main">
+          <div className="home-footer-brand">
+            <Link href="/" className="home-wordmark">
+              <span className="home-footer-mark"><BrandMark className="h-5 w-5" /></span>
+              Hice<span>jo</span>
+            </Link>
+            <p>A more thoughtful way to move your career forward.</p>
+          </div>
+          <div className="home-footer-links">
+            <div>
+              <span>TOOLS</span>
+              <Link href="/templates">Resume templates</Link>
+              <Link href="/tools/ats-resume-checker">Resume checker</Link>
+              <Link href="/tools/resume-tailor">Resume tailor</Link>
+              <Link href="/tools/cover-letter-generator">Cover letters</Link>
+            </div>
+            <div>
+              <span>EXPLORE</span>
+              <Link href="/blog">Career notes</Link>
+              <Link href="/about">About Hicejo</Link>
+              <Link href="/contact">Contact</Link>
+            </div>
+            <div>
+              <span>THE DETAILS</span>
+              <Link href="/security">Security</Link>
+              <Link href="/privacy">Privacy</Link>
+              <Link href="/terms">Terms</Link>
+            </div>
+          </div>
+        </div>
+        <div className="home-footer-bottom">
+          <span>© {new Date().getFullYear()} Hicejo. Built for your next chapter.</span>
+          <span>Thoughtful tools for your next career move.</span>
+        </div>
+      </footer>
     </>
   );
 }

@@ -51,6 +51,62 @@ export function StarterTemplatesModal({
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto p-5 space-y-3">
+            {/* Blank Canvas Option */}
+            <div className="p-4 rounded-xl border-2 border-dashed border-primary/40 hover:border-primary bg-primary/5 hover:bg-primary/10 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-primary text-primary-foreground">
+                    Clean Slate
+                  </span>
+                  <h4 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
+                    Start from Scratch (Blank Canvas)
+                  </h4>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Start with an empty, clean resume without any prefilled dummy text or fake companies.
+                </p>
+                <p className="text-[11px] text-zinc-500 font-mono">
+                  Pure empty structure • 100% your own words
+                </p>
+              </div>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  onSelectTemplate({
+                    id: "blank-canvas",
+                    name: "Blank Resume",
+                    role: "Custom Role",
+                    category: "Clean Slate",
+                    description: "Blank canvas without prefilled text",
+                    data: {
+                      personalInfo: { fullName: "", email: "", phone: "", location: "", website: "", linkedin: "" },
+                      summary: "",
+                      experience: [],
+                      education: [],
+                      projects: [],
+                      skills: [],
+                      design: {
+                        fontFamily: "font-sans",
+                        fontSize: "md",
+                        sectionOrder: ["summary", "experience", "projects", "education", "skills"],
+                        density: "normal",
+                        sectionSpacing: 1.0,
+                        itemSpacing: 1.0,
+                        lineHeight: 1.4
+                      }
+                    }
+                  });
+                  onClose();
+                }}
+                className="border-primary/40 hover:border-primary text-primary hover:bg-primary hover:text-primary-foreground gap-1.5 text-xs font-semibold shrink-0 cursor-pointer shadow-xs"
+              >
+                <span>Start Blank</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+
             {STARTER_TEMPLATES.map((tmpl) => (
               <div
                 key={tmpl.id}

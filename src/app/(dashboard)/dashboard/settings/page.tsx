@@ -8,31 +8,38 @@ import {
   Download,
   Trash2,
   Check,
+  CheckCircle2,
   RefreshCw,
   Mail,
   Briefcase,
   Layers,
-  CircleDollarSign
+  CircleDollarSign,
+  FileText
 } from "lucide-react";
 import { DashboardShell } from "@/components/shared/DashboardShell";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
+import { useResumeStore } from "@/store/useResumeStore";
 
 export default function SettingsPage() {
   const router = useRouter();
   const supabase = createClient();
 
+  const { careerProfile, setCareerProfile } = useResumeStore();
+
   const [fullName, setFullName] = React.useState("");
   const [email, setEmail] = React.useState("");
-  const [targetRole, setTargetRole] = React.useState("");
+  const [targetRole, setTargetRole] = React.useState(() => careerProfile?.targetRole || "");
   const [targetIndustry, setTargetIndustry] = React.useState("");
   const [targetSalary, setTargetSalary] = React.useState("");
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
   const [saveSuccess, setSaveSuccess] = React.useState(false);
+  const [isExporting, setIsExporting] = React.useState(false);
+  const [exportSuccess, setExportSuccess] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   // Load profile data on mount
@@ -45,7 +52,7 @@ export default function SettingsPage() {
           const profile = result.data;
           setFullName(profile.full_name || "");
           setEmail(profile.email || "");
-          setTargetRole(profile.target_role || "");
+          setTargetRole(profile.target_role || careerProfile?.targetRole || "");
           setTargetIndustry(profile.target_industry || "");
           setTargetSalary(profile.target_salary || "");
         }
@@ -56,7 +63,7 @@ export default function SettingsPage() {
       }
     };
     loadProfile();
-  }, []);
+  }, [careerProfile?.targetRole]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +72,10 @@ export default function SettingsPage() {
     setSaveSuccess(false);
 
     try {
+      if (targetRole.trim()) {
+        setCareerProfile({ targetRole: targetRole.trim() });
+      }
+
       const res = await fetch("/api/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -92,36 +103,119 @@ export default function SettingsPage() {
 
   const handleExportData = async () => {
     try {
-      // Fetch all user details
-      const profileRes = await fetch("/api/profile");
-      const profile = await profileRes.json();
-      
-      const resumesRes = await fetch("/api/resume");
-      const resumes = await resumesRes.json();
+      setIsExporting(true);
+      setExportSuccess(false);
 
-      const lettersRes = await fetch("/api/cover-letters");
-      const letters = await lettersRes.json();
+      // 1. Fetch complete database entities in parallel
+      const [profileRes, resumesRes, lettersRes] = await Promise.all([
+        fetch("/api/profile"),
+        fetch("/api/resume?full=true"),
+        fetch("/api/cover-letters")
+      ]);
 
+      const profileJson = await profileRes.json().catch(() => ({}));
+      const resumesJson = await resumesRes.json().catch(() => ({}));
+      const lettersJson = await lettersRes.json().catch(() => ({}));
+
+      let allResumes: any[] = resumesJson.success && Array.isArray(resumesJson.data) ? resumesJson.data : [];
+
+      // 2. Capture in-memory active canvas draft from Zustand store if not already saved
+      try {
+        const activeStore = useResumeStore.getState();
+        if (activeStore && activeStore.data) {
+          const hasContent =
+            activeStore.data.personalInfo?.fullName ||
+            activeStore.data.experience?.length > 0 ||
+            activeStore.data.skills?.length > 0;
+          if (hasContent) {
+            const alreadyInList = allResumes.some((r) => r.id && r.id === activeStore.id);
+            if (!alreadyInList) {
+              allResumes.unshift({
+                id: activeStore.id || "active-canvas-draft",
+                title: activeStore.title || "Active Canvas Draft (Unsaved)",
+                content: activeStore.data,
+                ats_score: null,
+                is_active_canvas: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              });
+            }
+          }
+        }
+      } catch (storeErr) {
+        console.warn("Could not capture in-memory draft", storeErr);
+      }
+
+      // 3. Gather local intelligence & learning items
+      let savedTargets: any[] = [];
+      let activeJobContext: any = null;
+      let completedSkills: string[] = [];
+      let learningRole: string | null = null;
+      let dailyCredits: any = null;
+
+      try {
+        const rawTargets = localStorage.getItem("hicejo_saved_targets");
+        if (rawTargets) savedTargets = JSON.parse(rawTargets);
+
+        const rawContext = localStorage.getItem("hicejo_active_job_context");
+        if (rawContext) activeJobContext = JSON.parse(rawContext);
+
+        const rawSkills = localStorage.getItem("hicejo_completed_skills");
+        if (rawSkills) completedSkills = JSON.parse(rawSkills);
+
+        learningRole = localStorage.getItem("hicejo_learning_role");
+
+        const rawCredits = localStorage.getItem("hicejo_daily_credits");
+        if (rawCredits) dailyCredits = JSON.parse(rawCredits);
+      } catch (storageErr) {
+        console.warn("Error reading local export items", storageErr);
+      }
+
+      // 4. Construct complete, uncompressed backup payload
       const exportPayload = {
-        exportedAt: new Date().toISOString(),
-        profile: profile.success ? profile.data : null,
-        resumes: resumes.success ? resumes.data : [],
-        coverLetters: letters.success ? letters.data : []
+        meta: {
+          platform: "Hicejo OS",
+          exportVersion: "2.0",
+          exportedAt: new Date().toISOString(),
+          description: "Complete personal backup containing profile, full resume drafts with experience & skills, cover letters, target jobs, and learning roadmaps.",
+          summary: {
+            totalResumes: allResumes.length,
+            totalCoverLetters: lettersJson.success && Array.isArray(lettersJson.data) ? lettersJson.data.length : 0,
+            totalSavedTargets: savedTargets.length,
+            totalMasteredSkills: completedSkills.length
+          }
+        },
+        profile: profileJson.success ? profileJson.data : null,
+        resumes: allResumes,
+        coverLetters: lettersJson.success && Array.isArray(lettersJson.data) ? lettersJson.data : [],
+        careerTargets: {
+          activeJobContext,
+          savedTargets
+        },
+        skillsAndLearning: {
+          currentRole: learningRole,
+          completedSkills
+        },
+        creditsAndUsage: dailyCredits
       };
 
-      // Generate download trigger
+      // 5. Generate JSON download trigger
       const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `hicejo-data-export-${new Date().toISOString().split("T")[0]}.json`;
+      link.download = `hicejo-complete-export-${new Date().toISOString().split("T")[0]}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+
+      setExportSuccess(true);
     } catch (err) {
-      console.error(err);
-      alert("Failed to export database items.");
+      console.error("Export data failure:", err);
+      alert("Failed to export database items. Please check your network connection and try again.");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -271,20 +365,65 @@ export default function SettingsPage() {
         {/* Data Purges & Exporters (Right) */}
         <div className="lg:col-span-5 space-y-6">
           {/* Exporter Card */}
-          <Card>
+          <Card className="border-border/70 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Download className="h-5 w-5 text-muted-foreground shrink-0" />
+                <Download className="h-5 w-5 text-primary shrink-0" />
                 <span>Export Personal Data</span>
               </CardTitle>
               <CardDescription>
-                Download a complete backup JSON payload containing your profile settings, resume drafts, cover letters, and keyword scores.
+                Download a complete, uncompressed backup JSON payload containing your complete profile, full resume drafts with experience & skill sections, cover letters, target jobs, and learning progress.
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-2">
-              <Button variant="outline" className="w-full gap-2" onClick={handleExportData}>
-                <Download className="h-4 w-4" />
-                <span>Export Database JSON</span>
+            <CardContent className="pt-2 space-y-4">
+              <div className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-1.5 text-xs text-muted-foreground">
+                <p className="font-semibold text-foreground">Included in this export:</p>
+                <ul className="space-y-1 pl-1">
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                    <span>Candidate Profile & Career Targets</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                    <span>Complete Resume Contents (Experience, Education, Skills, Projects)</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                    <span>Generated Cover Letters & Custom Company Drafts</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                    <span>Saved Target Roles & Requirements</span>
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                    <span>Skills & Learning Curriculum Mastery Records</span>
+                  </li>
+                </ul>
+              </div>
+
+              <Button
+                variant="outline"
+                className="w-full gap-2 font-bold text-xs h-10 border-border/80 hover:bg-muted cursor-pointer"
+                onClick={handleExportData}
+                disabled={isExporting}
+              >
+                {isExporting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin text-primary" />
+                    <span>Gathering & Packing Complete Data...</span>
+                  </>
+                ) : exportSuccess ? (
+                  <>
+                    <Check className="h-4 w-4 text-emerald-500" />
+                    <span>Export Complete! Click to Download Again</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 text-primary" />
+                    <span>Export Database JSON (Complete Backup)</span>
+                  </>
+                )}
               </Button>
             </CardContent>
           </Card>

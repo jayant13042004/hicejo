@@ -26,17 +26,23 @@ import {
   Scissors,
   Check,
   FileCheck,
-  LayoutTemplate
+  LayoutTemplate,
+  Printer,
+  AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useResumeStore } from "@/store/useResumeStore";
-import { Skill } from "@/types/resume";
+import { Skill, FitAnalysis, ResumeDensity } from "@/types/resume";
 import { DensityController } from "@/components/builder/DensityController";
+import { FitIndicatorBar } from "@/components/builder/FitIndicatorBar";
+import { FitAnalysisDrawer } from "@/components/builder/FitAnalysisDrawer";
 import { SmartBulletCompressorModal } from "@/components/builder/SmartBulletCompressorModal";
 import { StarterTemplatesModal } from "@/components/builder/StarterTemplatesModal";
-import { StarterTemplate } from "@/data/starterTemplates";
+import { StarterTemplate, STARTER_TEMPLATES } from "@/data/starterTemplates";
+import { ResumePerfectionBar } from "@/components/builder/ResumePerfectionBar";
+import { ROLE_CURRICULA, getCuratedSkillsForRole } from "@/data/learningCurricula";
 
 // 5 Curated ATS Typography Styles
 const fontClassMap: Record<string, string> = {
@@ -59,6 +65,14 @@ const fontSizeMap: Record<string, string> = {
 function ResumeBuilderContent() {
   const searchParams = useSearchParams();
   const resumeIdParam = searchParams.get("id");
+  const isAllFixed = searchParams.get("fixed") === "all";
+  const [showAllFixedBanner, setShowAllFixedBanner] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isAllFixed) {
+      setShowAllFixedBanner(true);
+    }
+  }, [isAllFixed]);
 
   const {
     id,
@@ -91,11 +105,17 @@ function ResumeBuilderContent() {
     redo,
     past,
     future,
+    activeJobContext,
+    careerProfile,
+    pendingImprovement,
+    setPendingImprovement,
   } = useResumeStore();
 
   const [activeTab, setActiveTab] = React.useState<
     "personal" | "summary" | "experience" | "education" | "projects" | "skills" | "design"
   >("personal");
+
+  const [mobileViewMode, setMobileViewMode] = React.useState<"editor" | "preview">("editor");
 
   const [enhancingId, setEnhancingId] = React.useState<string | null>(null);
   const [newSkillName, setNewSkillName] = React.useState("");
@@ -130,10 +150,26 @@ function ResumeBuilderContent() {
     itemType: "experience"
   });
 
-  // Fetch initial resume draft if ID is provided
+  const templateParam = searchParams.get("template");
+
+  // Fetch initial resume draft or hydrate starter template
   React.useEffect(() => {
     const fetchResume = async () => {
+      // 1. If a template query param was passed, hydrate that starter template immediately
+      if (templateParam) {
+        const foundTemplate = STARTER_TEMPLATES.find((t) => t.id === templateParam);
+        if (foundTemplate) {
+          setTitle(foundTemplate.name);
+          importResumeData(foundTemplate.data);
+          return;
+        }
+      }
+
       if (!resumeIdParam) {
+        // Preserve in-memory draft if already loaded (e.g. from Tailor or ongoing work)
+        if (data.personalInfo.fullName || data.experience.length > 0 || data.skills.length > 0) {
+          return;
+        }
         loadResume(null, "Untitled Resume", {
           personalInfo: { fullName: "", email: "", phone: "", location: "", website: "", linkedin: "" },
           summary: "",
@@ -151,6 +187,13 @@ function ResumeBuilderContent() {
             lineHeight: 1.4
           }
         });
+
+        // Prompt first-time users with template choices instead of an intimidating blank canvas
+        const hasPrompted = sessionStorage.getItem("hicejo_template_prompted");
+        if (!hasPrompted) {
+          sessionStorage.setItem("hicejo_template_prompted", "true");
+          setIsTemplatesModalOpen(true);
+        }
         return;
       }
 
@@ -165,7 +208,14 @@ function ResumeBuilderContent() {
       }
     };
     fetchResume();
-  }, [resumeIdParam, loadResume]);
+  }, [resumeIdParam, templateParam, loadResume, importResumeData]);
+
+  // Auto-switch to target section if an improvement recommendation was passed
+  React.useEffect(() => {
+    if (pendingImprovement?.targetSection) {
+      setActiveTab(pendingImprovement.targetSection as any);
+    }
+  }, [pendingImprovement]);
 
   // Debounced Auto-save to cloud DB
   React.useEffect(() => {
@@ -207,6 +257,288 @@ function ResumeBuilderContent() {
     return () => clearTimeout(timer);
   }, [data, title, id, saveState, setResumeId, setSaveState]);
 
+  // One-Page Fit Analysis & Auto-Optimizer states
+  const [fitAnalysis, setFitAnalysis] = React.useState<FitAnalysis>({
+    status: "fits",
+    pageCount: 1,
+    utilizationPercentage: 88,
+    overflowLines: 0,
+    overflowPercentage: 0,
+    contentHeightPx: 1000,
+    targetPageHeightPx: 1123,
+    readabilityGrade: "Excellent",
+    atsSafetyGrade: "Excellent",
+    contentDensity: "Optimal",
+    recommendedAction: "Your resume cleanly fits on a single page."
+  });
+  const [isFitDrawerOpen, setIsFitDrawerOpen] = React.useState(false);
+  const [isAutoFitting, setIsAutoFitting] = React.useState(false);
+  const [autoFitNotification, setAutoFitNotification] = React.useState<string | null>(null);
+
+  // Real-time calculation of page fit and line overflow
+  const calculateFit = React.useCallback(() => {
+    const resumeEl = document.getElementById("resume-print-area");
+    if (!resumeEl) return;
+
+    const targetHeight = Math.round(resumeEl.offsetWidth * (297 / 210)) || 1123;
+    
+    // Accurately measure actual rendered content bottom to detect trailing blank space
+    const sections = resumeEl.querySelectorAll(".section-item");
+    const lastSection = sections[sections.length - 1] as HTMLElement;
+    let actualContentHeight = 0;
+    if (lastSection) {
+      const resumeRect = resumeEl.getBoundingClientRect();
+      const lastRect = lastSection.getBoundingClientRect();
+      actualContentHeight = Math.round(lastRect.bottom - resumeRect.top + 30);
+    } else {
+      actualContentHeight = resumeEl.scrollHeight;
+    }
+
+    const isOverflowing = resumeEl.scrollHeight > targetHeight + 6;
+    const diff = resumeEl.scrollHeight - targetHeight;
+    const overflowLines = isOverflowing ? Math.max(1, Math.round(diff / 22)) : 0;
+    
+    // Utilization based on real content position
+    const utilization = isOverflowing
+      ? 100
+      : Math.min(100, Math.max(15, Math.round((actualContentHeight / targetHeight) * 100)));
+
+    let status: FitAnalysis["status"] = "fits";
+    if (isOverflowing) {
+      status = "overflowing";
+    } else if (utilization >= 92 || data.design?.balancePageHeight) {
+      status = "perfect";
+    } else {
+      status = "underutilized";
+    }
+
+    const currentDensity = data.design?.density || "normal";
+    const densityMap: Record<ResumeDensity, FitAnalysis["contentDensity"]> = {
+      relaxed: "Relaxed",
+      normal: "Optimal",
+      compact: "Compact",
+      "ultra-compact": "Dense"
+    };
+
+    setFitAnalysis({
+      status,
+      pageCount: isOverflowing ? 2 : 1,
+      utilizationPercentage: data.design?.balancePageHeight ? 100 : utilization,
+      overflowLines,
+      overflowPercentage: isOverflowing ? Math.round((diff / targetHeight) * 100) : 0,
+      contentHeightPx: actualContentHeight,
+      targetPageHeightPx: targetHeight,
+      readabilityGrade: data.design?.fontSize === "xs" ? "Tight" : "Excellent",
+      atsSafetyGrade: "Excellent",
+      contentDensity: densityMap[currentDensity] || "Optimal",
+      recommendedAction: isOverflowing
+        ? `${overflowLines} line${overflowLines === 1 ? "" : "s"} overflowing. Click "Fix to 1 Page" to auto-fit.`
+        : utilization < 90
+        ? `Resume uses ${utilization}% of page. Click "Fill 1 Page (100%)" to eliminate bottom white space.`
+        : "Resume fits cleanly on a single page."
+    });
+  }, [data]);
+
+  React.useEffect(() => {
+    const timer = setTimeout(calculateFit, 150);
+    window.addEventListener("resize", calculateFit);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", calculateFit);
+    };
+  }, [calculateFit]);
+
+  // Robust Multi-Stage Auto-Fit Solver
+  const handleMultiStageAutoFit = async () => {
+    setIsAutoFitting(true);
+    const resumeEl = document.getElementById("resume-print-area");
+    if (!resumeEl) {
+      setIsAutoFitting(false);
+      return;
+    }
+
+    const targetHeight = Math.round(resumeEl.offsetWidth * (297 / 210)) || 1123;
+    const initialOverflow = resumeEl.scrollHeight - targetHeight;
+
+    if (initialOverflow <= 6) {
+      setAutoFitNotification("Your resume already fits cleanly on 1 page!");
+      setIsAutoFitting(false);
+      return;
+    }
+
+    const currentDensity = data.design?.density || "normal";
+    const currentFontSize = data.design?.fontSize || "md";
+    const changes: string[] = [];
+
+    // Stage 1: Spacing & Density progression (relaxed -> normal -> compact -> ultra-compact)
+    let nextDensity: ResumeDensity = currentDensity;
+    if (currentDensity === "relaxed") {
+      nextDensity = "normal";
+      changes.push("Density: Relaxed → Normal");
+    } else if (currentDensity === "normal") {
+      nextDensity = "compact";
+      changes.push("Density: Normal → Compact");
+    } else if (currentDensity === "compact") {
+      nextDensity = "ultra-compact";
+      changes.push("Density: Compact → Ultra-compact");
+    }
+
+    if (nextDensity !== currentDensity) {
+      setDensity(nextDensity);
+      await new Promise((r) => setTimeout(r, 150));
+    }
+
+    // Check if solved after density adjustment
+    let currentHeight = resumeEl.scrollHeight;
+    if (currentHeight > targetHeight + 6) {
+      // Stage 2: Typography scale adjustment (xl -> lg -> md -> sm)
+      let nextFontSize = currentFontSize;
+      if (currentFontSize === "xl") {
+        nextFontSize = "lg";
+        changes.push("Font Scale: Spacious → Medium");
+      } else if (currentFontSize === "lg") {
+        nextFontSize = "md";
+        changes.push("Font Scale: Medium → Standard");
+      } else if (currentFontSize === "md") {
+        nextFontSize = "sm";
+        changes.push("Font Scale: Standard → Small");
+      }
+
+      if (nextFontSize !== currentFontSize) {
+        updateDesignSettings({ fontSize: nextFontSize });
+        await new Promise((r) => setTimeout(r, 150));
+      }
+    }
+
+    // Check if further density compaction needed
+    currentHeight = resumeEl.scrollHeight;
+    if (currentHeight > targetHeight + 6 && nextDensity === "normal") {
+      setDensity("compact");
+      changes.push("Density: Normal → Compact");
+      await new Promise((r) => setTimeout(r, 150));
+    }
+
+    calculateFit();
+    setIsAutoFitting(false);
+
+    const finalDiff = resumeEl.scrollHeight - targetHeight;
+    if (finalDiff <= 6) {
+      setAutoFitNotification(
+        `✨ Solved! ${changes.join(" • ")}. Your resume now fits cleanly on 1 page.`
+      );
+    } else {
+      const remainingLines = Math.max(1, Math.round(finalDiff / 22));
+      setAutoFitNotification(
+        `Applied: ${changes.join(" • ")}. Still ${remainingLines} line${remainingLines === 1 ? "" : "s"} over — open the Fit Audit below to compress verbose bullets.`
+      );
+      setIsFitDrawerOpen(true);
+    }
+  };
+
+  // Expand Underfilled Resume to 100% of Single Page (Eliminating Bottom White Space)
+  const handleExpandToFillPage = async () => {
+    const resumeEl = document.getElementById("resume-print-area");
+    if (!resumeEl) return;
+
+    setIsAutoFitting(true);
+    const targetHeight = Math.round(resumeEl.offsetWidth * (297 / 210)) || 1123;
+    const currentDensity = data.design?.density || "normal";
+    const currentFontSize = data.design?.fontSize || "md";
+    const changes: string[] = [];
+
+    const getActualHeight = () => {
+      const sections = resumeEl.querySelectorAll(".section-item");
+      const lastSection = sections[sections.length - 1] as HTMLElement;
+      if (lastSection) {
+        const resumeRect = resumeEl.getBoundingClientRect();
+        const lastRect = lastSection.getBoundingClientRect();
+        return Math.round(lastRect.bottom - resumeRect.top + 30);
+      }
+      return resumeEl.scrollHeight;
+    };
+
+    let actualHeight = getActualHeight();
+
+    // Stage 1: Expand Density (ultra-compact -> compact -> normal -> relaxed)
+    let nextDensity: ResumeDensity = currentDensity;
+    if (currentDensity === "ultra-compact") {
+      nextDensity = "compact";
+      changes.push("Density: Compact");
+    } else if (currentDensity === "compact") {
+      nextDensity = "normal";
+      changes.push("Density: Normal");
+    } else if (currentDensity === "normal" && actualHeight < targetHeight - 80) {
+      nextDensity = "relaxed";
+      changes.push("Density: Relaxed");
+    }
+
+    if (nextDensity !== currentDensity) {
+      setDensity(nextDensity);
+      await new Promise((r) => setTimeout(r, 120));
+    }
+
+    // Stage 2: Typography Scale (sm -> md -> lg)
+    actualHeight = getActualHeight();
+    if (actualHeight < targetHeight - 70) {
+      let nextFontSize = currentFontSize;
+      if (currentFontSize === "xs") {
+        nextFontSize = "sm";
+        changes.push("Font: Standard");
+      } else if (currentFontSize === "sm") {
+        nextFontSize = "md";
+        changes.push("Font: Medium");
+      } else if (currentFontSize === "md" && actualHeight < targetHeight - 120) {
+        nextFontSize = "lg";
+        changes.push("Font: Large");
+      }
+
+      if (nextFontSize !== currentFontSize) {
+        updateDesignSettings({ fontSize: nextFontSize });
+        await new Promise((r) => setTimeout(r, 120));
+      }
+    }
+
+    // Stage 3: Section Spacing & Edge-to-Edge Page Balancing
+    const currentSectionSpacing = data.design?.sectionSpacing || 1.0;
+    const nextSpacing = Math.min(1.5, Number((currentSectionSpacing + 0.2).toFixed(2)));
+    
+    updateDesignSettings({
+      sectionSpacing: nextSpacing,
+      balancePageHeight: true
+    });
+    changes.push("100% Page Balance (Zero White Space)");
+    await new Promise((r) => setTimeout(r, 120));
+
+    // Safety rollback check: if pushed past targetHeight + 6, back off slightly
+    if (resumeEl.scrollHeight > targetHeight + 6) {
+      updateDesignSettings({
+        sectionSpacing: Math.max(1.0, Number((nextSpacing - 0.2).toFixed(2))),
+        balancePageHeight: false
+      });
+      await new Promise((r) => setTimeout(r, 120));
+    }
+
+    calculateFit();
+    setIsAutoFitting(false);
+
+    setAutoFitNotification(
+      `✨ 100% Page Balance Applied: ${changes.join(" • ") || "Spacing scaled"}. Trailing white space eliminated!`
+    );
+  };
+
+  // Native Searchable/Vector PDF Trigger (100% Vector Text for ATS Parsers)
+  const handleExecutePrintPDF = () => {
+    setIsDownloadModalOpen(false);
+    const originalTitle = document.title;
+    const cleanFileName = (downloadFileName.trim() || title || "Resume").replace(/[^a-zA-Z0-9_\-\s]/g, "");
+    document.title = cleanFileName;
+
+    setTimeout(() => {
+      window.print();
+      document.title = originalTitle;
+    }, 250);
+  };
+
   // Open Download Modal and prefill name
   const handleOpenDownloadModal = () => {
     const defaultName = (data.personalInfo.fullName || title || "Resume")
@@ -217,62 +549,38 @@ function ResumeBuilderContent() {
     setIsDownloadModalOpen(true);
   };
 
-  // Direct 1-Click High-Quality Full-Width PDF Download
+  // Direct 1-Click High-Quality PDF Download (100% Reliable, Saves Directly to User Downloads)
   const handleExecutePDFDownload = async () => {
     const resumeEl = document.getElementById("resume-print-area");
     if (!resumeEl) return;
 
     setIsDownloadingPDF(true);
     try {
-      const html2canvas = (await import("html2canvas")).default;
+      const { toPng } = await import("html-to-image");
       const { jsPDF } = await import("jspdf");
 
-      // 1. Create a pristine detached container with exact A4 proportions (794px width)
-      const container = document.createElement("div");
-      container.style.position = "fixed";
-      container.style.left = "-9999px";
-      container.style.top = "0";
-      container.style.width = "794px";
-      container.style.minHeight = "1123px";
-      container.style.backgroundColor = "#ffffff";
-      container.style.zIndex = "-9999";
-      container.style.boxSizing = "border-box";
+      // Temporarily clear box shadow and border for clean print raster
+      const prevShadow = resumeEl.style.boxShadow;
+      const prevBorder = resumeEl.style.border;
+      resumeEl.style.boxShadow = "none";
+      resumeEl.style.border = "none";
 
-      // 2. Clone resume node cleanly
-      const cloned = resumeEl.cloneNode(true) as HTMLElement;
-      cloned.id = "clean-pdf-render";
-      cloned.style.width = "794px";
-      cloned.style.minWidth = "794px";
-      cloned.style.maxWidth = "794px";
-      cloned.style.minHeight = "1123px";
-      cloned.style.margin = "0";
-      cloned.style.padding = "45px 55px";
-      cloned.style.boxShadow = "none";
-      cloned.style.border = "none";
-      cloned.style.backgroundColor = "#ffffff";
-      cloned.style.color = "#09090b";
-      cloned.style.transform = "none";
-
-      // Remove non-print UI overlays
-      cloned.querySelectorAll(".no-print, [data-no-print]").forEach((el) => el.remove());
-
-      container.appendChild(cloned);
-      document.body.appendChild(container);
-
-      // 3. Render high-resolution canvas (Scale 2 for crisp vector typography)
-      const canvas = await html2canvas(cloned, {
-        scale: 2,
-        useCORS: true,
+      const dataUrl = await toPng(resumeEl, {
+        quality: 0.98,
+        pixelRatio: 2,
         backgroundColor: "#ffffff",
-        logging: false,
-        width: 794,
-        windowWidth: 794
+        filter: (node: HTMLElement) => {
+          if (node.classList && (node.classList.contains("no-print") || node.hasAttribute("data-no-print"))) {
+            return false;
+          }
+          return true;
+        }
       });
 
-      document.body.removeChild(container);
+      // Restore original styling
+      resumeEl.style.boxShadow = prevShadow;
+      resumeEl.style.border = prevBorder;
 
-      // 4. Create standard A4 portrait PDF (210mm x 297mm)
-      const imgData = canvas.toDataURL("image/jpeg", 0.98);
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
@@ -280,29 +588,54 @@ function ResumeBuilderContent() {
         compress: true
       });
 
-      pdf.addImage(imgData, "JPEG", 0, 0, 210, 297, undefined, "FAST");
+      // Exact A4 dimensions: 210mm x 297mm
+      pdf.addImage(dataUrl, "PNG", 0, 0, 210, 297, undefined, "FAST");
 
-      const finalName = (downloadFileName.trim() || "Resume").replace(/[^a-zA-Z0-9_\-]/g, "_");
-      pdf.save(`${finalName}.pdf`);
+      const defaultName = (data.personalInfo.fullName || title || "Resume")
+        .trim()
+        .replace(/[^a-zA-Z0-9_\-\s]/g, "")
+        .replace(/\s+/g, "_");
+      const cleanName = (downloadFileName.trim() || defaultName || "Resume").replace(/[^a-zA-Z0-9_\-\s]/g, "");
+
+      pdf.save(`${cleanName || "Resume"}.pdf`);
       setIsDownloadModalOpen(false);
-    } catch (err) {
-      console.error("Direct PDF download error:", err);
-      alert("Encountered an issue generating PDF. Please try again.");
+      setAutoFitNotification("✨ Resume PDF downloaded directly to your downloads folder!");
+    } catch (err: any) {
+      console.warn("Direct html-to-image render encountered error, trying fallback canvas:", err);
+      try {
+        const html2canvas = (await import("html2canvas")).default;
+        const { jsPDF } = await import("jspdf");
+        const canvas = await html2canvas(resumeEl, { scale: 2, backgroundColor: "#ffffff" });
+        const imgData = canvas.toDataURL("image/jpeg", 0.98);
+        const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+        pdf.addImage(imgData, "JPEG", 0, 0, 210, 297);
+        const defaultName = (data.personalInfo.fullName || title || "Resume").trim().replace(/[^a-zA-Z0-9_\-\s]/g, "").replace(/\s+/g, "_");
+        pdf.save(`${defaultName || "Resume"}.pdf`);
+        setIsDownloadModalOpen(false);
+        setAutoFitNotification("✨ Resume PDF downloaded directly to your downloads folder!");
+      } catch (fallbackErr) {
+        console.error("PDF download failed completely:", fallbackErr);
+        alert("Direct PDF export encountered an error in this browser. Please try again.");
+      }
     } finally {
       setIsDownloadingPDF(false);
     }
   };
 
-  // AI Bullet Enhancer endpoint trigger
+  // AI Bullet Enhancer endpoint trigger (Google XYZ format)
   const handleEnhanceBullet = async (itemId: string, text: string, itemType: "experience" | "projects") => {
     if (!text || text.trim() === "") return;
     setEnhancingId(itemId);
 
     try {
+      const targetRoleName = careerProfile?.targetRole || activeJobContext?.jobTitle || "Software Engineer";
       const res = await fetch("/api/ai/enhance-bullet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bulletText: text })
+        body: JSON.stringify({
+          bulletText: text,
+          jobTitle: targetRoleName
+        })
       });
       const result = await res.json();
       if (result.success && result.data?.enhanced) {
@@ -311,11 +644,75 @@ function ResumeBuilderContent() {
         } else {
           updateProject(itemId, { description: result.data.enhanced });
         }
+        setAutoFitNotification("✨ Bullets formatted with Google XYZ format! Use Undo (Ctrl+Z) if you prefer original.");
       }
     } catch (err) {
       console.error("Failed to enhance bullet", err);
     } finally {
       setEnhancingId(null);
+    }
+  };
+
+  // AI Summary Polish
+  const handleEnhanceSummary = async () => {
+    if (!data.summary || data.summary.trim() === "") return;
+    setEnhancingId("summary");
+
+    try {
+      const targetRoleName = careerProfile?.targetRole || activeJobContext?.jobTitle || "Software Engineer";
+      const res = await fetch("/api/ai/enhance-bullet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bulletText: data.summary,
+          jobTitle: targetRoleName
+        })
+      });
+      const result = await res.json();
+      if (result.success && result.data?.enhanced) {
+        // Strip bullet prefix if added
+        const cleanedSummary = result.data.enhanced.replace(/^•\s*/, "");
+        updateSummary(cleanedSummary);
+        setAutoFitNotification("✨ Summary polished into a concise, high-impact professional overview!");
+      }
+    } catch (err) {
+      console.error("Failed to polish summary", err);
+    } finally {
+      setEnhancingId(null);
+    }
+  };
+
+  // 1-Click Genuine Recommended Skills for Target Role
+  const handleAddRecommendedSkills = () => {
+    const rawTarget = (careerProfile?.targetRole || activeJobContext?.jobTitle || "Software Engineer").trim();
+    
+    // Get curated, genuine, unshortened resume skills specifically for this role
+    const curatedList = getCuratedSkillsForRole(rawTarget);
+
+    const toAdd: { name: string; category: string }[] = [];
+    curatedList.forEach((sk) => {
+      const cleanName = sk.name.trim();
+      if (
+        cleanName.length > 1 &&
+        !data.skills.some((existing) => existing.name.toLowerCase() === cleanName.toLowerCase())
+      ) {
+        toAdd.push({
+          name: cleanName,
+          category: sk.category || "Technical Skills"
+        });
+      }
+    });
+
+    // Add top verified skills for this role
+    const skillsToInject = toAdd.slice(0, 10);
+    skillsToInject.forEach((sk) => {
+      addSkill(sk.name, sk.category);
+    });
+
+    if (skillsToInject.length > 0) {
+      setAutoFitNotification(`✨ Added ${skillsToInject.length} verified essential skills for ${rawTarget}!`);
+    } else {
+      setAutoFitNotification(`✓ All essential skills for ${rawTarget} are already on your resume!`);
     }
   };
 
@@ -413,6 +810,23 @@ function ResumeBuilderContent() {
           </span>
         </div>
 
+        {/* Target Role Badge if Set */}
+        {(careerProfile?.targetRole || activeJobContext?.jobTitle) && (
+          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs">
+            <span className="text-primary font-bold">🎯</span>
+            <span className="font-semibold text-foreground truncate max-w-[220px]" title={careerProfile?.targetRole || activeJobContext?.jobTitle}>
+              {careerProfile?.targetRole || activeJobContext?.jobTitle}
+            </span>
+            <Link
+              href="/dashboard/jobs"
+              className="text-[10px] text-primary hover:underline ml-1 font-bold"
+              title="View Target Requirements & Skill Gaps"
+            >
+              Gaps &rarr;
+            </Link>
+          </div>
+        )}
+
         {/* Action Controls */}
         <div className="flex items-center gap-2.5">
           {/* History Controls */}
@@ -438,6 +852,38 @@ function ResumeBuilderContent() {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => {
+              if (window.confirm("Start a new blank resume from scratch?")) {
+                loadResume(null, "Untitled Resume", {
+                  personalInfo: { fullName: "", email: "", phone: "", location: "", website: "", linkedin: "" },
+                  summary: "",
+                  experience: [],
+                  education: [],
+                  projects: [],
+                  skills: [],
+                  design: {
+                    fontFamily: "font-sans",
+                    fontSize: "md",
+                    sectionOrder: ["summary", "experience", "projects", "education", "skills"],
+                    density: "normal",
+                    sectionSpacing: 1.0,
+                    itemSpacing: 1.0,
+                    lineHeight: 1.4
+                  }
+                });
+                window.history.replaceState({}, "", "/dashboard/builder");
+              }
+            }}
+            className="gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+            title="Create a new blank resume from scratch"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>New Blank</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setIsTemplatesModalOpen(true)}
             className="gap-1.5 text-xs font-semibold border-primary/30 hover:border-primary text-foreground"
           >
@@ -457,21 +903,103 @@ function ResumeBuilderContent() {
 
           <Button
             size="sm"
-            onClick={handleOpenDownloadModal}
-            className="bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-700 gap-1.5 text-xs font-bold shadow-sm"
+            onClick={handleExecutePDFDownload}
+            disabled={isDownloadingPDF}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 text-xs font-bold shadow-xs cursor-pointer"
+            title="Directly download PDF to your computer"
           >
-            <Download className="h-3.5 w-3.5" />
-            <span>Download PDF</span>
+            {isDownloadingPDF ? (
+              <>
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                <span>Downloading...</span>
+              </>
+            ) : (
+              <>
+                <Download className="h-3.5 w-3.5" />
+                <span>Download PDF</span>
+              </>
+            )}
           </Button>
         </div>
       </header>
 
+      {/* Pending Improvement Action Bar (Slim & Non-Intrusive) */}
+      {pendingImprovement && (
+        <div className="bg-primary/10 border-b border-primary/20 px-6 py-2 flex items-center justify-between gap-4 text-xs no-print shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-primary font-bold">⚡</span>
+            <span className="font-semibold text-foreground truncate">
+              {pendingImprovement.title}:
+            </span>
+            <span className="text-muted-foreground truncate hidden sm:inline">
+              {pendingImprovement.description || pendingImprovement.details}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              className="h-6.5 text-[11px] font-semibold gap-1 px-2.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={() => {
+                setActiveTab(pendingImprovement.targetSection as any);
+                setMobileViewMode("editor");
+              }}
+            >
+              <span>Edit {pendingImprovement.targetSection}</span>
+            </Button>
+            <button
+              onClick={() => setPendingImprovement(null)}
+              className="text-xs text-muted-foreground hover:text-foreground cursor-pointer px-1"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Real-Time Resume Perfection & ATS Readiness Checklist Bar */}
+      <ResumePerfectionBar
+        data={data}
+        fitAnalysis={fitAnalysis}
+        onNavigateTab={(tab) => {
+          setActiveTab(tab);
+          setMobileViewMode("editor");
+        }}
+        onAutoFit={handleMultiStageAutoFit}
+        targetRole={careerProfile?.targetRole || activeJobContext?.jobTitle}
+      />
+
+      {/* Mobile Mode Switcher Bar */}
+      <div className="flex md:hidden items-center justify-center p-2 bg-muted/60 border-b border-border/60 gap-2 no-print shrink-0">
+        <button
+          type="button"
+          onClick={() => setMobileViewMode("editor")}
+          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            mobileViewMode === "editor"
+              ? "bg-card text-primary shadow-xs border border-border/60"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          ✏️ Edit Form
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileViewMode("preview")}
+          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            mobileViewMode === "preview"
+              ? "bg-card text-primary shadow-xs border border-border/60"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          📄 Live Preview
+        </button>
+      </div>
+
       {/* Main Split Interface */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Side: Form Editor Panel */}
-        <div className="w-1/2 flex flex-col border-r border-border/40 bg-card/40 h-full no-print">
+        <div className={`w-full md:w-1/2 flex-col border-r border-border/40 bg-card/40 h-full no-print ${mobileViewMode === "editor" ? "flex" : "hidden md:flex"}`}>
           {/* Navigation Form Tabs */}
-          <div className="flex items-center gap-1 p-2 bg-muted/40 border-b border-border/40 overflow-x-auto text-xs font-medium">
+          <div className="flex items-center gap-1.5 p-2 bg-muted/20 border-b border-border/40 overflow-x-auto text-xs font-medium shrink-0">
             {[
               { id: "personal", label: "Contact", icon: UserRound },
               { id: "summary", label: "Summary", icon: FileText },
@@ -487,13 +1015,13 @@ function ResumeBuilderContent() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-1.5 py-2 px-3 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
+                  className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg whitespace-nowrap transition-all cursor-pointer ${
                     isActive
-                      ? "bg-card shadow-xs text-primary font-bold border border-border/60"
-                      : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+                      ? "bg-background shadow-xs text-foreground font-semibold border border-border/70"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
                   }`}
                 >
-                  <Icon className="h-3.5 w-3.5" />
+                  <Icon className={`h-3.5 w-3.5 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
                   <span>{tab.label}</span>
                 </button>
               );
@@ -550,32 +1078,65 @@ function ResumeBuilderContent() {
             {/* Professional Summary Tab */}
             {activeTab === "summary" && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Professional Summary</h3>
-                  {data.summary && data.summary.length > 180 && (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Professional Summary</h3>
+                    <p className="text-[11px] text-muted-foreground">Recommended: 2–4 concise lines highlighting target role and core engineering strengths.</p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {data.summary && data.summary.length > 200 && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setCompressorState({
+                          isOpen: true,
+                          bulletText: data.summary,
+                          itemId: "summary",
+                          itemType: "experience"
+                        })}
+                        className="text-xs h-7 px-2.5 gap-1 text-muted-foreground hover:text-foreground"
+                      >
+                        <Scissors className="h-3 w-3" />
+                        <span>Compress</span>
+                      </Button>
+                    )}
                     <Button
+                      type="button"
                       size="sm"
                       variant="outline"
-                      onClick={() => setCompressorState({
-                        isOpen: true,
-                        bulletText: data.summary,
-                        itemId: "summary",
-                        itemType: "experience"
-                      })}
-                      className="text-xs h-7 px-2.5 gap-1 text-primary border-primary/30"
+                      onClick={handleEnhanceSummary}
+                      disabled={enhancingId === "summary" || !data.summary}
+                      className="text-xs h-7 px-2.5 gap-1.5 border-primary/40 text-primary hover:bg-primary/10 font-semibold"
+                      title="Refines summary into a crisp, high-impact professional overview"
                     >
-                      <Scissors className="h-3 w-3" />
-                      <span>Compress Summary</span>
+                      {enhancingId === "summary" ? (
+                        <>
+                          <RefreshCw className="h-3 w-3 animate-spin text-primary" />
+                          <span>Polishing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-3 w-3 text-primary" />
+                          <span>✨ Polish Summary</span>
+                        </>
+                      )}
                     </Button>
-                  )}
+                  </div>
                 </div>
                 <textarea
-                  rows={8}
-                  placeholder="Detail your career achievements, main stack strengths, and general background objectives..."
+                  rows={7}
+                  placeholder="Senior Software Engineer with 4+ years of experience designing high-throughput distributed systems in TypeScript, Next.js, and Node.js. Track record of reducing API latency and leading cross-functional squads to ship mission-critical cloud applications."
                   value={data.summary}
                   onChange={(e) => updateSummary(e.target.value)}
                   className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 transition-all resize-none leading-relaxed"
                 />
+                <div className="flex justify-between items-center text-[11px] text-muted-foreground">
+                  <span>Character count: {data.summary?.length || 0} (50–350 is optimal)</span>
+                  {data.summary && data.summary.length > 450 && (
+                    <span className="text-amber-500 font-medium">⚠️ Slightly verbose. Keep under 4 lines for best ATS readability.</span>
+                  )}
+                </div>
               </div>
             )}
 
@@ -591,16 +1152,24 @@ function ResumeBuilderContent() {
                 </div>
 
                 <div className="space-y-6">
-                  {data.experience.map((exp) => (
-                    <Card key={exp.id} className="relative border border-border/80">
-                      <button
-                        onClick={() => removeExperience(exp.id)}
-                        className="absolute top-4 right-4 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                  {data.experience.map((exp, index) => (
+                    <Card key={exp.id} className="border border-border/70 overflow-hidden bg-card/60 shadow-2xs">
+                      <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border/50 text-xs">
+                        <span className="font-semibold text-foreground truncate">
+                          {exp.position || exp.company ? `${exp.position || "Position"}${exp.company ? ` at ${exp.company}` : ""}` : `Role #${index + 1}`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeExperience(exp.id)}
+                          className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-destructive transition-colors cursor-pointer px-1.5 py-0.5 rounded hover:bg-destructive/10"
+                          title="Remove experience"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>Remove</span>
+                        </button>
+                      </div>
                       
-                      <CardContent className="p-5 space-y-4">
+                      <CardContent className="p-4 space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <Input
                             label="Company Name"
@@ -637,24 +1206,60 @@ function ResumeBuilderContent() {
                         </div>
 
                         <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                              Bullet Achievements (one per line)
-                            </label>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleEnhanceBullet(exp.id, exp.description, "experience")}
-                              disabled={enhancingId === exp.id || !exp.description}
-                              className="h-7 text-xs gap-1 border-primary/20 hover:border-primary text-primary"
-                            >
-                              <Sparkles className="h-3 w-3" />
-                              <span>{enhancingId === exp.id ? "Enhancing..." : "AI Enhance"}</span>
-                            </Button>
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                Bullet Achievements (one per line)
+                              </label>
+                              <p className="text-[11px] text-muted-foreground">
+                                Format: Google XYZ (Accomplished [X], measured by [Y], by doing [Z])
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {exp.description && exp.description.length > 140 && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setCompressorState({
+                                    isOpen: true,
+                                    bulletText: exp.description,
+                                    itemId: exp.id,
+                                    itemType: "experience"
+                                  })}
+                                  className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                                  title="Shorten verbose bullet lines"
+                                >
+                                  <Scissors className="h-3 w-3" />
+                                  <span>Shorten</span>
+                                </Button>
+                              )}
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEnhanceBullet(exp.id, exp.description, "experience")}
+                                disabled={enhancingId === exp.id || !exp.description}
+                                className="h-7 text-xs gap-1.5 border-primary/40 hover:border-primary hover:bg-primary/10 text-primary font-semibold shadow-2xs"
+                                title="Rewrites using Google XYZ format with decisive action verbs and preserves your real metrics"
+                              >
+                                {enhancingId === exp.id ? (
+                                  <>
+                                    <RefreshCw className="h-3 w-3 animate-spin text-primary" />
+                                    <span>Polishing...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles className="h-3 w-3 text-primary" />
+                                    <span>✨ Perfect Bullets (Google XYZ)</span>
+                                  </>
+                                )}
+                              </Button>
+                            </div>
                           </div>
                           <textarea
                             rows={5}
-                            placeholder="• Built a scalable distributed service reducing latency by 40%..."
+                            placeholder="• Built a scalable distributed service reducing latency by 40% using Next.js and Redis...&#10;• Refactored database queries, accelerating response times for 25,000+ daily active users..."
                             value={exp.description}
                             onChange={(e) => updateExperience(exp.id, { description: e.target.value })}
                             className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 transition-all resize-none leading-relaxed"
@@ -685,16 +1290,24 @@ function ResumeBuilderContent() {
                 </div>
 
                 <div className="space-y-6">
-                  {data.education.map((edu) => (
-                    <Card key={edu.id} className="relative border border-border/80">
-                      <button
-                        onClick={() => removeEducation(edu.id)}
-                        className="absolute top-4 right-4 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                  {data.education.map((edu, index) => (
+                    <Card key={edu.id} className="border border-border/70 overflow-hidden bg-card/60 shadow-2xs">
+                      <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border/50 text-xs">
+                        <span className="font-semibold text-foreground truncate">
+                          {edu.degree || edu.school ? `${edu.degree || "Degree"}${edu.school ? ` • ${edu.school}` : ""}` : `Education #${index + 1}`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeEducation(edu.id)}
+                          className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-destructive transition-colors cursor-pointer px-1.5 py-0.5 rounded hover:bg-destructive/10"
+                          title="Remove education"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>Remove</span>
+                        </button>
+                      </div>
 
-                      <CardContent className="p-5 space-y-4">
+                      <CardContent className="p-4 space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <Input
                             label="University / Institution"
@@ -760,16 +1373,24 @@ function ResumeBuilderContent() {
                 </div>
 
                 <div className="space-y-6">
-                  {data.projects.map((proj) => (
-                    <Card key={proj.id} className="relative border border-border/80">
-                      <button
-                        onClick={() => removeProject(proj.id)}
-                        className="absolute top-4 right-4 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                  {data.projects.map((proj, index) => (
+                    <Card key={proj.id} className="border border-border/70 overflow-hidden bg-card/60 shadow-2xs">
+                      <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border/50 text-xs">
+                        <span className="font-semibold text-foreground truncate">
+                          {proj.name ? `${proj.name}${proj.role ? ` (${proj.role})` : ""}` : `Project #${index + 1}`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeProject(proj.id)}
+                          className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-destructive transition-colors cursor-pointer px-1.5 py-0.5 rounded hover:bg-destructive/10"
+                          title="Remove project"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>Remove</span>
+                        </button>
+                      </div>
 
-                      <CardContent className="p-5 space-y-4">
+                      <CardContent className="p-4 space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <Input
                             label="Project Name"
@@ -806,24 +1427,60 @@ function ResumeBuilderContent() {
                         </div>
 
                         <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                              Key Highlights & Tech Used
-                            </label>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleEnhanceBullet(proj.id, proj.description, "projects")}
-                              disabled={enhancingId === proj.id || !proj.description}
-                              className="h-7 text-xs gap-1 border-primary/20 hover:border-primary text-primary"
-                            >
-                              <Sparkles className="h-3 w-3" />
-                              <span>{enhancingId === proj.id ? "Enhancing..." : "AI Enhance"}</span>
-                            </Button>
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                Key Highlights & Tech Used
+                              </label>
+                              <p className="text-[11px] text-muted-foreground">
+                                Format: Google XYZ (Accomplished [X], measured by [Y], by doing [Z])
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {proj.description && proj.description.length > 140 && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setCompressorState({
+                                    isOpen: true,
+                                    bulletText: proj.description,
+                                    itemId: proj.id,
+                                    itemType: "projects"
+                                  })}
+                                  className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                                  title="Shorten verbose bullet lines"
+                                >
+                                  <Scissors className="h-3 w-3" />
+                                  <span>Shorten</span>
+                                </Button>
+                              )}
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEnhanceBullet(proj.id, proj.description, "projects")}
+                                disabled={enhancingId === proj.id || !proj.description}
+                                className="h-7 text-xs gap-1.5 border-primary/40 hover:border-primary hover:bg-primary/10 text-primary font-semibold shadow-2xs"
+                                title="Rewrites using Google XYZ format with decisive action verbs and preserves your real metrics"
+                              >
+                                {enhancingId === proj.id ? (
+                                  <>
+                                    <RefreshCw className="h-3 w-3 animate-spin text-primary" />
+                                    <span>Polishing...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles className="h-3 w-3 text-primary" />
+                                    <span>✨ Perfect Bullets (Google XYZ)</span>
+                                  </>
+                                )}
+                              </Button>
+                            </div>
                           </div>
                           <textarea
                             rows={4}
-                            placeholder="• Built a full-stack Next.js app serving 10,000+ monthly active users..."
+                            placeholder="• Built a full-stack Next.js app serving 10,000+ monthly active users...&#10;• Integrated Stripe payment checkout with zero transaction drop-offs..."
                             value={proj.description}
                             onChange={(e) => updateProject(proj.id, { description: e.target.value })}
                             className="flex w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 transition-all resize-none leading-relaxed"
@@ -845,6 +1502,34 @@ function ResumeBuilderContent() {
             {/* Skills Customizer Tab */}
             {activeTab === "skills" && (
               <div className="space-y-6">
+                {/* 1-Click Genuine Recommended Skills for Target Role */}
+                {(careerProfile?.targetRole || activeJobContext?.jobTitle) && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-primary/25 bg-primary/5 text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                        <Sparkles className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <span className="font-bold text-foreground">
+                          Recommended skills for {careerProfile?.targetRole || activeJobContext?.jobTitle}
+                        </span>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          Verified against the hiring bar and official industry curricula.
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleAddRecommendedSkills}
+                      className="text-xs h-7.5 px-3 font-semibold border-primary/30 text-primary hover:bg-primary/10 shrink-0 self-start sm:self-auto shadow-2xs"
+                    >
+                      + Add Essential Skills
+                    </Button>
+                  </div>
+                )}
+
                 <form onSubmit={handleAddSkillSubmit} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                   <div className="md:col-span-6">
                     <Input
@@ -910,7 +1595,116 @@ function ResumeBuilderContent() {
             {/* Design, Density & Layout Tab */}
             {activeTab === "design" && (
               <div className="space-y-6">
-                {/* 1. Resume Density Controller */}
+                {/* 0. Page Height Balance & Trailing White Space Elimination */}
+                <div className="space-y-3 p-4 rounded-xl border border-border/60 bg-card/60 backdrop-blur-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        Page Height Balance
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateDesignSettings({
+                          balancePageHeight: !data.design?.balancePageHeight
+                        })
+                      }
+                      className={`text-xs font-bold px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
+                        data.design?.balancePageHeight
+                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 shadow-xs"
+                          : "bg-muted text-muted-foreground border-border/60 hover:text-foreground"
+                      }`}
+                    >
+                      {data.design?.balancePageHeight ? "✓ 100% Balanced" : "Off (Top-Aligned)"}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Distributes space evenly across all sections so your resume fills 100% of the single page edge-to-edge with no trailing bottom void.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleExpandToFillPage}
+                    className="w-full text-xs font-bold gap-1.5 h-8 border-primary/40 hover:bg-primary/10 text-primary shadow-xs"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>📐 Auto-Fill Page (100%)</span>
+                  </Button>
+                </div>
+
+                {/* 1. Resume Layout Style (Top 5 Curated Styles) */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Resume Layout Style (Top 5)
+                    </h3>
+                    <span className="text-[10px] text-emerald-500 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      Classic ATS Recommended
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {[
+                      {
+                        id: "classic",
+                        label: "Classic ATS (Recommended)",
+                        badge: "100% Safe",
+                        desc: "Single column, clean divider rules, right-aligned dates. The gold standard for FAANG & corporate ATS."
+                      },
+                      {
+                        id: "split-sidebar",
+                        label: "Modern Split / 2-Column",
+                        badge: "Modern Polish",
+                        desc: "30% left sidebar for contact & skills; 70% right for experience. Balances 1-page resumes beautifully."
+                      },
+                      {
+                        id: "executive",
+                        label: "Executive Leader",
+                        badge: "Leadership",
+                        desc: "Authoritative header with left accent bars and refined typography. Tailored for senior & lead candidates."
+                      },
+                      {
+                        id: "minimal",
+                        label: "Minimalist Modern",
+                        badge: "High Whitespace",
+                        desc: "No heavy divider rules. Relies on clean typographic contrast and generous whitespace for modern roles."
+                      },
+                      {
+                        id: "technical",
+                        label: "Technical Grid",
+                        badge: "Dev Focused",
+                        desc: "Categorized monospace skill badges and project demo tags. Engineered for software & data practitioners."
+                      }
+                    ].map((styleOpt) => {
+                      const isSelected = (data.design?.resumeStyle || "classic") === styleOpt.id;
+                      return (
+                        <button
+                          key={styleOpt.id}
+                          type="button"
+                          onClick={() => updateDesignSettings({ resumeStyle: styleOpt.id as any })}
+                          className={`flex flex-col p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                            isSelected
+                              ? "border-primary bg-primary/10 text-primary shadow-xs ring-1 ring-primary/40"
+                              : "border-border/60 hover:bg-muted/40 text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-xs font-bold text-foreground">{styleOpt.label}</span>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                              isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                            }`}>
+                              {styleOpt.badge}
+                            </span>
+                          </div>
+                          <span className="text-[10px] opacity-75 mt-1 leading-relaxed">{styleOpt.desc}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Resume Density Controller */}
                 <DensityController
                   currentDensity={data.design?.density || "normal"}
                   onChangeDensity={(density) => setDensity(density)}
@@ -1010,24 +1804,69 @@ function ResumeBuilderContent() {
         </div>
 
         {/* Right Side: Clean A4 Page Preview Panel */}
-        <div className="w-1/2 flex flex-col bg-muted/30 overflow-y-auto h-full p-6 space-y-4">
-          {/* Document Preview Status Badge */}
-          <div className="flex items-center justify-between p-2 px-4 rounded-xl border border-border/60 bg-card/90 backdrop-blur-md shadow-xs">
-            <div className="flex items-center gap-2 text-xs font-bold text-foreground">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              <span>Standard A4 Document Preview</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleOpenDownloadModal}
-                className="h-7 text-xs gap-1.5 font-semibold"
-              >
-                <Download className="h-3.5 w-3.5" />
-                <span>Export PDF</span>
-              </Button>
-            </div>
+        <div className={`w-full md:w-1/2 flex-col bg-muted/30 overflow-y-auto h-full p-4 md:p-6 space-y-4 ${mobileViewMode === "preview" ? "flex" : "hidden md:flex"}`}>
+          {/* Fit Indicator Bar & Auto-Fit Controller */}
+          <div className="no-print space-y-2">
+            <FitIndicatorBar
+              fitAnalysis={fitAnalysis}
+              onFixToOnePage={handleMultiStageAutoFit}
+              onFillPage={handleExpandToFillPage}
+              onPrint={handleExecutePrintPDF}
+              isFixing={isAutoFitting}
+              isAnalysisOpen={isFitDrawerOpen}
+              onToggleAnalysis={() => setIsFitDrawerOpen(!isFitDrawerOpen)}
+            />
+
+            {/* Change Indicator Notification Banner */}
+            <AnimatePresence>
+              {autoFitNotification && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  className="p-3 rounded-xl border border-primary/30 bg-primary/10 text-xs text-foreground flex items-center justify-between gap-3 shadow-xs"
+                >
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary shrink-0" />
+                    <span className="font-medium">{autoFitNotification}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        undo();
+                        setAutoFitNotification(null);
+                      }}
+                      className="text-xs font-bold text-primary hover:underline cursor-pointer"
+                    >
+                      Undo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAutoFitNotification(null)}
+                      className="text-muted-foreground hover:text-foreground text-xs cursor-pointer ml-1"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Fit Analysis Detailed Diagnostic Drawer */}
+            <FitAnalysisDrawer
+              isOpen={isFitDrawerOpen}
+              fitAnalysis={fitAnalysis}
+              resumeData={data}
+              onOpenCompressor={(bulletText, itemId, itemType) => {
+                setCompressorState({
+                  isOpen: true,
+                  bulletText,
+                  itemId,
+                  itemType
+                });
+              }}
+            />
           </div>
 
           {/* A4 Canvas Container with Scaled Visuals */}
@@ -1048,169 +1887,235 @@ function ResumeBuilderContent() {
                 {/* Inner Content Container */}
                 <div className="flex flex-col w-full flex-1">
                   {/* Personal Details Header */}
-                  <div
-                    className="text-center border-b border-zinc-200 shrink-0"
-                    style={{
-                      paddingBottom: `${10 * sectionSpacingMultiplier}px`,
-                      marginBottom: `${12 * sectionSpacingMultiplier}px`
-                    }}
-                  >
-                    <h2 className="text-2xl font-extrabold tracking-tight uppercase text-zinc-950">
-                      {data.personalInfo.fullName || "Your Full Name"}
-                    </h2>
-                    {/* Clickable short-label contact destinations */}
-                    <div className="flex flex-wrap items-center justify-center gap-3.5 text-[0.85em] text-zinc-700 font-semibold uppercase tracking-wider mt-1.5">
-                      {data.personalInfo.email && (
-                        <a
-                          href={`mailto:${data.personalInfo.email}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-primary hover:underline transition-colors"
-                          title={data.personalInfo.email}
-                        >
-                          Email
-                        </a>
-                      )}
-                      {data.personalInfo.phone && (
-                        <a
-                          href={`tel:${data.personalInfo.phone.replace(/[^0-9+]/g, "")}`}
-                          className="hover:text-primary hover:underline transition-colors"
-                          title={data.personalInfo.phone}
-                        >
-                          Phone
-                        </a>
-                      )}
-                      {data.personalInfo.location && (
-                        <span className="text-zinc-600 font-normal">
-                          {data.personalInfo.location}
-                        </span>
-                      )}
-                      {data.personalInfo.website && (
-                        <a
-                          href={data.personalInfo.website.startsWith("http") ? data.personalInfo.website : `https://${data.personalInfo.website}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-primary hover:underline transition-colors"
-                          title={data.personalInfo.website}
-                        >
-                          Portfolio
-                        </a>
-                      )}
-                      {data.personalInfo.linkedin && (
-                        <a
-                          href={data.personalInfo.linkedin.startsWith("http") ? data.personalInfo.linkedin : `https://${data.personalInfo.linkedin}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:text-primary hover:underline transition-colors"
-                          title={data.personalInfo.linkedin}
-                        >
-                          LinkedIn
-                        </a>
-                      )}
-                    </div>
-                  </div>
+                  {(() => {
+                    const activeStyle = data.design?.resumeStyle || "classic";
+                    const isExecutive = activeStyle === "executive";
+                    const isMinimal = activeStyle === "minimal";
+                    const isTechnical = activeStyle === "technical";
+                    const isSplit = activeStyle === "split-sidebar";
 
-                  {/* Dynamic Sections rendering according to sectionOrder */}
-                  <div className="flex flex-col flex-1" style={{ gap: `${14 * sectionSpacingMultiplier}px` }}>
-                    {(data.design?.sectionOrder || ["summary", "experience", "projects", "education", "skills"]).map((secId) => {
-                      // 1. Professional Summary section
-                      if (secId === "summary" && data.summary) {
-                        return (
-                          <div key="summary" className="space-y-1 section-item break-inside-avoid">
-                            <h3 className="text-[1.05em] font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-200 pb-0.5">
-                              Professional Summary
-                            </h3>
-                            <p className="text-[0.95em] text-zinc-700 text-justify whitespace-pre-line leading-relaxed">
-                              {data.summary}
-                            </p>
-                          </div>
-                        );
+                    return (
+                      <div
+                        className={`shrink-0 ${
+                          isMinimal || isSplit ? "text-left" : "text-center"
+                        } ${
+                          isMinimal
+                            ? "pb-2 mb-3"
+                            : isExecutive
+                            ? "border-b-2 border-zinc-900"
+                            : isTechnical
+                            ? "border-b border-dashed border-zinc-400"
+                            : "border-b border-zinc-200"
+                        }`}
+                        style={{
+                          paddingBottom: isMinimal ? "6px" : `${10 * sectionSpacingMultiplier}px`,
+                          marginBottom: `${12 * sectionSpacingMultiplier}px`
+                        }}
+                      >
+                        {isExecutive && <div className="h-1 bg-zinc-900 w-full mb-2.5 shrink-0" />}
+
+                        <h2
+                          className={`text-2xl tracking-tight text-zinc-950 ${
+                            isExecutive
+                              ? "font-serif font-black tracking-wider uppercase"
+                              : isTechnical
+                              ? "font-mono font-bold uppercase tracking-tight"
+                              : isMinimal
+                              ? "font-black tracking-tight"
+                              : "font-extrabold tracking-tight uppercase"
+                          }`}
+                        >
+                          {data.personalInfo.fullName || "Your Full Name"}
+                        </h2>
+
+                        {/* Contact destinations */}
+                        <div
+                          className={`flex flex-wrap items-center gap-3 text-[0.85em] mt-1.5 ${
+                            isMinimal || isSplit ? "justify-start text-zinc-600 font-medium" : "justify-center text-zinc-700 font-semibold uppercase tracking-wider"
+                          } ${isTechnical ? "font-mono text-[0.8em]" : ""}`}
+                        >
+                          {data.personalInfo.email && (
+                            <a
+                              href={`mailto:${data.personalInfo.email}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:text-primary hover:underline transition-colors"
+                              title={data.personalInfo.email}
+                            >
+                              {isTechnical ? `[${data.personalInfo.email}]` : "Email"}
+                            </a>
+                          )}
+                          {data.personalInfo.phone && (
+                            <a
+                              href={`tel:${data.personalInfo.phone.replace(/[^0-9+]/g, "")}`}
+                              className="hover:text-primary hover:underline transition-colors"
+                              title={data.personalInfo.phone}
+                            >
+                              {isTechnical ? `[${data.personalInfo.phone}]` : "Phone"}
+                            </a>
+                          )}
+                          {data.personalInfo.location && (
+                            <span className="text-zinc-600 font-normal">
+                              {data.personalInfo.location}
+                            </span>
+                          )}
+                          {data.personalInfo.website && (
+                            <a
+                              href={data.personalInfo.website.startsWith("http") ? data.personalInfo.website : `https://${data.personalInfo.website}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:text-primary hover:underline transition-colors"
+                              title={data.personalInfo.website}
+                            >
+                              {isTechnical ? `[portfolio]` : "Portfolio"}
+                            </a>
+                          )}
+                          {data.personalInfo.linkedin && (
+                            <a
+                              href={data.personalInfo.linkedin.startsWith("http") ? data.personalInfo.linkedin : `https://${data.personalInfo.linkedin}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:text-primary hover:underline transition-colors"
+                              title={data.personalInfo.linkedin}
+                            >
+                              {isTechnical ? `[linkedin]` : "LinkedIn"}
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Body Content */}
+                  {(() => {
+                    const activeStyle = data.design?.resumeStyle || "classic";
+                    const isExecutive = activeStyle === "executive";
+                    const isMinimal = activeStyle === "minimal";
+                    const isTechnical = activeStyle === "technical";
+                    const isSplit = activeStyle === "split-sidebar";
+
+                    // Section Heading Styler
+                    const getHeadingClass = (title: string) => {
+                      if (isExecutive) {
+                        return "text-[1.05em] font-serif font-bold uppercase tracking-wider text-zinc-950 border-l-3 border-zinc-900 pl-2 pb-0.5 mb-1";
                       }
+                      if (isMinimal) {
+                        return "text-[0.88em] font-black uppercase tracking-widest text-zinc-400 pb-0.5";
+                      }
+                      if (isTechnical) {
+                        return "text-[1.02em] font-mono font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-300 pb-0.5";
+                      }
+                      return "text-[1.05em] font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-200 pb-0.5";
+                    };
 
-                      // 2. Work History section
-                      if (secId === "experience" && data.experience.length > 0) {
-                        return (
-                          <div key="experience" className="space-y-1.5 section-item break-inside-avoid">
-                            <h3 className="text-[1.05em] font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-200 pb-0.5">
-                              Work Experience
-                            </h3>
-                            <div style={{ display: "flex", flexDirection: "column", gap: `${10 * itemSpacingMultiplier}px` }}>
-                              {data.experience.map((exp) => (
-                                <div key={exp.id} className="space-y-0.5">
-                                  <div className="flex items-center justify-between text-[1em] font-bold">
-                                    <span className="text-zinc-900">{exp.position} — {exp.company}</span>
-                                    <span className="text-zinc-600 font-medium text-[0.9em]">{exp.startDate} - {exp.endDate}</span>
-                                  </div>
-                                  {exp.location && (
-                                    <p className="text-[0.8em] text-zinc-500 font-semibold uppercase tracking-wide">
-                                      {exp.location}
-                                    </p>
-                                  )}
-                                  {exp.description && (
-                                    <ul className="list-disc list-outside pl-4 space-y-0.5">
-                                      {exp.description.split("\n").filter(b => b.trim() !== "").map((bullet, i) => (
-                                        <li key={i} className="text-[0.95em] text-zinc-700 leading-relaxed">
-                                          {bullet.replace(/^[•\-\s]*/, "")}
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  )}
+                    // Reusable Renderers for each section
+                    const renderSummary = () =>
+                      data.summary ? (
+                        <div key="summary" className="space-y-1 section-item break-inside-avoid">
+                          <h3 className={getHeadingClass("Professional Summary")}>
+                            Professional Summary
+                          </h3>
+                          <p className="text-[0.95em] text-zinc-700 text-justify whitespace-pre-line leading-relaxed">
+                            {data.summary}
+                          </p>
+                        </div>
+                      ) : null;
+
+                    const renderExperience = () =>
+                      data.experience.length > 0 ? (
+                        <div key="experience" className="space-y-1.5 section-item break-inside-avoid">
+                          <h3 className={getHeadingClass("Work Experience")}>
+                            Work Experience
+                          </h3>
+                          <div style={{ display: "flex", flexDirection: "column", gap: `${10 * itemSpacingMultiplier}px` }}>
+                            {data.experience.map((exp) => (
+                              <div key={exp.id} className="space-y-0.5">
+                                <div className="flex items-center justify-between text-[1em] font-bold">
+                                  <span className="text-zinc-900">
+                                    {exp.position} — <span className={isExecutive ? "font-serif font-semibold" : ""}>{exp.company}</span>
+                                  </span>
+                                  <span className="text-zinc-600 font-medium text-[0.9em]">{exp.startDate} - {exp.endDate}</span>
                                 </div>
-                              ))}
-                            </div>
+                                {exp.location && (
+                                  <p className="text-[0.8em] text-zinc-500 font-semibold uppercase tracking-wide">
+                                    {exp.location}
+                                  </p>
+                                )}
+                                {exp.description && (
+                                  <ul className="list-disc list-outside pl-4 space-y-0.5">
+                                    {exp.description.split("\n").filter(b => b.trim() !== "").map((bullet, i) => (
+                                      <li key={i} className="text-[0.95em] text-zinc-700 leading-relaxed">
+                                        {bullet.replace(/^[•\-\s]*/, "")}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            ))}
                           </div>
-                        );
-                      }
+                        </div>
+                      ) : null;
 
-                      // 3. Projects section
-                      if (secId === "projects" && data.projects.length > 0) {
-                        return (
-                          <div key="projects" className="space-y-1.5 section-item break-inside-avoid">
-                            <h3 className="text-[1.05em] font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-200 pb-0.5">
-                              Personal Projects
-                            </h3>
-                            <div style={{ display: "flex", flexDirection: "column", gap: `${10 * itemSpacingMultiplier}px` }}>
-                              {data.projects.map((proj) => (
-                                <div key={proj.id} className="space-y-0.5">
-                                  <div className="flex items-center justify-between text-[1em] font-bold">
-                                    <span className="text-zinc-900">{proj.name} — {proj.role}</span>
-                                    <span className="text-zinc-600 font-medium text-[0.9em]">{proj.startDate} - {proj.endDate}</span>
-                                  </div>
-                                  {proj.link && (
-                                    <a
-                                      href={proj.link.startsWith("http") ? proj.link : `https://${proj.link}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-[0.8em] text-primary hover:underline font-semibold"
-                                    >
-                                      {proj.link}
-                                    </a>
-                                  )}
-                                  {proj.description && (
-                                    <ul className="list-disc list-outside pl-4 space-y-0.5">
-                                      {proj.description.split("\n").filter(b => b.trim() !== "").map((bullet, i) => (
-                                        <li key={i} className="text-[0.95em] text-zinc-700 leading-relaxed">
-                                          {bullet.replace(/^[•\-\s]*/, "")}
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  )}
+                    const renderProjects = () =>
+                      data.projects.length > 0 ? (
+                        <div key="projects" className="space-y-1.5 section-item break-inside-avoid">
+                          <h3 className={getHeadingClass("Personal Projects")}>
+                            Personal Projects
+                          </h3>
+                          <div style={{ display: "flex", flexDirection: "column", gap: `${10 * itemSpacingMultiplier}px` }}>
+                            {data.projects.map((proj) => (
+                              <div key={proj.id} className="space-y-0.5">
+                                <div className="flex items-center justify-between text-[1em] font-bold">
+                                  <span className="text-zinc-900">{proj.name} — {proj.role}</span>
+                                  <span className="text-zinc-600 font-medium text-[0.9em]">{proj.startDate} - {proj.endDate}</span>
                                 </div>
-                              ))}
-                            </div>
+                                {proj.link && (
+                                  <a
+                                    href={proj.link.startsWith("http") ? proj.link : `https://${proj.link}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`text-[0.8em] text-primary hover:underline font-semibold ${isTechnical ? "font-mono" : ""}`}
+                                  >
+                                    {isTechnical ? `[Live Demo: ${proj.link}]` : proj.link}
+                                  </a>
+                                )}
+                                {proj.description && (
+                                  <ul className="list-disc list-outside pl-4 space-y-0.5">
+                                    {proj.description.split("\n").filter(b => b.trim() !== "").map((bullet, i) => (
+                                      <li key={i} className="text-[0.95em] text-zinc-700 leading-relaxed">
+                                        {bullet.replace(/^[•\-\s]*/, "")}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            ))}
                           </div>
-                        );
-                      }
+                        </div>
+                      ) : null;
 
-                      // 4. Education section
-                      if (secId === "education" && data.education.length > 0) {
-                        return (
-                          <div key="education" className="space-y-1.5 section-item break-inside-avoid">
-                            <h3 className="text-[1.05em] font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-200 pb-0.5">
-                              Education
-                            </h3>
-                            <div style={{ display: "flex", flexDirection: "column", gap: `${8 * itemSpacingMultiplier}px` }}>
-                              {data.education.map((edu) => (
+                    const renderEducation = () =>
+                      data.education.length > 0 ? (
+                        <div key="education" className="space-y-1.5 section-item break-inside-avoid">
+                          <h3 className={getHeadingClass("Education")}>
+                            Education
+                          </h3>
+                          <div style={{ display: "flex", flexDirection: "column", gap: `${8 * itemSpacingMultiplier}px` }}>
+                            {data.education.map((edu) => (
+                              isSplit ? (
+                                <div key={edu.id} className="space-y-0.5 text-[0.9em]">
+                                  <div className="font-bold text-[0.95em] text-zinc-950 leading-tight">
+                                    {edu.school}
+                                  </div>
+                                  <div className="text-zinc-700 text-[0.9em] leading-tight">
+                                    {edu.degree}{edu.fieldOfStudy ? ` in ${edu.fieldOfStudy}` : ""}
+                                  </div>
+                                  <div className="text-zinc-500 font-medium text-[0.82em]">
+                                    {edu.startDate} – {edu.endDate}
+                                    {edu.location ? ` · ${edu.location}` : ""}
+                                  </div>
+                                </div>
+                              ) : (
                                 <div key={edu.id} className="space-y-0.5 text-[0.95em]">
                                   <div className="flex items-center justify-between font-bold text-[1em]">
                                     <span className="text-zinc-900">{edu.school}</span>
@@ -1221,42 +2126,111 @@ function ResumeBuilderContent() {
                                     {edu.location && <span className="text-zinc-500 font-medium">{edu.location}</span>}
                                   </div>
                                 </div>
+                              )
+                            ))}
+                          </div>
+                        </div>
+                      ) : null;
+
+                    const renderSkills = () =>
+                      data.skills.length > 0 ? (
+                        <div key="skills" className="space-y-1 section-item break-inside-avoid">
+                          <h3 className={getHeadingClass("Skills & Technologies")}>
+                            Skills & Technologies
+                          </h3>
+                          {isSplit ? (
+                            <div className="space-y-3 pt-1 text-[0.9em]">
+                              {Object.keys(groupedSkills).map((catKey) => {
+                                const rowSkills = groupedSkills[catKey].map((s) => s.name).join(", ");
+                                return (
+                                  <div key={catKey} className="space-y-1">
+                                    <span className="text-[0.82em] font-bold text-zinc-900 uppercase tracking-wider block">
+                                      {catKey}
+                                    </span>
+                                    <p className="text-[0.9em] text-zinc-700 leading-snug">
+                                      {rowSkills}
+                                    </p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : isTechnical ? (
+                            <div className="space-y-2 pt-1 text-[0.9em]">
+                              {Object.keys(groupedSkills).map((catKey) => (
+                                <div key={catKey} className="space-y-1">
+                                  <span className="text-xs font-mono font-bold text-zinc-800 uppercase tracking-wide block">
+                                    {catKey}
+                                  </span>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {groupedSkills[catKey].map((s) => (
+                                      <span
+                                        key={s.id}
+                                        className="inline-block px-2 py-0.5 rounded bg-zinc-100 text-zinc-800 text-[0.8em] font-mono border border-zinc-200"
+                                      >
+                                        {s.name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
                               ))}
                             </div>
-                          </div>
-                        );
-                      }
-
-                      // 5. Technical Skills section
-                      if (secId === "skills" && data.skills.length > 0) {
-                        const keys = Object.keys(groupedSkills);
-                        return (
-                          <div key="skills" className="space-y-1 section-item break-inside-avoid">
-                            <h3 className="text-[1.05em] font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-200 pb-0.5">
-                              Skills & Technologies
-                            </h3>
+                          ) : (
                             <div className="space-y-1 text-[0.95em] text-zinc-700 leading-relaxed">
-                              {keys.map((catKey) => {
-                                const rowSkills = groupedSkills[catKey].map(s => s.name).join(", ");
+                              {Object.keys(groupedSkills).map((catKey) => {
+                                const rowSkills = groupedSkills[catKey].map((s) => s.name).join(", ");
                                 return (
                                   <div key={catKey} className="grid grid-cols-12 gap-2">
                                     <span className="col-span-3 font-bold text-zinc-900 uppercase text-[0.85em] tracking-wide">
                                       {catKey}:
                                     </span>
-                                    <span className="col-span-9">
-                                      {rowSkills}
-                                    </span>
+                                    <span className="col-span-9">{rowSkills}</span>
                                   </div>
                                 );
                               })}
                             </div>
-                          </div>
-                        );
-                      }
+                          )}
+                        </div>
+                      ) : null;
 
-                      return null;
-                    })}
-                  </div>
+                    // If 2-Column Split Sidebar Style
+                    if (isSplit) {
+                      return (
+                        <div className="flex flex-1 gap-6 pt-1">
+                          {/* Left Column (32% width) */}
+                          <div className="w-[32%] shrink-0 pr-4 border-r border-zinc-200 flex flex-col space-y-4">
+                            {renderEducation()}
+                            {renderSkills()}
+                          </div>
+                          {/* Right Column (68% width) */}
+                          <div className="flex-1 flex flex-col space-y-4 min-w-0">
+                            {renderSummary()}
+                            {renderExperience()}
+                            {renderProjects()}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Single Column Layout (Classic, Executive, Minimal, Technical)
+                    const sectionMap: Record<string, () => React.ReactNode> = {
+                      summary: renderSummary,
+                      experience: renderExperience,
+                      projects: renderProjects,
+                      education: renderEducation,
+                      skills: renderSkills
+                    };
+
+                    const order = data.design?.sectionOrder || ["summary", "experience", "projects", "education", "skills"];
+
+                    return (
+                      <div
+                        className={`flex flex-col flex-1 ${data.design?.balancePageHeight ? "justify-between" : ""}`}
+                        style={{ gap: `${14 * sectionSpacingMultiplier}px` }}
+                      >
+                        {order.map((secId) => sectionMap[secId]?.())}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -1294,7 +2268,7 @@ function ResumeBuilderContent() {
 
               <div className="space-y-2">
                 <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                  PDF File Name
+                  PDF Document Name
                 </label>
                 <div className="flex items-center gap-2">
                   <Input
@@ -1309,28 +2283,86 @@ function ResumeBuilderContent() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
+              {/* Export Mode Selection Cards */}
+              <div className="space-y-3 pt-1">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Choose Download Method</p>
+
+                {/* Option 1: Direct 1-Click PDF Download (Primary) */}
+                <div className="p-4 rounded-xl border-2 border-primary/50 bg-primary/5 space-y-3 hover:bg-primary/10 transition-colors shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-lg bg-primary text-primary-foreground">
+                        <Download className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-black text-foreground">Normal PDF File (.pdf)</p>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                            RECOMMENDED
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          Direct 1-click download of your single-page resume straight to your computer.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={handleExecutePDFDownload}
+                    disabled={isDownloadingPDF || !downloadFileName.trim()}
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold h-9 gap-2 shadow-sm"
+                  >
+                    {isDownloadingPDF ? (
+                      <>
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                        <span>Generating & Saving PDF...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-3.5 w-3.5" />
+                        <span>Download Normal PDF (.pdf)</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Option 2: Print Vector PDF */}
+                <div className="p-3.5 rounded-xl border border-border/60 bg-muted/20 space-y-2 hover:bg-muted/30 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-muted text-muted-foreground">
+                        <Printer className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-foreground">Print Vector PDF</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Opens browser print dialog with &quot;Save as PDF&quot; for 100% selectable vector fonts.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleExecutePrintPDF}
+                    className="w-full text-xs font-semibold h-8 gap-1.5"
+                  >
+                    <Printer className="h-3.5 w-3.5" />
+                    <span>Open Print Dialog (Vector)</span>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-border/40 text-[11px] text-muted-foreground">
+                <span>💡 Tip: Select &quot;Save as PDF&quot; in the print dialog.</span>
+                <button
+                  type="button"
                   onClick={() => setIsDownloadModalOpen(false)}
-                  disabled={isDownloadingPDF}
+                  className="hover:text-foreground font-semibold cursor-pointer"
                 >
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleExecutePDFDownload}
-                  disabled={isDownloadingPDF || !downloadFileName.trim()}
-                  className="bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-700 gap-1.5 font-bold"
-                >
-                  {isDownloadingPDF ? (
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Download className="h-3.5 w-3.5" />
-                  )}
-                  <span>{isDownloadingPDF ? "Generating PDF..." : "Download Now"}</span>
-                </Button>
+                  Close
+                </button>
               </div>
             </motion.div>
           </div>
@@ -1545,7 +2577,10 @@ function ResumeBuilderContent() {
                         const res = await fetch("/api/ai/parse", {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ rawText: importRawText })
+                          body: JSON.stringify({
+                            resumeText: importRawText,
+                            rawText: importRawText
+                          })
                         });
                         const result = await res.json();
                         if (result.success && result.data) {

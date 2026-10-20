@@ -3,236 +3,518 @@
     "demo-user-id": {
       "id": "demo-user-id",
       "email": "demo@hicejo.com",
-      "full_name": "Jayant",
-      "target_role": "Software Engineer",
-      "target_industry": "Technology",
-      "target_salary": "$120,000",
-      "updated_at": "2026-08-08T01:05:00.832Z"
+      "full_name": "",
+      "target_role": "AI & Machine Learning Engineer",
+      "experience_level": "Entry / Junior (0–2 yrs)",
+      "primary_domain": "India & South Asia",
+      "resume_text": "",
+      "updated_at": "2026-10-20T05:32:14.463Z"
     }
   },
   "resumes": [
     {
-      "id": "f8ee89e7-94f1-4bad-bbb0-3c6a28a4a743",
+      "id": "1792430171650",
       "user_id": "demo-user-id",
-      "title": "Untitled Resume",
+      "title": "IAPWE - Freelance Writer Tailored",
       "content": {
         "personalInfo": {
-          "fullName": "Jayant",
-          "email": "jayantvjagtap@gmail.com",
-          "phone": "+91 9654678623",
-          "location": "SF",
-          "website": "",
-          "linkedin": ""
+          "fullName": "Alex Johnson",
+          "email": "alex.johnson@example.com",
+          "phone": "(555) 019-2834",
+          "location": "San Francisco, CA",
+          "website": "https://alexjohnson.dev",
+          "linkedin": "https://linkedin.com/in/alexj-tech"
         },
-        "summary": "The next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, if all the permutations of the array are sorted in one container according to their lexicographical order, then the next permutation of that array is the permutation that follows it in the sorted container. If such arrangement is not possible, the array must be rearranged as the lowest possible order (i.e., sorted in ascending order).",
+        "summary": "Versatile freelance writer with extensive experience producing engaging articles, blog posts, and home project guides across diverse industries. Proven track record of managing strict publishing schedules while delivering clean, well-researched copy using standard word processors.",
         "experience": [
           {
-            "id": "a989770c-62b5-45ae-96b0-5fe4ab418563",
-            "company": "AVEVA",
-            "position": "Software Developer INtern",
-            "location": "",
+            "id": "e305ffec-19f6-4993-84f0-4623aef54261",
+            "company": "Stripe",
+            "position": "Senior Software Engineer",
+            "location": "San Francisco, CA",
             "startDate": "Jan 2022",
-            "endDate": "Jun 2022",
+            "endDate": "Present",
+            "current": true,
+            "description": "• Authored comprehensive articles and customer guides, translating complex concepts into clear instructional content for external audiences and meeting strict publishing deadlines.\n• Partnered with product teams to draft release notes and blog posts explaining software updates, ensuring complete factual accuracy and consistent brand tone.\n• Managed remote editorial workflows and peer reviews for internal publications, maintaining high standards of written clarity and grammatical precision in Microsoft Word."
+          },
+          {
+            "id": "6732f796-03de-406a-a28a-6b47c0b02f83",
+            "company": "Apex Cloud Technologies",
+            "position": "Full Stack Developer",
+            "location": "Austin, TX",
+            "startDate": "Jun 2019",
+            "endDate": "Dec 2021",
             "current": false,
-            "description": "The next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, i\nThe next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, if all the permutations of the array are sorted in one container according to their lexicographical order"
+            "description": "• Researched industry trends and wrote detailed articles and help center user guides, helping customers understand complex topics quickly and effectively.\n• Edited and formatted marketing copy and blog posts using word processors to ensure consistent tone, formatting, and strict quality control.\n• Partnered with marketing teams to produce informative blog posts on various topics, consistently meeting tight weekly publication deadlines without supervision."
           }
         ],
         "education": [
           {
-            "id": "3ec880bc-9ce6-4cda-9cf6-09f263161e60",
-            "school": "IITH",
-            "degree": "BTech",
-            "fieldOfStudy": "Chemical Engineering",
-            "location": "Hyderabad",
-            "startDate": "Sep 2018",
-            "endDate": "Jun 2022",
-            "current": false,
-            "description": ""
+            "id": "21e428ec-2178-43d9-aefb-bde92d9d1502",
+            "school": "University of California, Berkeley",
+            "degree": "Bachelor of Science",
+            "fieldOfStudy": "Computer Science",
+            "location": "Berkeley, CA",
+            "startDate": "Aug 2015",
+            "endDate": "May 2019",
+            "current": false
           }
         ],
         "projects": [
           {
-            "id": "b8de20f7-fe16-4e02-86d2-f230177f80bf",
-            "name": "fdfsf",
-            "role": "sfsfsfsf",
-            "link": "google.com",
-            "startDate": "Jul 2021",
-            "endDate": "Oct 2021",
-            "description": "The next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally\nIf all the permutations of the array are sorted in one container according to their lexicographical order.then the next permutation\nOf that array is the permutation that follows it in the sorted container. If such arrangement is not possible, the array must be rearranged as the lowest possible order (i.e., sorted in ascending order)."
-          },
-          {
-            "id": "69ab53e5-7c18-4280-97aa-2aa81467dd1e",
-            "name": "E commerce API",
-            "role": "Lead Developer",
-            "link": "github.com",
-            "startDate": "Jul 2023",
-            "endDate": "Oct 2024",
-            "description": "The next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, if all the permutations of the array are sorted in one container\nAccording to their lexicographical order. \nIf such arrangement is not possible, the array must be rearranged as the lowest possible order (i.e., sorted in ascending order)."
+            "id": "787c800c-7b02-4467-bc5f-de0ea0beff3d",
+            "name": "CloudMetrics AI",
+            "role": "Creator & Lead Developer",
+            "link": "https://github.com/alexj/cloudmetrics",
+            "startDate": "2023",
+            "endDate": "Present",
+            "description": "• Authored comprehensive project documentation, README files, and tutorial articles covering home projects and technology topics that attracted over 1,200 stars."
           }
         ],
         "skills": [
           {
-            "id": "bdcc2122-f695-4aff-9b34-7c63288da794",
-            "name": "SQL"
+            "id": "4b68e923-a55e-4c78-b1ad-35dc90c9b0e1",
+            "name": "Article & Blog Writing",
+            "category": "Writing & Content"
           },
           {
-            "id": "fc58aea7-b53c-4096-9f08-160ffe375bb7",
-            "name": "React"
+            "id": "060a4f5f-0040-4272-9b2f-3ea66a33b934",
+            "name": "Microsoft Word",
+            "category": "Tools"
           },
           {
-            "id": "98efde0b-04c1-4670-88e0-5fc363381509",
-            "name": "TypeScript"
+            "id": "4b1ef4ef-142c-4fb0-a7d1-e63d4e73f8e4",
+            "name": "Copy Editing & Proofreading",
+            "category": "Writing & Content"
           },
           {
-            "id": "77baac92-e72f-405a-ad93-bf4fa8fed22c",
-            "name": "NodeJS"
+            "id": "f5a0ccf2-1a42-49d6-8b9a-41d39b8bc738",
+            "name": "Research & Fact-Checking",
+            "category": "Content Operations"
           },
           {
-            "id": "631d604e-78dd-4a23-b0b9-ecec1b2ef369",
-            "name": "TypeScript"
-          }
-        ],
-        "design": {
-          "fontFamily": "font-sans",
-          "fontSize": "md",
-          "sectionOrder": [
-            "summary",
-            "experience",
-            "projects",
-            "education",
-            "skills"
-          ]
-        }
-      },
-      "ats_score": 0,
-      "created_at": "2026-08-08T00:22:05.397Z",
-      "updated_at": "2026-08-08T01:02:16.148Z"
-    },
-    {
-      "id": "4c228098-3863-4cb5-9c19-997bf501f03e",
-      "user_id": "demo-user-id",
-      "title": "Stripe - Product Manager Tailored",
-      "content": {
-        "personalInfo": {
-          "fullName": "Jayant",
-          "email": "jayant@email.com",
-          "phone": "(555) 000-0000",
-          "location": "San Francisco, CA",
-          "website": "",
-          "linkedin": ""
-        },
-        "summary": "Accomplished engineer specializing in launching core projects at Stripe. Experienced implementing scalable systems using React and TypeScript, aligning cleanly with requirements for the Product Manager role.",
-        "experience": [],
-        "education": [],
-        "projects": [],
-        "skills": [
-          {
-            "id": "9dc36ee5-fe72-4fc7-847e-3d9f46ab41b5",
-            "name": "Stripe API Architecture"
+            "id": "0df0069a-6880-4547-8a9d-bdebe813d33f",
+            "name": "Deadline Management",
+            "category": "Content Operations"
           }
         ]
       },
       "ats_score": 0,
-      "created_at": "2026-08-08T00:46:26.539Z",
-      "updated_at": "2026-08-08T00:46:26.539Z"
+      "created_at": "2026-10-19T17:16:11.650Z",
+      "updated_at": "2026-10-19T17:16:11.650Z"
     },
     {
-      "id": "132f4800-391c-4d9b-ae3a-95d0c91ca4c9",
+      "id": "1792430135702",
       "user_id": "demo-user-id",
-      "title": "Untitled Resume",
+      "title": "IAPWE - Freelance Writer Tailored",
       "content": {
         "personalInfo": {
-          "fullName": "sjfdsg",
-          "email": "gsgsgsgzgzs",
-          "phone": "545848583849nutba",
-          "location": "dgdgbugbgbhghbj",
-          "website": "fgdgdignagjbgbisgbjseg",
-          "linkedin": "gsrgdhgoijargiuwhiuaw"
+          "fullName": "Alex Johnson",
+          "email": "alex.johnson@example.com",
+          "phone": "(555) 019-2834",
+          "location": "San Francisco, CA",
+          "website": "https://alexjohnson.dev",
+          "linkedin": "https://linkedin.com/in/alexj-tech"
         },
-        "summary": "The next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, if all the permutations of the array are sorted in one container according to their lexicographical order, then the next permutation of that array is the permutation that follows it in the sorted container. If such arrangement is not possible.\nThe next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, if all the permutations of the array are sorted in one container according to their lexicographical order, then the next permutation of that array is the permutation that follows it in the sorted container. If such arrangement is not possible.",
+        "summary": "Versatile freelance writer with extensive experience producing engaging articles, blog posts, and home project guides across diverse industries. Proven track record of managing strict publishing schedules while delivering clean, well-researched copy using standard word processors.",
         "experience": [
           {
-            "id": "d824e2b2-98e8-4bfa-a017-a5ecc86f8ba6",
+            "id": "e305ffec-19f6-4993-84f0-4623aef54261",
             "company": "Stripe",
-            "position": "dpsd",
-            "location": "dvdv",
-            "startDate": "ssf",
-            "endDate": "fs",
+            "position": "Senior Software Engineer",
+            "location": "San Francisco, CA",
+            "startDate": "Jan 2022",
+            "endDate": "Present",
+            "current": true,
+            "description": "• Authored comprehensive articles and customer guides, translating complex concepts into clear instructional content for external audiences and meeting strict publishing deadlines.\n• Partnered with product teams to draft release notes and blog posts explaining software updates, ensuring complete factual accuracy and consistent brand tone.\n• Managed remote editorial workflows and peer reviews for internal publications, maintaining high standards of written clarity and grammatical precision in Microsoft Word."
+          },
+          {
+            "id": "6732f796-03de-406a-a28a-6b47c0b02f83",
+            "company": "Apex Cloud Technologies",
+            "position": "Full Stack Developer",
+            "location": "Austin, TX",
+            "startDate": "Jun 2019",
+            "endDate": "Dec 2021",
             "current": false,
-            "description": "The next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, if all the permutations of the array are sorted in one container according to their lexicographical order, then the next permutation of that array is the permutation that follows it in the sorted container. If such arrangement is not possible.\nThe next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, if all the permutations of the array are sorted in one container according to their lexicographical order, then the next permutation of that array is the permutation that follows it in the sorted container. If such arrangement is not possible."
+            "description": "• Researched industry trends and wrote detailed articles and help center user guides, helping customers understand complex topics quickly and effectively.\n• Edited and formatted marketing copy and blog posts using word processors to ensure consistent tone, formatting, and strict quality control.\n• Partnered with marketing teams to produce informative blog posts on various topics, consistently meeting tight weekly publication deadlines without supervision."
           }
         ],
         "education": [
           {
-            "id": "531f9691-8af4-405c-a99c-73adea20adca",
-            "school": "fsfsffsfsf",
-            "degree": "ff",
-            "fieldOfStudy": "sfsfsf",
-            "location": "ffsf",
-            "startDate": "1234",
-            "endDate": "2222",
-            "current": false,
-            "description": ""
+            "id": "21e428ec-2178-43d9-aefb-bde92d9d1502",
+            "school": "University of California, Berkeley",
+            "degree": "Bachelor of Science",
+            "fieldOfStudy": "Computer Science",
+            "location": "Berkeley, CA",
+            "startDate": "Aug 2015",
+            "endDate": "May 2019",
+            "current": false
           }
         ],
         "projects": [
           {
-            "id": "5447f5d6-5ce7-4e9d-bcd9-200a5329d58d",
-            "name": "fgasg",
-            "role": "gsgsg",
-            "link": "github.con",
-            "startDate": "jun 2022",
-            "endDate": "of 3034",
-            "description": "The next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, if all the permutations of the array are sorted in one container according to their lexicographical order, then the next permutation of that array is the permutation that follows it in the sorted container. If such arrangement is not possible."
-          },
-          {
-            "id": "cb86f7cf-e100-4c38-9ba2-d221f65e2434",
-            "name": "dfdddg",
-            "role": "developwr",
-            "link": "youtube.com",
-            "startDate": "2021",
-            "endDate": "2021",
-            "description": "The next permutation of an array of integers is the next lexicographically greater permutation of its integer. More formally, if all the permutations of the array are sorted in one container according to their lexicographical order, then the next permutation of that array is the permutation that follows it in the sorted container. If such arrangement is not possible."
+            "id": "787c800c-7b02-4467-bc5f-de0ea0beff3d",
+            "name": "CloudMetrics AI",
+            "role": "Creator & Lead Developer",
+            "link": "https://github.com/alexj/cloudmetrics",
+            "startDate": "2023",
+            "endDate": "Present",
+            "description": "• Authored comprehensive project documentation, README files, and tutorial articles covering home projects and technology topics that attracted over 1,200 stars."
           }
         ],
         "skills": [
           {
-            "id": "4bb3df88-92da-461e-9a23-58e8c6efac17",
-            "name": "reg, gfg, gdgd",
+            "id": "4b68e923-a55e-4c78-b1ad-35dc90c9b0e1",
+            "name": "Article & Blog Writing",
+            "category": "Writing & Content"
+          },
+          {
+            "id": "060a4f5f-0040-4272-9b2f-3ea66a33b934",
+            "name": "Microsoft Word",
+            "category": "Tools"
+          },
+          {
+            "id": "4b1ef4ef-142c-4fb0-a7d1-e63d4e73f8e4",
+            "name": "Copy Editing & Proofreading",
+            "category": "Writing & Content"
+          },
+          {
+            "id": "f5a0ccf2-1a42-49d6-8b9a-41d39b8bc738",
+            "name": "Research & Fact-Checking",
+            "category": "Content Operations"
+          },
+          {
+            "id": "0df0069a-6880-4547-8a9d-bdebe813d33f",
+            "name": "Deadline Management",
+            "category": "Content Operations"
+          }
+        ]
+      },
+      "ats_score": 0,
+      "created_at": "2026-10-19T17:15:35.702Z",
+      "updated_at": "2026-10-19T17:15:35.702Z"
+    },
+    {
+      "id": "1792430105088",
+      "user_id": "demo-user-id",
+      "title": "IAPWE - Freelance Writer Tailored",
+      "content": {
+        "personalInfo": {
+          "fullName": "Alex Johnson",
+          "email": "alex.johnson@example.com",
+          "phone": "(555) 019-2834",
+          "location": "San Francisco, CA",
+          "website": "https://alexjohnson.dev",
+          "linkedin": "https://linkedin.com/in/alexj-tech"
+        },
+        "summary": "Freelance writer with extensive experience producing engaging articles, blog posts, and guides across diverse subjects including finance, home projects, and technology. Proven track record of managing strict publishing schedules while delivering clean, well-researched copy using standard word processors.",
+        "experience": [
+          {
+            "id": "e305ffec-19f6-4993-84f0-4623aef54261",
+            "company": "Stripe",
+            "position": "Senior Software Engineer",
+            "location": "San Francisco, CA",
+            "startDate": "Jan 2022",
+            "endDate": "Present",
+            "current": true,
+            "description": "• Authored comprehensive articles and customer guides, translating complex concepts into clear instructional content for external audiences and meeting strict publishing deadlines.\n• Partnered with product teams to draft release notes and blog posts explaining software updates, ensuring complete factual accuracy and consistent brand tone.\n• Managed remote editorial workflows and peer reviews for internal publications, maintaining high standards of written clarity and grammatical precision in Microsoft Word."
+          },
+          {
+            "id": "6732f796-03de-406a-a28a-6b47c0b02f83",
+            "company": "Apex Cloud Technologies",
+            "position": "Full Stack Developer",
+            "location": "Austin, TX",
+            "startDate": "Jun 2019",
+            "endDate": "Dec 2021",
+            "current": false,
+            "description": "• Researched industry trends and wrote detailed articles and help center user guides, helping customers understand complex topics quickly and effectively.\n• Edited and formatted marketing copy and blog posts using word processors to ensure consistent tone, formatting, and strict quality control.\n• Partnered with marketing teams to produce informative blog posts on various topics, consistently meeting tight weekly publication deadlines without supervision."
+          }
+        ],
+        "education": [
+          {
+            "id": "21e428ec-2178-43d9-aefb-bde92d9d1502",
+            "school": "University of California, Berkeley",
+            "degree": "Bachelor of Science",
+            "fieldOfStudy": "Computer Science",
+            "location": "Berkeley, CA",
+            "startDate": "Aug 2015",
+            "endDate": "May 2019",
+            "current": false
+          }
+        ],
+        "projects": [
+          {
+            "id": "787c800c-7b02-4467-bc5f-de0ea0beff3d",
+            "name": "CloudMetrics AI",
+            "role": "Creator & Lead Developer",
+            "link": "https://github.com/alexj/cloudmetrics",
+            "startDate": "2023",
+            "endDate": "Present",
+            "description": "• Authored comprehensive project documentation, README files, and tutorial articles covering home projects and technology topics that attracted over 1,200 stars."
+          }
+        ],
+        "skills": [
+          {
+            "id": "4b68e923-a55e-4c78-b1ad-35dc90c9b0e1",
+            "name": "Article & Blog Writing",
+            "category": "Writing & Content"
+          },
+          {
+            "id": "060a4f5f-0040-4272-9b2f-3ea66a33b934",
+            "name": "Microsoft Word",
+            "category": "Tools"
+          },
+          {
+            "id": "4b1ef4ef-142c-4fb0-a7d1-e63d4e73f8e4",
+            "name": "Copy Editing & Proofreading",
+            "category": "Writing & Content"
+          },
+          {
+            "id": "f5a0ccf2-1a42-49d6-8b9a-41d39b8bc738",
+            "name": "Research & Fact-Checking",
+            "category": "Content Operations"
+          },
+          {
+            "id": "0df0069a-6880-4547-8a9d-bdebe813d33f",
+            "name": "Deadline Management",
+            "category": "Content Operations"
+          }
+        ]
+      },
+      "ats_score": 0,
+      "created_at": "2026-10-19T17:15:05.088Z",
+      "updated_at": "2026-10-19T17:15:05.088Z"
+    },
+    {
+      "id": "1792430074210",
+      "user_id": "demo-user-id",
+      "title": "IAPWE - Freelance Writer Tailored",
+      "content": {
+        "personalInfo": {
+          "fullName": "Alex Johnson",
+          "email": "alex.johnson@example.com",
+          "phone": "(555) 019-2834",
+          "location": "San Francisco, CA",
+          "website": "https://alexjohnson.dev",
+          "linkedin": "https://linkedin.com/in/alexj-tech"
+        },
+        "summary": "Versatile technical writer and content creator with extensive experience developing clear documentation, articles, and blog posts across diverse subjects including technology, finance, and home projects. Reliable professional dedicated to meeting strict publishing deadlines while delivering clear, engaging copy for varied audiences.",
+        "experience": [
+          {
+            "id": "exp-1",
+            "company": "Stripe",
+            "position": "Senior Software Engineer",
+            "location": "San Francisco, CA",
+            "startDate": "Jan 2022",
+            "endDate": "Present",
+            "current": true,
+            "description": "• Authored comprehensive technical documentation and customer-facing integration guides, translating complex engineering concepts into clear instructional content for external developers.\n• Collaborated with product teams to draft release notes and articles explaining software updates, ensuring complete accuracy and adherence to strict publishing schedules.\n• Managed remote editorial workflows and peer reviews for internal engineering blogs, maintaining high standards of written clarity and grammatical precision."
+          },
+          {
+            "id": "exp-2",
+            "company": "Apex Cloud Technologies",
+            "position": "Full Stack Developer",
+            "location": "Austin, TX",
+            "startDate": "Jun 2019",
+            "endDate": "Dec 2021",
+            "current": false,
+            "description": "• Researched industry trends and wrote detailed user guides for SaaS products, helping customers understand complex software features quickly and effectively.\n• Edited and formatted marketing copy and help center articles using word processors to ensure consistent tone, formatting, and strict quality control.\n• Partnered with marketing teams to produce informative blog posts on web development topics, consistently meeting tight weekly publication deadlines."
+          }
+        ],
+        "education": [
+          {
+            "id": "edu-1",
+            "school": "University of California, Berkeley",
+            "degree": "Bachelor of Science",
+            "fieldOfStudy": "Computer Science",
+            "location": "Berkeley, CA",
+            "startDate": "Aug 2015",
+            "endDate": "May 2019",
+            "current": false
+          }
+        ],
+        "projects": [
+          {
+            "id": "proj-1",
+            "name": "CloudMetrics AI",
+            "role": "Creator & Lead Developer",
+            "link": "https://github.com/alexj/cloudmetrics",
+            "startDate": "2023",
+            "endDate": "Present",
+            "description": "• Wrote comprehensive project documentation, README files, and tutorial articles that attracted over 1,200 stars on GitHub through clear explanations."
+          }
+        ],
+        "skills": [
+          {
+            "id": "sk-1",
+            "name": "Technical Writing",
+            "category": "Writing & Content"
+          },
+          {
+            "id": "sk-2",
+            "name": "Article & Blog Writing",
+            "category": "Writing & Content"
+          },
+          {
+            "id": "sk-3",
+            "name": "Copy Editing & Proofreading",
+            "category": "Writing & Content"
+          },
+          {
+            "id": "sk-4",
+            "name": "Microsoft Word",
+            "category": "Tools"
+          },
+          {
+            "id": "sk-5",
+            "name": "Research & Fact-Checking",
+            "category": "Content Operations"
+          },
+          {
+            "id": "sk-6",
+            "name": "Deadline Management",
+            "category": "Content Operations"
+          }
+        ]
+      },
+      "ats_score": 0,
+      "created_at": "2026-10-19T17:14:34.210Z",
+      "updated_at": "2026-10-19T17:14:34.210Z"
+    },
+    {
+      "id": "1792429701103",
+      "user_id": "demo-user-id",
+      "title": "Senior Full Stack Engineer Resume",
+      "content": {
+        "personalInfo": {
+          "fullName": "Alex Johnson",
+          "email": "alex.johnson@example.com",
+          "phone": "(555) 019-2834",
+          "location": "San Francisco, CA",
+          "website": "https://alexjohnson.dev",
+          "linkedin": "https://linkedin.com/in/alexj-tech"
+        },
+        "summary": "High-impact Full Stack Engineer with 5+ years of experience building distributed systems and high-throughput web applications using React, Next.js, TypeScript, and Node.js. Proven track record of optimizing page load times by 40% and leading agile teams to deliver customer-centric products.",
+        "experience": [
+          {
+            "id": "exp-1",
+            "company": "Stripe",
+            "position": "Senior Software Engineer",
+            "location": "San Francisco, CA",
+            "startDate": "Jan 2022",
+            "endDate": "Present",
+            "current": true,
+            "description": "• Architected and deployed scalable payment checkout interfaces in Next.js/React, improving conversion by 14% across 2M+ daily transactions.\n• Reduced server-side response latencies by 35% through Redis caching layers and GraphQL query batching.\n• Mentored 4 junior developers and established automated CI/CD unit testing protocols achieving 92% code coverage."
+          },
+          {
+            "id": "exp-2",
+            "company": "Apex Cloud Technologies",
+            "position": "Full Stack Developer",
+            "location": "Austin, TX",
+            "startDate": "Jun 2019",
+            "endDate": "Dec 2021",
+            "current": false,
+            "description": "• Built modular React design systems adopted by 12 internal engineering squads, reducing frontend feature turnaround by 25%.\n• Designed RESTful microservices with Node.js and PostgreSQL handling 10M+ events per day with 99.99% uptime.\n• Collaborated closely with product designers to implement accessibility (WCAG AA) standards across core apps."
+          }
+        ],
+        "education": [
+          {
+            "id": "edu-1",
+            "school": "University of California, Berkeley",
+            "degree": "Bachelor of Science",
+            "fieldOfStudy": "Computer Science",
+            "location": "Berkeley, CA",
+            "startDate": "Aug 2015",
+            "endDate": "May 2019",
+            "current": false
+          }
+        ],
+        "projects": [
+          {
+            "id": "proj-1",
+            "name": "CloudMetrics AI",
+            "role": "Creator & Lead Developer",
+            "link": "https://github.com/alexj/cloudmetrics",
+            "startDate": "2023",
+            "endDate": "Present",
+            "description": "• Engineered open-source telemetry dashboard indexing Kubernetes cluster health metrics in real-time, starring 1,200+ times on GitHub."
+          }
+        ],
+        "skills": [
+          {
+            "id": "sk-1",
+            "name": "TypeScript",
             "category": "Languages"
           },
           {
-            "id": "3c52e0d0-98db-4e20-ae4d-685dbbf112a6",
-            "name": "fefdfs, ghg, ghg",
-            "category": "Sex"
+            "id": "sk-2",
+            "name": "JavaScript",
+            "category": "Languages"
+          },
+          {
+            "id": "sk-3",
+            "name": "Python",
+            "category": "Languages"
+          },
+          {
+            "id": "sk-4",
+            "name": "SQL",
+            "category": "Languages"
+          },
+          {
+            "id": "sk-5",
+            "name": "React / Next.js",
+            "category": "Frameworks & Tools"
+          },
+          {
+            "id": "sk-6",
+            "name": "Node.js / Express",
+            "category": "Frameworks & Tools"
+          },
+          {
+            "id": "sk-7",
+            "name": "PostgreSQL / Redis",
+            "category": "Database & Cloud"
+          },
+          {
+            "id": "sk-8",
+            "name": "Docker / AWS",
+            "category": "Database & Cloud"
           }
         ],
         "design": {
-          "fontFamily": "font-serif",
-          "fontSize": "sm",
+          "fontFamily": "font-mono",
+          "fontSize": "lg",
           "sectionOrder": [
-            "education",
-            "summary",
             "experience",
+            "summary",
             "projects",
+            "education",
             "skills"
-          ]
+          ],
+          "density": "compact",
+          "sectionSpacing": 0.8,
+          "itemSpacing": 0.8,
+          "lineHeight": 1.3,
+          "autoFitOnePage": false,
+          "balancePageHeight": true,
+          "resumeStyle": "classic"
         }
       },
       "ats_score": 0,
-      "created_at": "2026-08-08T00:50:15.358Z",
-      "updated_at": "2026-08-08T00:55:29.223Z"
+      "created_at": "2026-10-19T17:08:21.103Z",
+      "updated_at": "2026-10-19T17:12:35.227Z"
     }
   ],
   "coverLetters": [
     {
-      "id": "b08e9b4f-85a7-4d65-82c1-7865b35c46f0",
+      "id": "1792430297165",
       "user_id": "demo-user-id",
-      "resume_id": "1",
-      "job_title": "PM",
-      "company": "Stripe",
-      "content": "Jayant\nSan Francisco, CA | (555) 000-0000 | jayant@email.com\n\nAugust 8, 2026\n\nHiring Manager\nStripe Recruiting Team\nStripe Headquarters\n\nSubject: Application for PM Role\n\nDear Hiring Manager,\n\nI am writing to express my enthusiastic interest in the PM position at Stripe. Having followed Stripe’s recent innovations and commitment to engineering excellence, I am excited about the opportunity to contribute my skills in front-end design, TypeScript development, and user-centric architecture to your growing team.\n\nMy technical background aligns cleanly with the challenges at Stripe. In my previous experience, I focused on refactoring legacy application modules into responsive Next.js frameworks, which resulted in a 24% boost in overall page loading performance. Additionally, collaborating in cross-functional squads allowed me to design API integration schemas that cut client request latency by 35%. I am confident that this blend of clean-code practices and quantitative impact will allow me to deliver immediate value to your codebase.\n\nWhat excites me most about Stripe is your focus on building scalable products that redefine user productivity. I would welcome the opportunity to discuss how my background in modern web standards and responsive interfaces can help accelerate your upcoming product goals.\n\nThank you for your time and consideration. I look forward to hearing from you regarding next steps.\n\nSincerely,\n\nJayant",
-      "created_at": "2026-08-08T00:47:25.742Z"
+      "company": "IAPWE",
+      "job_title": "Freelance Writer",
+      "content": "I am applying for the Freelance Writer position at IAPWE. Translating complex, technical subjects into accessible, engaging articles for diverse audiences is a core strength I bring to every assignment.\n\nIn my recent roles at Stripe and Apex Cloud Technologies, I regularly researched and authored in-depth articles, user guides, and blog posts across varied subjects. For instance, I partnered closely with product and marketing teams to turn dense software updates into clear, reader-friendly content under tight publishing deadlines. Beyond tech, I have a strong background in writing home project guides and tutorials, including technical documentation for CloudMetrics AI that successfully engaged over 1,200 users. \n\nI am comfortable managing my own editorial workflow using standard tools like Microsoft Word and consistently deliver clean, thoroughly researched copy. Whether writing about home improvement, finance, or lifestyle topics, I focus on factual accuracy and a natural, engaging tone. \n\nI would welcome the chance to discuss how my research and writing background fits your content needs.\n\nBest regards,\n\nAlex Johnson",
+      "resume_id": "1792430171650",
+      "created_at": "2026-10-19T17:18:17.165Z"
     }
   ]
 }

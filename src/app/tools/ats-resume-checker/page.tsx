@@ -44,7 +44,7 @@ export default function ATSCheckerLandingPage() {
             </div>
 
             <h1 className="text-4xl md:text-6xl font-black tracking-tight text-foreground max-w-3xl mx-auto leading-tight">
-              Test If Your Resume Can Pass The <span className="bg-gradient-to-r from-primary via-violet-500 to-indigo-500 bg-clip-text text-transparent">ATS Screen</span>
+              Test If Your Resume Can Pass The <span className="underline decoration-primary decoration-4 underline-offset-8">ATS Screen</span>
             </h1>
 
             <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
@@ -53,7 +53,7 @@ export default function ATSCheckerLandingPage() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
               <Link href="/dashboard/checker">
-                <Button size="lg" className="bg-primary text-primary-foreground font-bold px-8 h-12 gap-2 shadow-lg shadow-primary/20 text-sm">
+                <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-8 h-12 gap-2 shadow-xs text-sm">
                   <span>Scan Your Resume Free</span>
                   <ArrowRight className="h-4 w-4" />
                 </Button>
@@ -106,7 +106,7 @@ export default function ATSCheckerLandingPage() {
               </div>
 
               <div className="p-6 rounded-2xl border border-border/80 bg-card space-y-3">
-                <div className="h-10 w-10 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-500">
+                <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center text-foreground">
                   <FileText className="h-5 w-5" />
                 </div>
                 <h3 className="font-bold text-base text-foreground">Format & Structure Audit</h3>

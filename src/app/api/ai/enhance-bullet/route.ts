@@ -1,50 +1,82 @@
 import { NextResponse } from "next/server";
 import { getAIClient } from "@/lib/ai";
-import { createServerSideClient } from "@/lib/supabase/server";
 
-// POST /api/ai/enhance-bullet - Optimize resume bullet point
+// POST /api/ai/enhance-bullet - Optimize resume bullet points using Google XYZ format
 export async function POST(request: Request) {
   try {
-    // Basic session validation
-    const supabase = await createServerSideClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const body = await request.json();
+    const rawText = body.bulletPoint || body.bulletText || body.text || body.description || "";
+    const jobTitle = body.jobTitle || "Software Engineer";
+    const industry = body.industry || "Technology";
+
+    if (!rawText || typeof rawText !== "string" || rawText.trim() === "") {
+      return NextResponse.json({ success: false, error: "Bullet text is required" }, { status: 400 });
     }
 
-    const { bulletPoint, jobTitle = "Software Developer", industry = "Technology" } = await request.json();
+    // Split into individual bullets if multiple lines are provided
+    const lines = rawText
+      .split("\n")
+      .map((l) => l.trim().replace(/^[•\-\*\s]+/, ""))
+      .filter((l) => l.length > 0);
 
-    if (!bulletPoint || bulletPoint.trim() === "") {
-      return NextResponse.json({ success: false, error: "Bullet point is required" }, { status: 400 });
-    }
+    const isTechnicalRole = (roleStr: string) => {
+      const lower = (roleStr || "").toLowerCase();
+      const techKeywords = [
+        "engineer", "developer", "software", "architect", "data science",
+        "data scientist", "backend", "frontend", "full stack", "fullstack",
+        "devops", "sre", "machine learning", "ml", "ai engineer", "cloud",
+        "qa", "tester", "systems", "security engineer", "mobile", "ios", "android"
+      ];
+      return techKeywords.some(k => lower.includes(k));
+    };
+
+    const isTech = isTechnicalRole(jobTitle);
 
     const { openai, modelMini, isConfigured } = getAIClient();
 
+    // Fallback if AI client is not configured (offline / demo mode)
     if (!isConfigured) {
-      // Fallback Mock Enhancer for development/testing if no API key is configured
-      const mockEnhancements = [
-        `Engineered modern application layouts, resulting in a 24% reduction in load times and a 15% increase in user session retention.`,
-        `Collaborated with cross-functional design and product teams to integrate and scale feature interfaces, accelerating delivery schedules by 3 weeks.`,
-        `Redesigned core module components using clean architectures, decreasing code duplication by 35% and streamlining onboarding workflows.`,
-        `Architected key system logic integrations, optimizing client request handling speeds by 40% and cutting hosting costs.`,
-      ];
-      const selected = mockEnhancements[Math.floor(Math.random() * mockEnhancements.length)];
-      return NextResponse.json({ success: true, enhanced: selected });
+      const mockActionVerbs = isTech
+        ? ["Built", "Engineered", "Designed", "Refactored", "Optimized", "Deployed"]
+        : ["Led", "Accelerated", "Delivered", "Managed", "Structured", "Negotiated"];
+      const enhancedLines = lines.map((line, idx) => {
+        const verb = mockActionVerbs[idx % mockActionVerbs.length];
+        const cleaned = line
+          .replace(/^(responsible for|worked on|helped to|assisted in|tasked with)\s+/i, "")
+          .trim();
+        // Capitalize first char
+        const rest = cleaned.charAt(0).toLowerCase() + cleaned.slice(1);
+        return `• ${verb} ${rest}`;
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          enhanced: enhancedLines.join("\n"),
+          bulletCount: lines.length
+        }
+      });
     }
 
-    const systemPrompt = `You are a professional resume writer, career strategist, and recruiter. 
-Your task is to take a simple resume bullet point and rewrite it to be extremely professional, high-impact, and quantified.
-Follow these rules strictly:
-1. Start with a strong action verb (e.g., Engineered, Spearheaded, Re-architected, Orchestrated).
-2. Incorporate realistic metrics (e.g., improved speeds by 30%, increased engagement by 15%, reduced bugs by 20%) to show impact.
-3. Keep the language concise, clear, and relevant to the target job and industry.
-4. Return ONLY the single enhanced bullet point text. Do not wrap in quotes. Do not include introductory text, feedback, explanations, or multiple choices. Just the raw single bullet point.`;
+    const systemPrompt = `You are a principal hiring bar raiser and executive resume strategist known for writing sharp, 100% human-sounding resume bullet points.
+Your task is to rewrite draft resume bullet points using the Google XYZ formula:
+"Accomplished [X], measured by [Y], by doing [Z]"
 
-    const userPrompt = `Target Job Title: ${jobTitle}
-Target Industry: ${industry}
-Original Bullet Point: "${bulletPoint}"
+CRITICAL RULES (ANTI-AI-SLOP & HUMAN WRITING):
+1. FORBIDDEN WORDS: NEVER use "spearheaded", "orchestrated", "synergized", "leveraged", "pioneered", "cutting-edge", "game-changing", "seamlessly", "testament to", "delved", "fostered", "dynamic".
+2. ACTION VERBS: Start EVERY bullet point with a decisive, past-tense active verb (${isTech ? "e.g., Built, Designed, Engineered, Refactored, Optimized, Automated, Deployed, Migrated, Reduced, Scaled" : "e.g., Negotiated, Closed, Managed, Structured, Scaled, Forecasted, Standardized, Executed, Launched, Partnered, Streamlined, Reduced"}).
+3. PRESERVE FACTUAL METRICS: PRESERVE all real metrics, numbers, percentages, tools, libraries, and frameworks mentioned in the draft.
+4. NO FAKE METRICS: NEVER invent fake business metrics or imaginary numbers. If no numbers were given, articulate the concrete outcome (${isTech ? 'e.g., "reducing query execution time", "preventing regression bugs", "decreasing bundle size", "automating manual deployments"' : 'e.g., "accelerating deal cycle times", "improving pipeline retention", "standardizing approval workflows", "boosting campaign conversion"'}) without fabricating fake stats.
+5. CONCISE & READABLE: Keep each bullet concise, high-density, and between 15 and 28 words.
+6. FORMAT: If the input contains multiple lines/bullets, output EXACTLY the same number of lines, each beginning with a bullet character "• ".
+7. Return ONLY the enhanced bullet point text. Do not wrap in markdown quotes or preface with commentary.`;
 
-Enhanced Bullet Point:`;
+    const userPrompt = `Target Role: ${jobTitle}
+Industry: ${industry}
+Draft Bullet(s):
+${lines.map((l) => `• ${l}`).join("\n")}
+
+Enhanced Google XYZ Bullet(s):`;
 
     const response = await openai.chat.completions.create({
       model: modelMini,
@@ -52,18 +84,38 @@ Enhanced Bullet Point:`;
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
       ],
-      temperature: 0.7,
-      max_tokens: 150
+      temperature: 0.25,
+      max_tokens: 350
     });
 
-    const enhanced = response.choices[0]?.message?.content?.trim();
+    let enhanced = response.choices[0]?.message?.content?.trim();
 
     if (!enhanced) {
       return NextResponse.json({ success: false, error: "Failed to generate enhancement from AI" }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, enhanced });
+    // Strip wrapping quotes if LLM added them
+    if (enhanced.startsWith('"') && enhanced.endsWith('"')) {
+      enhanced = enhanced.slice(1, -1).trim();
+    }
+
+    // Ensure bullet format
+    const formatted = enhanced
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0)
+      .map((l) => (l.startsWith("•") ? l : `• ${l}`))
+      .join("\n");
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        enhanced: formatted,
+        bulletCount: lines.length
+      }
+    });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error("Enhance bullet error:", error);
+    return NextResponse.json({ success: false, error: error.message || "Enhancement failed" }, { status: 500 });
   }
 }

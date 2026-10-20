@@ -49,15 +49,19 @@ export interface Skill {
 
 export type ResumeDensity = "relaxed" | "normal" | "compact" | "ultra-compact";
 
+export type ResumeStyle = "classic" | "split-sidebar" | "executive" | "minimal" | "technical";
+
 export interface DesignSettings {
   fontFamily?: "font-sans" | "font-serif" | "font-mono" | "font-executive" | "font-geometric";
   fontSize?: "xs" | "sm" | "md" | "lg" | "xl";
+  resumeStyle?: ResumeStyle;
   sectionOrder?: string[];
   density?: ResumeDensity;
   sectionSpacing?: number; // 0.6 to 1.4 multiplier
   itemSpacing?: number;    // 0.6 to 1.4 multiplier
   lineHeight?: number;     // 1.2 to 1.6 multiplier
   autoFitOnePage?: boolean;
+  balancePageHeight?: boolean;
 }
 
 export interface FitAnalysis {
@@ -93,4 +97,41 @@ export interface ResumeState {
   saveState: SaveState;
   past: ResumeData[];
   future: ResumeData[];
+}
+
+export interface PillarScore {
+  id: string;
+  name: string;
+  score: number; // 0-100
+  weight: number; // percentage
+  status: "strong" | "moderate" | "weak";
+  summary: string;
+  recommendation: string;
+}
+
+export interface UpliftStep {
+  title: string;
+  estimatedPoints: number;
+  action: string;
+  rationale: string;
+  groundedContext: string;
+}
+
+export interface ApplicationStrengthResult {
+  isTargeted: boolean;
+  score: number; // Overall score 0-100
+  tierLabel: "Top Tier Contender" | "Strong Match" | "Moderate Match" | "High Risk";
+  readabilityScore: number;
+  projectedScore: number;
+  potentialUplift: number;
+  pillars: PillarScore[];
+  upliftPath: UpliftStep[];
+  strengths: string[];
+  weaknesses: string[];
+  missingRequirements: string[];
+  recruiterRisks: string[];
+  matchedKeywords: string[];
+  missingKeywords: string[];
+  formattingIssues: string[];
+  executiveSummary: string;
 }

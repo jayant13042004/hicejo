@@ -12,26 +12,19 @@ interface Props {
 }
 
 export async function generateStaticParams() {
-  return [
-    { slug: "software-engineer-resume" },
-    { slug: "product-manager-resume" },
-    { slug: "data-scientist-resume" },
-    { slug: "marketing-specialist-resume" },
-    { slug: "college-student-resume" }
-  ];
+  return STARTER_TEMPLATES.map((t) => ({ slug: `${t.id}-resume` }));
 }
 
-const SLUG_MAP: Record<string, string> = {
-  "software-engineer-resume": "software-engineer",
-  "product-manager-resume": "product-manager",
-  "data-scientist-resume": "data-scientist",
-  "marketing-specialist-resume": "marketing-specialist",
-  "college-student-resume": "college-student"
-};
+function resolveTemplateId(slug: string): string {
+  if (slug.endsWith("-resume")) {
+    return slug.slice(0, -7);
+  }
+  return slug;
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const templateId = SLUG_MAP[slug];
+  const templateId = resolveTemplateId(slug);
   const template = STARTER_TEMPLATES.find((t) => t.id === templateId);
 
   if (!template) {
@@ -52,7 +45,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function TemplateDetailsPage({ params }: Props) {
   const { slug } = await params;
-  const templateId = SLUG_MAP[slug];
+  const templateId = resolveTemplateId(slug);
   const template = STARTER_TEMPLATES.find((t) => t.id === templateId);
 
   if (!template) {
@@ -96,7 +89,7 @@ export default async function TemplateDetailsPage({ params }: Props) {
             </div>
 
             <h1 className="text-3xl md:text-5xl font-black tracking-tight text-foreground leading-tight">
-              {template.name} <span className="bg-gradient-to-r from-primary to-violet-600 bg-clip-text text-transparent">Resume Template</span>
+              {template.name} <span className="underline decoration-primary decoration-4 underline-offset-8 text-foreground">Resume Template</span>
             </h1>
 
             <p className="text-muted-foreground text-sm md:text-base max-w-2xl leading-relaxed">
@@ -104,8 +97,8 @@ export default async function TemplateDetailsPage({ params }: Props) {
             </p>
 
             <div className="flex flex-wrap gap-3 pt-2">
-              <Link href={`/dashboard/builder`}>
-                <Button size="lg" className="bg-primary text-primary-foreground font-bold px-7 h-11 gap-2 shadow-lg shadow-primary/20 text-xs">
+              <Link href={`/dashboard/builder?template=${template.id}`}>
+                <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-7 h-11 gap-2 shadow-xs text-xs">
                   <Sparkles className="h-4 w-4" />
                   <span>Use This Template in Builder</span>
                   <ArrowRight className="h-4 w-4" />

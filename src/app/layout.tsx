@@ -15,16 +15,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Hicejo — The AI Career Platform & Resume Optimizer",
-  description: "Optimize your job search. Hicejo helps you build, checker, roast, and tailor your resumes and cover letters against applicant tracking systems (ATS) using advanced AI matching algorithms.",
+  metadataBase: new URL("https://hicejo.com"),
+  title: "Hicejo — A More Thoughtful Job Search",
+  description: "Build a clear resume, see how it fits a role, and prepare for interviews with practical career tools that keep your experience at the center.",
   keywords: [
     "resume builder",
     "ATS resume checker",
     "resume tailor",
     "cover letter generator",
     "resume roast",
-    "AI career coach",
-    "job search organizer"
+    "mock interview practice",
+    "STAR interview prep",
+    "AI career coach"
   ],
   authors: [{ name: "Hicejo Engineering" }],
   creator: "Hicejo Inc.",
@@ -37,14 +39,14 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "https://hicejo.com",
-    title: "Hicejo — The AI Career Platform & Resume Optimizer",
-    description: "Optimize your job search. Hicejo helps you build, checker, roast, and tailor your resumes and cover letters against applicant tracking systems (ATS) using advanced AI matching algorithms.",
+    title: "Hicejo — A More Thoughtful Job Search",
+    description: "Build a clear resume, see how it fits a role, and prepare for interviews with practical career tools that keep your experience at the center.",
     siteName: "Hicejo",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Hicejo — The AI Career Platform & Resume Optimizer",
-    description: "Optimize your job search. Build, checker, roast, and tailor resumes using advanced AI matching.",
+    title: "Hicejo — A More Thoughtful Job Search",
+    description: "Build a clear resume, see how it fits a role, and prepare for interviews with practical career tools that keep your experience at the center.",
   },
 };
 

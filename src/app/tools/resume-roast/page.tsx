@@ -106,7 +106,7 @@ export default function ResumeRoastLandingPage() {
               </div>
 
               <div className="p-6 rounded-2xl border border-border/80 bg-card space-y-3">
-                <div className="h-10 w-10 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-500">
+                <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center text-foreground">
                   <Terminal className="h-5 w-5" />
                 </div>
                 <h3 className="font-bold text-base text-foreground">Live Terminal Diagnostic</h3>

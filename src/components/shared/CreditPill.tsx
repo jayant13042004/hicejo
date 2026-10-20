@@ -46,14 +46,11 @@ export function CreditPill({ currentFeature }: CreditPillProps) {
     <>
       <button
         onClick={() => setIsUpgradeOpen(true)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/30 bg-primary/10 hover:bg-primary/20 text-foreground text-xs font-semibold cursor-pointer transition-all shadow-xs group"
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border/80 bg-secondary/60 hover:bg-secondary text-foreground text-xs font-medium cursor-pointer transition-colors"
         title="View Daily Credits & Pro Plan"
       >
-        <Zap className="h-3.5 w-3.5 text-primary group-hover:scale-110 transition-transform" />
-        <span className="font-mono text-primary font-bold">{displayLabel}</span>
-        <span className="hidden sm:inline-block text-[10px] text-muted-foreground ml-1 font-normal">
-          • Upgrade
-        </span>
+        <span className="font-mono text-[11px] text-muted-foreground">{displayLabel}</span>
+        <span className="text-[10px] text-muted-foreground/70 hidden sm:inline-block">Upgrade</span>
       </button>
 
       <UpgradeModal

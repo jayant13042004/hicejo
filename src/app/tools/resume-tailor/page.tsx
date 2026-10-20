@@ -38,13 +38,13 @@ export default function ResumeTailorLandingPage() {
         {/* Hero Section */}
         <section className="relative overflow-hidden pt-20 pb-16 md:pt-28 md:pb-24 border-b border-border/40">
           <div className="mx-auto max-w-5xl px-6 text-center space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-500 text-xs font-semibold uppercase tracking-wider">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted border border-border/80 text-foreground text-xs font-semibold uppercase tracking-wider">
               <Sparkles className="h-3.5 w-3.5" />
               <span>AI Job Match Tailoring</span>
             </div>
 
             <h1 className="text-4xl md:text-6xl font-black tracking-tight text-foreground max-w-3xl mx-auto leading-tight">
-              Tailor Your Resume To Any Job Description In <span className="bg-gradient-to-r from-violet-500 via-purple-500 to-primary bg-clip-text text-transparent">Seconds</span>
+              Tailor Your Resume To Any Job Description In <span className="underline decoration-primary decoration-4 underline-offset-8">Seconds</span>
             </h1>
 
             <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
@@ -53,7 +53,7 @@ export default function ResumeTailorLandingPage() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
               <Link href="/dashboard/tailor">
-                <Button size="lg" className="bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-700 text-white font-bold px-8 h-12 gap-2 shadow-lg shadow-primary/20 text-sm">
+                <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-8 h-12 gap-2 shadow-sm text-sm">
                   <Sparkles className="h-4 w-4" />
                   <span>Tailor My Resume Free</span>
                 </Button>
@@ -106,7 +106,7 @@ export default function ResumeTailorLandingPage() {
               </div>
 
               <div className="p-6 rounded-2xl border border-border/80 bg-card space-y-3">
-                <div className="h-10 w-10 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-500">
+                <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center text-foreground">
                   <ArrowLeftRight className="h-5 w-5" />
                 </div>
                 <h3 className="font-bold text-base text-foreground">2. AI Keyword Alignment</h3>

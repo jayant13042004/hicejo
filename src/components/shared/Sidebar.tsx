@@ -3,22 +3,68 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
+  Briefcase,
   FileText,
-  ShieldCheck,
-  Sparkles,
-  FileUp,
-  Flame,
-  History,
+  BookOpen,
+  Mic,
   Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
+  X,
+  FileUp,
+  ShieldCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+
+export interface NavItem {
+  label: string;
+  href: string;
+  icon: any;
+}
+
+export interface NavGroup {
+  group: string;
+  items: NavItem[];
+}
+
+export const NAV_GROUPS: NavGroup[] = [
+  {
+    group: "Core",
+    items: [
+      { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
+      { label: "Target Jobs", href: "/dashboard/jobs", icon: Briefcase },
+    ],
+  },
+  {
+    group: "Apply",
+    items: [
+      { label: "Resume Builder", href: "/dashboard/builder", icon: FileText },
+      { label: "ATS Resume Checker", href: "/dashboard/checker", icon: ShieldCheck },
+      { label: "Cover Letter", href: "/dashboard/cover-letter", icon: FileUp },
+    ],
+  },
+  {
+    group: "Prepare",
+    items: [
+      { label: "Interview Studio", href: "/dashboard/interview", icon: Mic },
+      { label: "Skills Roadmap", href: "/dashboard/learning", icon: BookOpen },
+    ],
+  },
+  {
+    group: "Account",
+    items: [
+      { label: "Settings", href: "/dashboard/settings", icon: Settings },
+    ],
+  },
+];
+
+// Flat export for backwards compatibility
+export const NAV_ITEMS = NAV_GROUPS.flatMap((g) => g.items);
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -33,96 +79,212 @@ export function Sidebar() {
     router.push("/");
   };
 
-  const navItems = [
-    { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
-    { label: "AI Resume Builder", href: "/dashboard/builder", icon: FileText },
-    { label: "Resume ATS Score Checker", href: "/dashboard/checker", icon: ShieldCheck },
-    { label: "Resume Tailor", href: "/dashboard/tailor", icon: Sparkles },
-    { label: "Cover Letter Gen", href: "/dashboard/cover-letter", icon: FileUp },
-    { label: "Resume Roast", href: "/dashboard/roast", icon: Flame },
-    { label: "History & Drafts", href: "/dashboard/history", icon: History },
-    { label: "Settings", href: "/dashboard/settings", icon: Settings },
-  ];
-
   return (
     <motion.div
-      animate={{ width: isCollapsed ? 72 : 260 }}
-      transition={{ type: "spring", stiffness: 300, damping: 25 }}
-      className="no-print relative flex flex-col h-screen border-r border-border/40 bg-card text-foreground select-none"
+      animate={{ width: isCollapsed ? 64 : 240 }}
+      transition={{ type: "spring", stiffness: 350, damping: 30 }}
+      className="no-print relative hidden md:flex flex-col h-screen border-r border-border/70 bg-card text-foreground select-none shrink-0"
     >
       {/* Collapse button */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-6 z-20 flex h-6 w-6 items-center justify-center rounded-full border border-border bg-background text-muted-foreground hover:text-foreground shadow-sm cursor-pointer"
+        className="absolute -right-3 top-5 z-20 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground shadow-xs cursor-pointer transition-colors"
+        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
         {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
       </button>
 
       {/* Brand Header */}
-      <div className="flex h-16 items-center px-6 border-b border-border/40">
-        <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm shadow-primary/20 shrink-0">
-            <Flame className="h-4 w-4" />
+      <div className="flex h-14 items-center px-4 border-b border-border/50">
+        <Link href="/dashboard" className="flex items-center gap-2.5">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground font-black text-xs shrink-0 shadow-xs">
+            H
           </div>
           {!isCollapsed && (
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-lg font-bold tracking-tight"
-            >
-              Hice<span className="text-primary">jo</span>
-            </motion.span>
+            <div className="flex items-baseline gap-1.5 overflow-hidden">
+              <span className="text-sm font-bold tracking-tight text-foreground">
+                Hicejo
+              </span>
+              <span className="text-[10px] text-muted-foreground font-mono">
+                workspace
+              </span>
+            </div>
           )}
         </Link>
       </div>
 
       {/* Navigation list */}
-      <div className="flex-1 space-y-1 py-4 px-3 overflow-y-auto overflow-x-hidden">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          const Icon = item.icon;
+      <div className="flex-1 py-3 px-2 space-y-4 overflow-y-auto overflow-x-hidden">
+        {NAV_GROUPS.map((group) => (
+          <div key={group.group} className="space-y-0.5">
+            {!isCollapsed && (
+              <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                {group.group}
+              </div>
+            )}
+            {group.items.map((item) => {
+              const isActive =
+                pathname === item.href ||
+                (item.href !== "/dashboard" && pathname.startsWith(item.href));
+              const Icon = item.icon;
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "relative flex items-center h-10 px-3 rounded-lg text-sm font-medium transition-colors hover:bg-muted/50 text-muted-foreground hover:text-foreground",
-                isActive && "text-foreground font-semibold bg-muted"
-              )}
-            >
-              {isActive && (
-                <motion.div
-                  layoutId="active-indicator"
-                  className="absolute left-0 top-2 bottom-2 w-1 rounded-r-md bg-primary"
-                  transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                />
-              )}
-              <Icon className={cn("h-5 w-5 shrink-0", isActive && "text-primary")} />
-              {!isCollapsed && (
-                <motion.span
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="ml-3 truncate"
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  title={isCollapsed ? item.label : undefined}
+                  className={cn(
+                    "group relative flex items-center h-8.5 px-2.5 rounded-md text-xs font-medium transition-colors",
+                    isActive
+                      ? "bg-secondary text-foreground font-semibold"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                  )}
                 >
-                  {item.label}
-                </motion.span>
-              )}
-            </Link>
-          );
-        })}
+                  {isActive && (
+                    <div className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-primary" />
+                  )}
+                  <Icon
+                    className={cn(
+                      "h-4 w-4 shrink-0 transition-colors",
+                      isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                    )}
+                  />
+                  {!isCollapsed && (
+                    <span className="ml-2.5 truncate">{item.label}</span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </div>
 
-      {/* Bottom Profile/LogOut Actions */}
-      <div className="p-3 border-t border-border/40">
-        <button
-          onClick={handleSignOut}
-          className="flex w-full items-center h-10 px-3 rounded-lg text-sm font-medium hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
-        >
-          <LogOut className="h-5 w-5 shrink-0" />
-          {!isCollapsed && <span className="ml-3">Sign Out</span>}
-        </button>
+      {/* Bottom User Area */}
+      <div className="p-2 border-t border-border/50">
+        <div className="flex items-center justify-between p-1.5 rounded-md hover:bg-secondary/60 transition-colors">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-foreground font-bold text-[10px] shrink-0 border border-border">
+              J
+            </div>
+            {!isCollapsed && (
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-foreground truncate">Jayant</p>
+              </div>
+            )}
+          </div>
+          {!isCollapsed && (
+            <button
+              onClick={handleSignOut}
+              className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              title="Sign out"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
     </motion.div>
+  );
+}
+
+// Mobile Off-canvas Drawer
+export function MobileDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const supabase = createClient();
+
+  const handleSignOut = async () => {
+    document.cookie = "sb-mock-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+    await supabase.auth.signOut().catch(() => {});
+    router.refresh();
+    router.push("/");
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/40 backdrop-blur-xs"
+          />
+
+          {/* Sheet */}
+          <motion.div
+            initial={{ x: "-100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "-100%" }}
+            transition={{ type: "spring", damping: 28, stiffness: 300 }}
+            className="relative flex flex-col w-68 max-w-[80vw] h-full bg-card border-r border-border text-foreground shadow-xl z-10"
+          >
+            {/* Header */}
+            <div className="flex h-14 items-center justify-between px-4 border-b border-border/50">
+              <Link href="/dashboard" onClick={onClose} className="flex items-center gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground font-black text-xs shrink-0">
+                  H
+                </div>
+                <span className="text-sm font-bold tracking-tight">Hicejo</span>
+              </Link>
+              <button
+                onClick={onClose}
+                className="p-1 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+                aria-label="Close navigation"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Nav list */}
+            <div className="flex-1 py-3 px-3 space-y-4 overflow-y-auto">
+              {NAV_GROUPS.map((group) => (
+                <div key={group.group} className="space-y-0.5">
+                  <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                    {group.group}
+                  </div>
+                  {group.items.map((item) => {
+                    const isActive =
+                      pathname === item.href ||
+                      (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                    const Icon = item.icon;
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={onClose}
+                        className={cn(
+                          "flex items-center h-8.5 px-2.5 rounded-md text-xs font-medium transition-colors",
+                          isActive
+                            ? "bg-secondary text-foreground font-semibold"
+                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                        )}
+                      >
+                        <Icon className={cn("h-4 w-4 mr-2.5 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
+                        <span>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="p-3 border-t border-border/50">
+              <button
+                onClick={handleSignOut}
+                className="flex w-full items-center h-8 px-2 rounded-md text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+              >
+                <LogOut className="h-3.5 w-3.5 mr-2 shrink-0" />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }

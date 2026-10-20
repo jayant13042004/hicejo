@@ -1,32 +1,38 @@
 import { MetadataRoute } from "next";
+import { BLOG_ARTICLES } from "@/data/blogArticles";
+import { STARTER_TEMPLATES } from "@/data/starterTemplates";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://hicejo.com";
   const lastModified = new Date();
 
-  const publicRoutes = [
+  const coreRoutes = [
     "",
     "/login",
     "/register",
+    "/about",
+    "/contact",
+    "/security",
+    "/terms",
+    "/privacy",
+    "/cookie-policy",
+    "/templates",
+    "/blog",
     "/tools/ats-resume-checker",
     "/tools/resume-roast",
     "/tools/resume-tailor",
-    "/tools/cover-letter-generator",
-    "/templates/software-engineer-resume",
-    "/templates/product-manager-resume",
-    "/templates/data-scientist-resume",
-    "/templates/marketing-specialist-resume",
-    "/templates/college-student-resume",
-    "/blog",
-    "/blog/how-to-beat-ats-in-2026",
-    "/blog/top-50-resume-action-verbs",
-    "/blog/how-to-tailor-resume-for-job-description"
+    "/tools/cover-letter-generator"
   ];
 
-  return publicRoutes.map((route) => ({
+  const templateRoutes = STARTER_TEMPLATES.map((t) => `/templates/${t.id}-resume`);
+  const blogRoutes = BLOG_ARTICLES.map((b) => `/blog/${b.slug}`);
+
+  const allRoutes = [...coreRoutes, ...templateRoutes, ...blogRoutes];
+
+  return allRoutes.map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified,
-    changeFrequency: route === "" ? "daily" : "weekly",
-    priority: route === "" ? 1.0 : route.startsWith("/tools") ? 0.9 : route.startsWith("/templates") ? 0.8 : 0.7
+    changeFrequency: route === "" ? "daily" : route.startsWith("/blog") ? "weekly" : "monthly",
+    priority: route === "" ? 1.0 : route.startsWith("/tools") ? 0.9 : route.startsWith("/templates") ? 0.85 : 0.75
   }));
 }

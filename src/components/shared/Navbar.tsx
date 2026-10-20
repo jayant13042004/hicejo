@@ -4,18 +4,20 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Menu, X, ArrowRight } from "lucide-react";
+import { Menu, X, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { BrandMark } from "@/components/shared/BrandMark";
 
 interface NavbarProps {
-  userSession?: any; // Simple user payload passed from layout/page
+  userSession?: unknown;
 }
 
 export function Navbar({ userSession }: NavbarProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const pathname = usePathname();
 
-  const toggleMenu = () => setIsOpen(!isOpen);
+  const toggleMenu = () => setIsOpen((open) => !open);
 
   // Hidden on dashboard sub-routes since dashboard shell uses its own navigation
   if (pathname.startsWith("/dashboard")) {
@@ -23,21 +25,20 @@ export function Navbar({ userSession }: NavbarProps) {
   }
 
   const menuItems = [
-    { label: "ATS Checker", href: "/tools/ats-resume-checker" },
-    { label: "Resume Roast", href: "/tools/resume-roast" },
-    { label: "Resume Tailor", href: "/tools/resume-tailor" },
-    { label: "Templates", href: "/templates/software-engineer-resume" },
-    { label: "Blog", href: "/blog" },
+    { label: "Product", href: "/#product" },
+    { label: "How it works", href: "/#how-it-works" },
+    { label: "Pricing", href: "/#pricing" },
+    { label: "Resources", href: "/blog" },
   ];
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md">
+    <nav className="site-nav sticky top-0 z-50 w-full border-b border-border/40 bg-background/90 backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/20">
-              <Sparkles className="h-5 w-5" />
+            <div className="site-logo-mark flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs">
+              <BrandMark className="h-6 w-6" />
             </div>
             <span className="text-xl font-bold tracking-tight text-foreground">
               Hice<span className="text-primary">jo</span>
@@ -58,8 +59,9 @@ export function Navbar({ userSession }: NavbarProps) {
           </div>
 
           {/* Action Buttons */}
-          <div className="hidden md:flex items-center gap-4">
-            {userSession ? (
+          <div className="hidden md:flex items-center gap-3">
+            <ThemeToggle />
+            {userSession != null ? (
               <Link href="/dashboard">
                 <Button variant="outline" size="sm" className="flex items-center gap-2">
                   <span>Go to Dashboard</span>
@@ -74,7 +76,7 @@ export function Navbar({ userSession }: NavbarProps) {
                   </Button>
                 </Link>
                 <Link href="/register">
-                  <Button size="sm" className="bg-gradient-to-r from-primary to-violet-600">
+                  <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium border border-border/80">
                     Get Started Free
                   </Button>
                 </Link>
@@ -82,10 +84,15 @@ export function Navbar({ userSession }: NavbarProps) {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
-          <div className="md:hidden">
+          {/* Mobile Menu & Theme Button */}
+          <div className="flex md:hidden items-center gap-2">
+            <ThemeToggle />
             <button
+              type="button"
               onClick={toggleMenu}
+              aria-label={isOpen ? "Close navigation menu" : "Open navigation menu"}
+              aria-expanded={isOpen}
+              aria-controls="mobile-navigation"
               className="inline-flex items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none"
             >
               {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -101,6 +108,7 @@ export function Navbar({ userSession }: NavbarProps) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
+            id="mobile-navigation"
             className="border-b border-border bg-card md:hidden"
           >
             <div className="space-y-1 px-4 pb-4 pt-2">
@@ -115,7 +123,7 @@ export function Navbar({ userSession }: NavbarProps) {
                 </Link>
               ))}
               <div className="mt-4 border-t border-border pt-4 flex flex-col gap-2">
-                {userSession ? (
+                {userSession != null ? (
                   <Link href="/dashboard" onClick={() => setIsOpen(false)}>
                     <Button variant="outline" className="w-full flex items-center justify-center gap-2">
                       <span>Go to Dashboard</span>
@@ -130,7 +138,7 @@ export function Navbar({ userSession }: NavbarProps) {
                       </Button>
                     </Link>
                     <Link href="/register" onClick={() => setIsOpen(false)}>
-                      <Button className="w-full bg-gradient-to-r from-primary to-violet-600">
+                      <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
                         Get Started Free
                       </Button>
                     </Link>

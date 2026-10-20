@@ -1,6 +1,35 @@
 import { create } from "zustand";
 import { ResumeData, PersonalInfo, Experience, Education, Project, Skill, SaveState, DesignSettings, ResumeDensity } from "@/types/resume";
 
+export interface PendingImprovement {
+  type?: "uplift" | "roast" | "tailor";
+  title: string;
+  description?: string;
+  details?: string;
+  targetSection?: "personal" | "summary" | "experience" | "skills" | "projects" | "education" | string;
+  actionableSnippet?: string;
+}
+
+export interface UserCareerProfile {
+  targetRole: string;
+  experienceLevel: string;
+  primaryDomain: string;
+  targetCountry?: string;
+  resumeText: string;
+  isConfigured: boolean;
+}
+
+export interface ActiveJobContext {
+  jobTitle: string;
+  company?: string;
+  jobDescription: string;
+  atsScore?: number;
+  matchTier?: string;
+  sourceTool?: "checker" | "tailor" | "roast" | "interview";
+  pendingImprovement?: PendingImprovement;
+  lastUpdated: string;
+}
+
 interface ResumeStore {
   id: string | null;
   title: string;
@@ -9,6 +38,18 @@ interface ResumeStore {
   past: ResumeData[];
   future: ResumeData[];
   
+  // User Career Profile (Target Role, Seniority Level, Baseline Resume)
+  careerProfile: UserCareerProfile | null;
+  setCareerProfile: (profile: Partial<UserCareerProfile>) => void;
+
+  // Active Target Job Context for Connected OS Workflow
+  activeJobContext: ActiveJobContext | null;
+  pendingImprovement: PendingImprovement | null;
+  setActiveJobContext: (context: Partial<ActiveJobContext>) => void;
+  clearActiveJobContext: () => void;
+  setPendingImprovement: (improvement: PendingImprovement | null) => void;
+  loadTailoredDraft: (id: string | null, title: string, data: ResumeData, jobContext?: Partial<ActiveJobContext>) => void;
+
   // Load entire resume
   loadResume: (id: string | null, title: string, data: ResumeData) => void;
   importResumeData: (data: ResumeData) => void;
@@ -76,6 +117,48 @@ const initialResumeData: ResumeData = {
   design: defaultDesign
 };
 
+function getInitialCareerProfile(): UserCareerProfile | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const saved = localStorage.getItem("hicejo_career_profile");
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistCareerProfile(profile: UserCareerProfile | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (profile) {
+      localStorage.setItem("hicejo_career_profile", JSON.stringify(profile));
+    } else {
+      localStorage.removeItem("hicejo_career_profile");
+    }
+  } catch {}
+}
+
+function getInitialJobContext(): ActiveJobContext | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const saved = localStorage.getItem("hicejo_active_job_context");
+    return saved ? JSON.parse(saved) : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistJobContext(context: ActiveJobContext | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (context) {
+      localStorage.setItem("hicejo_active_job_context", JSON.stringify(context));
+    } else {
+      localStorage.removeItem("hicejo_active_job_context");
+    }
+  } catch {}
+}
+
 export const useResumeStore = create<ResumeStore>((set, get) => {
   // Helper to record history before mutation
   const saveHistory = (state: any) => ({
@@ -90,6 +173,116 @@ export const useResumeStore = create<ResumeStore>((set, get) => {
     saveState: "idle",
     past: [],
     future: [],
+
+    careerProfile: getInitialCareerProfile(),
+    setCareerProfile: (updates) => {
+      set((state) => {
+        const current = state.careerProfile || {
+          targetRole: "",
+          experienceLevel: "Mid-Level (2-5 yrs)",
+          primaryDomain: "",
+          resumeText: "",
+          isConfigured: false
+        };
+        const next = { ...current, ...updates, isConfigured: true };
+        persistCareerProfile(next);
+        return { careerProfile: next };
+      });
+    },
+
+    activeJobContext: getInitialJobContext(),
+    pendingImprovement: getInitialJobContext()?.pendingImprovement || null,
+
+    setActiveJobContext: (context) => {
+      set((state) => {
+        const merged: ActiveJobContext = state.activeJobContext
+          ? { ...state.activeJobContext, ...context, lastUpdated: new Date().toISOString() }
+          : {
+              jobTitle: context.jobTitle || "",
+              company: context.company || "",
+              jobDescription: context.jobDescription || "",
+              atsScore: context.atsScore,
+              matchTier: context.matchTier,
+              sourceTool: context.sourceTool,
+              pendingImprovement: context.pendingImprovement,
+              lastUpdated: new Date().toISOString(),
+              ...context
+            };
+        persistJobContext(merged);
+        return {
+          activeJobContext: merged,
+          ...(context.pendingImprovement !== undefined ? { pendingImprovement: context.pendingImprovement || null } : {})
+        };
+      });
+    },
+
+    clearActiveJobContext: () => {
+      persistJobContext(null);
+      set({ activeJobContext: null, pendingImprovement: null });
+    },
+
+    setPendingImprovement: (improvement) => {
+      set((state) => {
+        const updatedContext: ActiveJobContext = state.activeJobContext
+          ? {
+              ...state.activeJobContext,
+              pendingImprovement: improvement || undefined,
+              lastUpdated: new Date().toISOString()
+            }
+          : {
+              jobTitle: "Target Position",
+              company: "Target Company",
+              jobDescription: "",
+              pendingImprovement: improvement || undefined,
+              lastUpdated: new Date().toISOString()
+            };
+        persistJobContext(updatedContext);
+        return {
+          activeJobContext: updatedContext,
+          pendingImprovement: improvement || null
+        };
+      });
+    },
+
+    loadTailoredDraft: (id, title, data, jobContext) => {
+      set((state) => {
+        const past = [...state.past.slice(-29), JSON.parse(JSON.stringify(state.data))];
+        const mergedData = {
+          ...data,
+          design: {
+            ...defaultDesign,
+            ...(data.design || {})
+          }
+        };
+
+        let updatedContext = state.activeJobContext;
+        if (jobContext) {
+          updatedContext = {
+            jobTitle: jobContext.jobTitle || state.activeJobContext?.jobTitle || "",
+            company: jobContext.company || state.activeJobContext?.company || "",
+            jobDescription: jobContext.jobDescription || state.activeJobContext?.jobDescription || "",
+            atsScore: jobContext.atsScore ?? state.activeJobContext?.atsScore,
+            matchTier: jobContext.matchTier ?? state.activeJobContext?.matchTier,
+            sourceTool: "tailor",
+            pendingImprovement: jobContext.pendingImprovement ?? state.activeJobContext?.pendingImprovement,
+            lastUpdated: new Date().toISOString(),
+            ...jobContext
+          };
+          persistJobContext(updatedContext);
+        }
+
+        return {
+          id,
+          title,
+          data: mergedData,
+          past,
+          future: [],
+          saveState: "saved",
+          activeJobContext: updatedContext,
+          pendingImprovement: updatedContext?.pendingImprovement || null
+        };
+      });
+    },
 
     loadResume: (id, title, data) => {
       // Ensure default design settings exist on load

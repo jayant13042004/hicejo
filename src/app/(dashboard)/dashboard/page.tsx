@@ -2,17 +2,50 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { FileText, ShieldCheck, Flame, Sparkles, Plus, ArrowRight, FileUp, Trophy, Inbox, RefreshCw } from "lucide-react";
+import {
+  ArrowRight,
+  Target,
+  Sliders,
+  CheckCircle2,
+  AlertCircle,
+  Plus,
+  FileText,
+  Clock,
+  Sparkles,
+  ChevronRight,
+  BookOpen,
+  Mic,
+  ShieldCheck,
+  X,
+  ExternalLink,
+  Layers,
+  Compass,
+  Briefcase
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { DashboardShell } from "@/components/shared/DashboardShell";
+import { useResumeStore } from "@/store/useResumeStore";
+import { POPULAR_ROLES, getCuratedCurriculumForRole } from "@/data/learningCurricula";
+import {
+  calculatePreparationReadiness,
+  getPriorityGaps,
+  getNextBestAction,
+  getSkillProgressMap,
+  getDetectedInterviewGaps,
+  STORAGE_KEYS,
+  PriorityGap,
+  PreparationReadiness
+} from "@/lib/hicejoState";
 
 interface UserProfile {
   id?: string;
   full_name?: string;
   email?: string;
   target_role?: string;
+  experience_level?: string;
+  primary_domain?: string;
+  resume_text?: string;
 }
 
 interface ResumeItem {
@@ -23,40 +56,100 @@ interface ResumeItem {
   updated_at: string;
 }
 
-interface LetterItem {
-  id: string;
-  company: string;
-  job_title: string;
-  created_at: string;
-}
+const EXPERIENCE_LEVELS = [
+  "Entry / Junior (0-2 yrs)",
+  "Mid-Level (2-5 yrs)",
+  "Senior (5-8 yrs)",
+  "Staff / Lead (8-12 yrs)",
+  "Executive / Principal (12+ yrs)"
+];
 
 export default function DashboardPage() {
   const [profile, setProfile] = React.useState<UserProfile | null>(null);
   const [resumes, setResumes] = React.useState<ResumeItem[]>([]);
-  const [coverLetters, setCoverLetters] = React.useState<LetterItem[]>([]);
+  const [savedTargets, setSavedTargets] = React.useState<any[]>([]);
+  const [lastInterview, setLastInterview] = React.useState<any | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+
+  const { careerProfile, setCareerProfile, activeJobContext, setActiveJobContext } = useResumeStore();
+
+  // Setup / Personalization Modal State
+  const [isSetupModalOpen, setIsSetupModalOpen] = React.useState(false);
+  const [roleInput, setRoleInput] = React.useState(() => careerProfile?.targetRole || "");
+  const [levelInput, setLevelInput] = React.useState(() => careerProfile?.experienceLevel || "Mid-Level (2-5 yrs)");
+  const [domainInput, setDomainInput] = React.useState(() => careerProfile?.primaryDomain || "");
+  const [resumeTextInput, setResumeTextInput] = React.useState(() => careerProfile?.resumeText || "");
+  const [isSavingProfile, setIsSavingProfile] = React.useState(false);
+
+  const openSetupModal = () => {
+    setRoleInput(careerProfile?.targetRole || profile?.target_role || "");
+    setLevelInput(careerProfile?.experienceLevel || profile?.experience_level || "Mid-Level (2-5 yrs)");
+    setDomainInput(careerProfile?.primaryDomain || profile?.primary_domain || "");
+    setResumeTextInput(careerProfile?.resumeText || profile?.resume_text || "");
+    setIsSetupModalOpen(true);
+  };
+
+  // Load targets & last interview from localStorage
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const storedTargets = localStorage.getItem(STORAGE_KEYS.SAVED_TARGETS);
+        if (storedTargets) {
+          const parsed = JSON.parse(storedTargets);
+          if (Array.isArray(parsed)) {
+            setSavedTargets(parsed.filter((j: any) => !j.isSample && j.id !== "sample-target-role"));
+          }
+        }
+        const storedEval = localStorage.getItem(STORAGE_KEYS.LAST_INTERVIEW_EVAL);
+        if (storedEval) {
+          setLastInterview(JSON.parse(storedEval));
+        }
+      } catch {}
+    }
+  }, []);
 
   React.useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [profileRes, resumesRes, lettersRes] = await Promise.all([
+        const [profileRes, resumesRes] = await Promise.all([
           fetch("/api/profile"),
-          fetch("/api/resume"),
-          fetch("/api/cover-letters")
+          fetch("/api/resume")
         ]);
 
         const profileData = await profileRes.json().catch(() => ({}));
         const resumesData = await resumesRes.json().catch(() => ({}));
-        const lettersData = await lettersRes.json().catch(() => ({}));
 
         if (profileData.success && profileData.data) {
-          setProfile(profileData.data);
+          const p = profileData.data;
+          setProfile(p);
+          if (p.target_role) {
+            setRoleInput(p.target_role);
+            if (p.experience_level) setLevelInput(p.experience_level);
+            if (p.primary_domain) setDomainInput(p.primary_domain);
+            if (p.resume_text) setResumeTextInput(p.resume_text);
+
+            setCareerProfile({
+              targetRole: p.target_role,
+              experienceLevel: p.experience_level || "Mid-Level (2-5 yrs)",
+              primaryDomain: p.primary_domain || "",
+              resumeText: p.resume_text || "",
+              isConfigured: true
+            });
+            if (!activeJobContext?.jobTitle) {
+              setActiveJobContext({
+                jobTitle: p.target_role,
+                company: "",
+                jobDescription: ""
+              });
+            }
+          } else if (careerProfile?.targetRole) {
+            setRoleInput(careerProfile.targetRole);
+            if (careerProfile.experienceLevel) setLevelInput(careerProfile.experienceLevel);
+            if (careerProfile.primaryDomain) setDomainInput(careerProfile.primaryDomain);
+          }
         }
         if (resumesData.success && Array.isArray(resumesData.data)) {
           setResumes(resumesData.data);
-        }
-        if (lettersData.success && Array.isArray(lettersData.data)) {
-          setCoverLetters(lettersData.data);
         }
       } catch (err) {
         console.error("Failed to load dashboard data", err);
@@ -66,273 +159,672 @@ export default function DashboardPage() {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [setCareerProfile, setActiveJobContext, activeJobContext?.jobTitle, careerProfile?.targetRole, careerProfile?.experienceLevel, careerProfile?.primaryDomain]);
 
-  // Compute live user stats
-  const totalDrafts = resumes.length;
-  const scoredResumes = resumes.filter((r) => typeof r.ats_score === "number" && r.ats_score > 0);
-  const avgScore =
-    scoredResumes.length > 0
-      ? Math.round(scoredResumes.reduce((acc, r) => acc + (r.ats_score || 0), 0) / scoredResumes.length)
-      : null;
-  const totalLetters = coverLetters.length;
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!roleInput.trim()) return;
 
-  // Determine user display name
+    setIsSavingProfile(true);
+
+    const targetRole = roleInput.trim();
+    const experienceLevel = levelInput;
+    const primaryDomain = domainInput.trim();
+    const resumeText = resumeTextInput.trim();
+
+    // 1. Immediately update Zustand store and localStorage so the UI updates and persists
+    setCareerProfile({
+      targetRole,
+      experienceLevel,
+      primaryDomain,
+      resumeText,
+      isConfigured: true
+    });
+
+    setActiveJobContext({
+      jobTitle: targetRole,
+      company: activeJobContext?.company || "",
+      jobDescription: activeJobContext?.jobDescription || ""
+    });
+
+    setProfile((prev) => ({
+      ...(prev || { id: "user", email: "", full_name: "Jayant" }),
+      target_role: targetRole,
+      experience_level: experienceLevel,
+      primary_domain: primaryDomain,
+      resume_text: resumeText
+    }));
+
+    // Close the setup modal immediately
+    setIsSetupModalOpen(false);
+
+    // 2. Synchronize to backend profile API in the background
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetRole,
+          experienceLevel,
+          primaryDomain,
+          resumeText
+        })
+      });
+      const result = await res.json().catch(() => ({}));
+      if (result.success && result.data) {
+        setProfile((prev) => ({
+          ...(prev || {}),
+          ...result.data,
+          target_role: targetRole,
+          experience_level: experienceLevel,
+          primary_domain: primaryDomain
+        }));
+      }
+    } catch (err) {
+      console.warn("Background profile sync notice:", err);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
   const displayName = profile?.full_name?.trim()
     ? profile.full_name.trim().split(" ")[0]
-    : profile?.email
-    ? profile.email.split("@")[0]
-    : "there";
+    : "Jayant";
 
-  // Build chart trajectory from scored resumes or fallback
-  const chartData = scoredResumes.length > 0
-    ? [...scoredResumes]
-        .reverse()
-        .map((r, idx) => ({
-          name: `Scan ${idx + 1}`,
-          score: r.ats_score
-        }))
-    : [];
+  const activeTargetRole = careerProfile?.targetRole || profile?.target_role || "";
+  const activeExperienceLevel = careerProfile?.experienceLevel || profile?.experience_level || "Mid-Level (2-5 yrs)";
+
+  // Resolve curriculum skills for target role
+  const roleCurriculum = React.useMemo(() => {
+    if (!activeTargetRole) return null;
+    return getCuratedCurriculumForRole(activeTargetRole, activeExperienceLevel);
+  }, [activeTargetRole, activeExperienceLevel]);
+
+  const allSkills = React.useMemo(() => {
+    if (!roleCurriculum) return [];
+    return roleCurriculum.modules.flatMap((m) => m.skills);
+  }, [roleCurriculum]);
+
+  // Measured Readiness breakdown (honest calculation)
+  const readiness: PreparationReadiness = React.useMemo(() => {
+    const highestAts = resumes.reduce((max, r) => Math.max(max, r.ats_score || 0), 0);
+    return calculatePreparationReadiness(
+      activeTargetRole,
+      activeExperienceLevel,
+      allSkills,
+      resumes.length,
+      highestAts > 0 ? highestAts : null,
+      lastInterview?.score || null
+    );
+  }, [activeTargetRole, activeExperienceLevel, allSkills, resumes, lastInterview]);
+
+  // Priority Gaps (Top 3 highest impact)
+  const priorityGaps: PriorityGap[] = React.useMemo(() => {
+    return getPriorityGaps(activeTargetRole, savedTargets, allSkills, resumes.length);
+  }, [activeTargetRole, savedTargets, allSkills, resumes.length]);
+
+  // Next Best Action
+  const nextBestAction = React.useMemo(() => {
+    return getNextBestAction(activeTargetRole, savedTargets, priorityGaps, resumes.length);
+  }, [activeTargetRole, savedTargets, priorityGaps, resumes.length]);
+
+  // Determine Current Career Journey Step (1 to 6)
+  const journeyStage = React.useMemo(() => {
+    if (!activeTargetRole) return 1;
+    if (savedTargets.length === 0) return 2;
+    if (readiness.evidenceCount < 3) return 3;
+    if (readiness.demonstratedCount < 2) return 4;
+    if (resumes.length === 0) return 5;
+    return 6;
+  }, [activeTargetRole, savedTargets.length, readiness.evidenceCount, readiness.demonstratedCount, resumes.length]);
+
+  // Greeting time of day
+  const greeting = React.useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  }, []);
 
   return (
-    <DashboardShell title="Dashboard Overview">
-      {/* Welcome Banner */}
-      <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-accent/5 to-transparent p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-primary font-semibold text-sm">
-            <Trophy className="h-4 w-4" />
-            <span>Ready to get hired?</span>
-          </div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            {isLoading ? "Welcome back!" : `Welcome back, ${displayName}!`}
-          </h2>
-          <p className="text-muted-foreground text-sm max-w-xl">
-            {totalDrafts === 0 ? (
-              "Get started by creating your first resume draft or importing an existing PDF/Word resume."
-            ) : avgScore ? (
-              <>
-                Your average ATS compatibility score is{" "}
-                <span className="text-emerald-500 font-semibold">{avgScore}%</span>. Tailor your resumes for target job descriptions.
-              </>
-            ) : (
-              `You have ${totalDrafts} saved resume ${totalDrafts === 1 ? "draft" : "drafts"}. Run an ATS check to measure compatibility!`
-            )}
-          </p>
-        </div>
-        <Link href="/dashboard/builder">
-          <Button className="bg-gradient-to-r from-primary to-violet-600 shadow-md">
-            <Plus className="h-4 w-4 mr-2" />
-            <span>New Resume Draft</span>
-          </Button>
-        </Link>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[
-          {
-            label: "Total Drafts",
-            value: isLoading ? "..." : `${totalDrafts}`,
-            desc: "Saved resumes",
-            icon: FileText,
-            color: "text-blue-500"
-          },
-          {
-            label: "Avg ATS Score",
-            value: isLoading ? "..." : avgScore !== null ? `${avgScore}%` : "--",
-            desc: avgScore !== null ? "Calculated from audits" : "No scans yet",
-            icon: ShieldCheck,
-            color: "text-emerald-500"
-          },
-          {
-            label: "Resume Scans",
-            value: isLoading ? "..." : `${scoredResumes.length}`,
-            desc: "ATS verified drafts",
-            icon: Flame,
-            color: "text-amber-500"
-          },
-          {
-            label: "Cover Letters",
-            value: isLoading ? "..." : `${totalLetters}`,
-            desc: "Custom generated",
-            icon: FileUp,
-            color: "text-pink-500"
-          },
-        ].map((stat, i) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={i}>
-              <CardContent className="p-6 flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{stat.label}</p>
-                  <p className="text-3xl font-extrabold">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground">{stat.desc}</p>
-                </div>
-                <div className={`h-12 w-12 rounded-xl bg-muted/50 flex items-center justify-center ${stat.color}`}>
-                  <Icon className="h-6 w-6" />
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Charts & Actions Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Performance Chart */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>ATS Score Trajectory</CardTitle>
-            <CardDescription>Visual tracker matching your optimization improvements.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-64 pl-2 pr-6 pb-2">
-            {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="scoreColor" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.3)" />
-                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis domain={[0, 100]} stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    contentStyle={{
-                      background: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                      color: "hsl(var(--foreground))",
-                      fontSize: "12px",
-                    }}
-                  />
-                  <Area type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={2} fillOpacity={1} fill="url(#scoreColor)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 border border-dashed border-border/60 rounded-xl">
-                <ShieldCheck className="h-10 w-10 text-muted-foreground/40 mb-2" />
-                <p className="text-sm font-semibold text-foreground">No ATS Scans Recorded Yet</p>
-                <p className="text-xs text-muted-foreground max-w-sm mt-1 mb-4">
-                  Run your resume through the ATS Keyword Checker to evaluate keyword match scores and view trajectory charts.
-                </p>
-                <Link href="/dashboard/checker">
-                  <Button variant="outline" size="sm">Run ATS Scan</Button>
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Quick Actions Panel */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Utilities</CardTitle>
-            <CardDescription>Access primary AI assistants.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {[
-              { label: "ATS Keyword Scan", href: "/dashboard/checker", icon: ShieldCheck, desc: "Verify job compliance" },
-              { label: "Tailor to Job Descr.", href: "/dashboard/tailor", icon: Sparkles, desc: "Adapt experience bullet points" },
-              { label: "Resume Roast Audit", href: "/dashboard/roast", icon: Flame, desc: "Get brutally honest critique" },
-            ].map((act, i) => {
-              const Icon = act.icon;
-              return (
-                <Link key={i} href={act.href} className="group block">
-                  <div className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-background/50 hover:bg-muted/30 group-hover:border-primary/20 transition-all cursor-pointer">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:bg-primary/10 transition-colors">
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">{act.label}</p>
-                        <p className="text-xs text-muted-foreground">{act.desc}</p>
-                      </div>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </Link>
-              );
-            })}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Saved Resumes Lists */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+    <DashboardShell title="Career Command Center">
+      <div className="space-y-8 max-w-4xl mx-auto pb-12 text-foreground">
+        {/* ========================================================================= */}
+        {/* A. TARGET ROLE                                                            */}
+        {/* ========================================================================= */}
+        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 pb-5 border-b border-border/60">
           <div>
-            <CardTitle>Recent Resumes</CardTitle>
-            <CardDescription>Manage and tailor your current profiles.</CardDescription>
-          </div>
-          {resumes.length > 0 && (
-            <Link href="/dashboard/history">
-              <Button variant="outline" size="sm">View All</Button>
-            </Link>
-          )}
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-10 text-muted-foreground">
-              <RefreshCw className="h-5 w-5 animate-spin mr-2" />
-              <span className="text-sm">Loading your documents...</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
+                Active Target Position
+              </span>
             </div>
-          ) : resumes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="h-12 w-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground mb-3">
-                <Inbox className="h-6 w-6" />
+            {activeTargetRole ? (
+              <div className="flex flex-wrap items-baseline gap-2 mt-1">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+                  {activeTargetRole}
+                </h1>
+                <span className="text-xs text-muted-foreground">
+                  • {activeExperienceLevel}
+                </span>
               </div>
-              <h3 className="font-semibold text-foreground text-base">No Resumes Created Yet</h3>
-              <p className="text-xs text-muted-foreground max-w-sm mt-1 mb-4">
-                You have not created or imported any resume drafts. Create your first ATS-optimized resume now!
+            ) : (
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-muted-foreground mt-1">
+                No Target Position Selected
+              </h1>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">
+              {greeting}, {displayName}. Your preparation arc is calibrated to this role.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {activeTargetRole ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={openSetupModal}
+                className="h-8 text-xs font-semibold gap-1.5 cursor-pointer border-border/80 hover:bg-secondary"
+              >
+                <Sliders className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Change Target</span>
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                onClick={openSetupModal}
+                className="h-8 text-xs font-semibold bg-primary text-primary-foreground gap-1.5 shadow-xs cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Set Target Role</span>
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* B. PREPARATION READINESS (HONEST ASSESSMENT, NOT PROBABILITY OF GETTING HIRED) */}
+        {/* ========================================================================= */}
+        <div className="p-5 rounded-lg border border-border/80 bg-card space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/60">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Preparation Readiness
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-secondary text-muted-foreground font-semibold">
+                  Evidence-Calibrated
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Hicejo&apos;s preparation assessment based on verified evidence — not a guarantee of employment.
               </p>
-              <Link href="/dashboard/builder">
-                <Button className="bg-gradient-to-r from-primary to-violet-600 gap-2">
-                  <Plus className="h-4 w-4" />
-                  <span>Create Your First Resume</span>
-                </Button>
-              </Link>
             </div>
-          ) : (
-            <div className="divide-y divide-border/40">
-              {resumes.slice(0, 5).map((res) => (
-                <div key={res.id} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
-                  <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                      <FileText className="h-5 w-5" />
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl sm:text-3xl font-black text-foreground font-mono">
+                {readiness.overallScore}%
+              </span>
+              <span className="text-xs font-semibold text-muted-foreground">Prepared</span>
+            </div>
+          </div>
+
+          {/* Sub-scores Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+            <div className="p-3 rounded-md border border-border/60 bg-secondary/30 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground font-medium">Skills</span>
+                <span className="font-mono font-bold text-foreground">{readiness.skillsScore}%</span>
+              </div>
+              <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-500"
+                  style={{ width: `${readiness.skillsScore}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-muted-foreground block truncate">
+                {readiness.learnedCount + readiness.practicedCount}/{readiness.totalRequirements} topics covered
+              </span>
+            </div>
+
+            <div className="p-3 rounded-md border border-border/60 bg-secondary/30 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground font-medium">Evidence</span>
+                <span className="font-mono font-bold text-foreground">{readiness.evidenceScore}%</span>
+              </div>
+              <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                  style={{ width: `${readiness.evidenceScore}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-muted-foreground block truncate">
+                {readiness.demonstratedCount}/{readiness.totalRequirements} proven artifacts
+              </span>
+            </div>
+
+            <div className="p-3 rounded-md border border-border/60 bg-secondary/30 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground font-medium">Application</span>
+                <span className="font-mono font-bold text-foreground">{readiness.applicationScore}%</span>
+              </div>
+              <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-500"
+                  style={{ width: `${readiness.applicationScore}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-muted-foreground block truncate">
+                {resumes.length > 0 ? `${resumes.length} active resume${resumes.length > 1 ? "s" : ""}` : "No draft yet"}
+              </span>
+            </div>
+
+            <div className="p-3 rounded-md border border-border/60 bg-secondary/30 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground font-medium">Interview</span>
+                <span className="font-mono font-bold text-foreground">{readiness.interviewScore}%</span>
+              </div>
+              <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-amber-500 rounded-full transition-all duration-500"
+                  style={{ width: `${readiness.interviewScore}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-muted-foreground block truncate">
+                {lastInterview ? `${lastInterview.score}% last session` : "Simulation ready"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* C. NEXT BEST ACTION (MOST IMPORTANT COMPONENT ON THE PAGE)               */}
+        {/* ========================================================================= */}
+        <div className="p-5 rounded-lg border-2 border-primary/20 bg-card space-y-3 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-primary">
+              Next Best Action
+            </span>
+            <span className="text-[11px] text-muted-foreground font-mono">
+              Highest-Leverage Step
+            </span>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h2 className="text-base sm:text-lg font-bold text-foreground">
+                {nextBestAction.title}
+              </h2>
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-xl">
+                {nextBestAction.context}
+              </p>
+            </div>
+
+            <div>
+              {nextBestAction.actionType === "setup" ? (
+                <Button
+                  size="sm"
+                  onClick={openSetupModal}
+                  className="h-9 px-4 font-semibold text-xs bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 shadow-xs cursor-pointer shrink-0"
+                >
+                  <span>{nextBestAction.ctaLabel}</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              ) : (
+                <Link href={nextBestAction.ctaHref || "/dashboard/learning"}>
+                  <Button
+                    size="sm"
+                    className="h-9 px-4 font-semibold text-xs bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 shadow-xs cursor-pointer shrink-0"
+                  >
+                    <span>{nextBestAction.ctaLabel}</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* D. CAREER JOURNEY (TARGET JOB → DIAGNOSE → CLOSE GAPS → BUILD PROOF → APPLY → INTERVIEW) */}
+        {/* ========================================================================= */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Career Journey
+            </span>
+            <Link href="/dashboard/journey" className="text-xs text-primary hover:underline font-medium">
+              View Complete Journey &rarr;
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-xs">
+            {[
+              {
+                step: 1,
+                name: "Target Job",
+                desc: activeTargetRole ? "Configured" : "Unset",
+                href: "/dashboard/jobs",
+                isDone: Boolean(activeTargetRole),
+                isCurrent: journeyStage === 1
+              },
+              {
+                step: 2,
+                name: "Diagnose",
+                desc: `${savedTargets.length} Analyzed`,
+                href: "/dashboard/jobs",
+                isDone: savedTargets.length > 0,
+                isCurrent: journeyStage === 2
+              },
+              {
+                step: 3,
+                name: "Close Gaps",
+                desc: `${readiness.totalRequirements - readiness.evidenceCount} Remaining`,
+                href: "/dashboard/learning",
+                isDone: readiness.evidenceCount >= 3,
+                isCurrent: journeyStage === 3
+              },
+              {
+                step: 4,
+                name: "Build Proof",
+                desc: `${readiness.demonstratedCount}/${readiness.totalRequirements} Proven`,
+                href: "/dashboard/learning",
+                isDone: readiness.demonstratedCount >= 2,
+                isCurrent: journeyStage === 4
+              },
+              {
+                step: 5,
+                name: "Apply",
+                desc: resumes.length > 0 ? "Draft Ready" : "Create Draft",
+                href: "/dashboard/builder",
+                isDone: resumes.length > 0,
+                isCurrent: journeyStage === 5
+              },
+              {
+                step: 6,
+                name: "Interview",
+                desc: lastInterview ? `${lastInterview.score}% Scored` : "Practice",
+                href: "/dashboard/interview",
+                isDone: Boolean(lastInterview),
+                isCurrent: journeyStage === 6
+              },
+            ].map((stage) => (
+              <Link
+                key={stage.step}
+                href={stage.href}
+                className={`p-3 rounded-md border transition-colors flex flex-col justify-between space-y-2 ${
+                  stage.isCurrent
+                    ? "bg-secondary/80 border-primary/50 text-foreground ring-1 ring-primary/20"
+                    : stage.isDone
+                    ? "bg-card border-border/80 text-foreground"
+                    : "bg-secondary/30 border-border/50 text-muted-foreground"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[10px] text-muted-foreground">0{stage.step}</span>
+                  {stage.isDone ? (
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  ) : stage.isCurrent ? (
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                  ) : (
+                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30" />
+                  )}
+                </div>
+                <div>
+                  <p className="font-semibold text-xs text-foreground truncate">{stage.name}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">{stage.desc}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* E. PRIORITY GAPS (SHOW ONLY TOP 3 HIGHEST-IMPACT GAPS)                    */}
+        {/* ========================================================================= */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between pb-1 border-b border-border/60">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Priority Gaps (Top 3)
+            </span>
+            <Link href="/dashboard/learning" className="text-xs text-primary hover:underline font-medium">
+              Review all requirements &rarr;
+            </Link>
+          </div>
+
+          {priorityGaps.length > 0 ? (
+            <div className="border border-border/70 rounded-md bg-card divide-y divide-border/60 overflow-hidden text-xs">
+              {priorityGaps.map((gap) => (
+                <div key={gap.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-secondary/20 transition-colors">
+                  <div className="space-y-1 min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-foreground truncate">{gap.problem}</span>
+                      <span className="font-mono text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+                        {gap.impact} priority
+                      </span>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-sm">{res.title}</h4>
-                      <p className="text-xs text-muted-foreground">
-                        Updated on {new Date(res.updated_at).toLocaleDateString()}
-                      </p>
-                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      {gap.whyItMatters}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-6">
-                    <div className="text-right">
-                      {res.ats_score ? (
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                          res.ats_score >= 80 ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"
-                        }`}>
-                          Score: {res.ats_score}%
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground">
-                          Not scanned
-                        </span>
-                      )}
-                    </div>
-                    <Link href={`/dashboard/builder?id=${res.id}`}>
-                      <Button variant="ghost" size="sm">Edit</Button>
+
+                  <div className="shrink-0">
+                    <Link href={gap.actionHref}>
+                      <Button size="sm" variant="outline" className="h-7.5 px-3 text-xs font-semibold text-primary hover:text-primary-foreground hover:bg-primary cursor-pointer">
+                        <span>{gap.actionLabel}</span>
+                        <ArrowRight className="h-3 w-3 ml-1" />
+                      </Button>
                     </Link>
                   </div>
                 </div>
               ))}
             </div>
+          ) : (
+            <div className="p-6 rounded-md border border-border/80 bg-secondary/30 text-center space-y-1 text-xs">
+              <CheckCircle2 className="h-5 w-5 text-emerald-500 mx-auto" />
+              <p className="font-semibold text-foreground">No critical evidence gaps detected</p>
+              <p className="text-muted-foreground text-[11px]">
+                {activeTargetRole ? "Your demonstrated evidence aligns with role benchmarks. Proceed to mock interviews or application tailoring." : "Define your target position above to benchmark required evidence."}
+              </p>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* F. RECENT WORK                                                            */}
+        {/* ========================================================================= */}
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center justify-between pb-1 border-b border-border/60">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
+              Recent Work & Sessions
+            </span>
+            <Link href="/dashboard/builder">
+              <Button size="sm" variant="outline" className="h-7 text-xs font-semibold gap-1 cursor-pointer">
+                <Plus className="h-3 w-3" />
+                <span>New Resume Draft</span>
+              </Button>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            {/* 1. Resumes Drafts */}
+            <div className="p-4 rounded-md border border-border/70 bg-card space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-foreground flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5 text-primary" />
+                  <span>Resume Drafts ({resumes.length})</span>
+                </span>
+                <Link href="/dashboard/builder" className="text-[11px] text-primary hover:underline">
+                  Open Builder &rarr;
+                </Link>
+              </div>
+
+              {resumes.length > 0 ? (
+                <div className="divide-y divide-border/40">
+                  {resumes.slice(0, 3).map((r) => (
+                    <div key={r.id} className="py-2 flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <Link href={`/dashboard/builder?id=${r.id}`} className="font-medium text-foreground hover:text-primary truncate block">
+                          {r.title || "Untitled Resume"}
+                        </Link>
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          Updated {new Date(r.updated_at || r.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <Link href={`/dashboard/builder?id=${r.id}`}>
+                        <Button size="sm" variant="ghost" className="h-6.5 text-[11px] px-2 text-primary font-semibold">
+                          Edit
+                        </Button>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[11px] text-muted-foreground py-2">
+                  No resume drafts saved yet. Create a baseline 1-page draft in the builder.
+                </p>
+              )}
+            </div>
+
+            {/* 2. Target Jobs & Interview Sessions */}
+            <div className="p-4 rounded-md border border-border/70 bg-card space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-foreground flex items-center gap-1.5">
+                  <Mic className="h-3.5 w-3.5 text-primary" />
+                  <span>Interview & Target Role Checks</span>
+                </span>
+                <Link href="/dashboard/interview" className="text-[11px] text-primary hover:underline">
+                  Launch Studio &rarr;
+                </Link>
+              </div>
+
+              {lastInterview ? (
+                <div className="p-2.5 rounded-md bg-secondary/40 border border-border/60 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-foreground">Latest Mock Interview</span>
+                    <span className="font-mono text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                      {lastInterview.score}/100
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground line-clamp-2">
+                    {lastInterview.feedback || lastInterview.hiringRecommendation}
+                  </p>
+                </div>
+              ) : (
+                <div className="p-2.5 rounded-md bg-secondary/30 border border-border/60 space-y-1">
+                  <span className="font-medium text-foreground block">Ready for Simulation</span>
+                  <p className="text-[11px] text-muted-foreground">
+                    Practice realistic technical and behavioral rounds in the Interview Studio.
+                  </p>
+                </div>
+              )}
+
+              {savedTargets.length > 0 && (
+                <div className="pt-1 border-t border-border/40">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground block mb-1">
+                    Active Target Job
+                  </span>
+                  <Link href="/dashboard/jobs" className="text-foreground hover:text-primary font-medium flex items-center justify-between">
+                    <span className="truncate">{savedTargets[0].company} — {savedTargets[0].title}</span>
+                    <span className="font-mono text-[10px] text-muted-foreground">{savedTargets[0].matchScore}% fit</span>
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* SETUP MODAL: CANDIDATE TARGET ROLE CONFIGURATION                          */}
+        {/* ========================================================================= */}
+        {isSetupModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
+            <div className="relative w-full max-w-lg bg-card border border-border rounded-lg shadow-xl p-6 text-foreground space-y-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between pb-3 border-b border-border/60">
+                <div>
+                  <h3 className="text-base font-bold text-foreground">Target Role Configuration</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Align your dashboard readiness metrics with your target position.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSetupModalOpen(false)}
+                  className="p-1 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveProfile} className="space-y-4 text-xs">
+                <div className="space-y-1.5">
+                  <label className="font-bold text-foreground block">Target Role Title *</label>
+                  <Input
+                    required
+                    placeholder="e.g. GenAI / LLM Engineer, Data Scientist, Senior Backend Engineer"
+                    value={roleInput}
+                    onChange={(e) => setRoleInput(e.target.value)}
+                    className="h-9 text-xs"
+                  />
+                  {/* Popular role suggestions */}
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {POPULAR_ROLES.slice(0, 10).map((r) => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => setRoleInput(r.title)}
+                        className="px-2 py-0.5 rounded text-[11px] bg-secondary hover:bg-secondary/80 text-foreground transition-colors cursor-pointer border border-border/60"
+                      >
+                        {r.title}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-foreground block">Experience Level</label>
+                  <select
+                    value={levelInput}
+                    onChange={(e) => setLevelInput(e.target.value)}
+                    className="w-full h-9 px-3 text-xs rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                  >
+                    {EXPERIENCE_LEVELS.map((lvl) => (
+                      <option key={lvl} value={lvl}>{lvl}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="font-bold text-foreground block">Primary Domain / Focus Area (Optional)</label>
+                  <Input
+                    placeholder="e.g. Performance Marketing, B2B SaaS, Distributed Systems, Corporate Finance"
+                    value={domainInput}
+                    onChange={(e) => setDomainInput(e.target.value)}
+                    className="h-9 text-xs"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-border/60">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsSetupModalOpen(false)}
+                    className="h-8.5 text-xs font-semibold cursor-pointer"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSavingProfile || !roleInput.trim()}
+                    className="h-8.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold cursor-pointer"
+                  >
+                    {isSavingProfile ? "Saving Profile..." : "Save Configuration"}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
     </DashboardShell>
   );
 }

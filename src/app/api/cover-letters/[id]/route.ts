@@ -11,7 +11,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    if (isDemoMode()) {
+    if (await isDemoMode()) {
       deleteDemoCoverLetter(id);
       return NextResponse.json({ success: true, message: "Cover letter deleted successfully" });
     }

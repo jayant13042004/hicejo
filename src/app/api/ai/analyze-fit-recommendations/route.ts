@@ -103,7 +103,12 @@ ${JSON.stringify({
       return NextResponse.json({ success: false, error: "AI failed to respond" }, { status: 500 });
     }
 
-    const result = JSON.parse(rawContent);
+    let cleanJson = rawContent;
+    if (cleanJson.startsWith("```")) {
+      cleanJson = cleanJson.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+    }
+
+    const result = JSON.parse(cleanJson);
     return NextResponse.json({ success: true, data: result });
   } catch (error: any) {
     console.error("Fit recommendation error:", error);

@@ -12,18 +12,20 @@ interface ThemeContextType {
 const ThemeContext = React.createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = React.useState<Theme>("dark");
+  const [theme, setTheme] = React.useState<Theme>("light");
 
   React.useEffect(() => {
-    // Load theme from localStorage on mount
+    // Load theme from localStorage on mount (default to light mode)
     const savedTheme = localStorage.getItem("hicejo-theme") as Theme | null;
     const root = window.document.documentElement;
-    if (savedTheme === "light") {
-      setTheme("light");
-      root.classList.remove("dark");
-    } else {
+    if (savedTheme === "dark") {
       setTheme("dark");
       root.classList.add("dark");
+      root.setAttribute("data-theme", "dark");
+    } else {
+      setTheme("light");
+      root.classList.remove("dark");
+      root.setAttribute("data-theme", "light");
     }
   }, []);
 
@@ -34,8 +36,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("hicejo-theme", newTheme);
     if (newTheme === "dark") {
       root.classList.add("dark");
+      root.setAttribute("data-theme", "dark");
     } else {
       root.classList.remove("dark");
+      root.setAttribute("data-theme", "light");
     }
   };
 
