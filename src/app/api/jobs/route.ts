@@ -31,7 +31,7 @@ async function fetchLiveLinkedInJobs(query = "software engineer", location = "re
     const cardChunks = html.split('<div class="base-card');
     const jobs: JobListing[] = [];
 
-    for (let i = 1; i < Math.min(cardChunks.length, 12); i++) {
+    for (let i = 1; i < Math.min(cardChunks.length, 25); i++) {
       const chunk = cardChunks[i];
       const titleMatch = chunk.match(/<span class="sr-only">([\s\S]*?)<\/span>/i);
       const compMatch = chunk.match(/<h4 class="base-search-card__subtitle"[\s\S]*?>([\s\S]*?)<\/h4>/i);
@@ -104,7 +104,7 @@ async function fetchLiveRemotiveJobs(): Promise<JobListing[]> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3500);
 
-    const res = await fetch("https://remotive.com/api/remote-jobs?category=software-dev&limit=15", {
+    const res = await fetch("https://remotive.com/api/remote-jobs?category=software-dev&limit=35", {
       signal: controller.signal,
       next: { revalidate: 1800 }
     });
