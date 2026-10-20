@@ -494,7 +494,7 @@ export default function DashboardPage() {
                   onClick={openSetupModal}
                   className="h-9 px-4 font-semibold text-xs bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 shadow-xs cursor-pointer shrink-0"
                 >
-                  <span>{nextBestAction.ctaLabel}</span>
+                  <span>{nextBestAction.ctaLabel.replace(/\s*→\s*$/, "")}</span>
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               ) : (
@@ -503,7 +503,7 @@ export default function DashboardPage() {
                     size="sm"
                     className="h-9 px-4 font-semibold text-xs bg-primary hover:bg-primary/90 text-primary-foreground gap-1.5 shadow-xs cursor-pointer shrink-0"
                   >
-                    <span>{nextBestAction.ctaLabel}</span>
+                    <span>{nextBestAction.ctaLabel.replace(/\s*→\s*$/, "")}</span>
                     <ArrowRight className="h-3.5 w-3.5" />
                   </Button>
                 </Link>

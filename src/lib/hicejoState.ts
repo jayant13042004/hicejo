@@ -382,7 +382,7 @@ export function getNextBestAction(
       title: topGap.problem,
       problem: topGap.problem,
       context: contextDesc,
-      ctaLabel: topGap.actionLabel + " →",
+      ctaLabel: topGap.actionLabel,
       ctaHref: topGap.actionHref,
       actionType: "link"
     };
@@ -393,7 +393,7 @@ export function getNextBestAction(
       title: "Draft your baseline 1-page resume",
       problem: "No active resume draft.",
       context: "Create your core experience in single-page vector format without fabricating achievements.",
-      ctaLabel: "Open Resume Builder →",
+      ctaLabel: "Open Resume Builder",
       ctaHref: "/dashboard/builder",
       actionType: "link"
     };
@@ -403,7 +403,7 @@ export function getNextBestAction(
     title: "Run an interview simulation",
     problem: "Verify articulation under pressure.",
     context: `Test your technical explanation and STAR delivery for ${targetRole} with our simulated hiring manager.`,
-    ctaLabel: "Start Mock Interview →",
+    ctaLabel: "Start Mock Interview",
     ctaHref: "/dashboard/interview",
     actionType: "link"
   };
