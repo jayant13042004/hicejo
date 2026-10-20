@@ -36,28 +36,28 @@
   --radius: 0.5rem;                   /* 8px crisp modern radius */
 }
 
-/* Polished Dark Mode (Secondary) */
+/* Premium Obsidian Pure Black Dark Mode */
 .dark, [data-theme="dark"] {
-  --background: 224 35% 6%;           /* Deep neutral graphite #0A0D14 */
-  --foreground: 210 20% 96%;          /* Soft crisp white #F1F5F9 */
+  --background: 0 0% 3.5%;            /* Pure deep black canvas #090909 */
+  --foreground: 0 0% 98%;             /* Soft crisp pure white #FAFAFA */
   
-  --card: 224 30% 9%;                 /* Elevated graphite card */
-  --card-foreground: 210 20% 96%;
+  --card: 0 0% 7%;                    /* Elevated solid black/charcoal card #121212 */
+  --card-foreground: 0 0% 98%;
 
-  --popover: 224 30% 9%;
-  --popover-foreground: 210 20% 96%;
+  --popover: 0 0% 7%;                 /* Elevated solid popover #121212 */
+  --popover-foreground: 0 0% 98%;
   
-  --primary: 210 20% 98%;             /* Crisp white solid primary in dark mode */
-  --primary-foreground: 224 35% 6%;
+  --primary: 0 0% 98%;                /* Crisp pure white solid primary in dark mode */
+  --primary-foreground: 0 0% 5%;      /* Pure black text on primary button #0D0D0D */
   
-  --secondary: 224 20% 14%;
-  --secondary-foreground: 210 20% 96%;
+  --secondary: 0 0% 11%;              /* Subtle neutral charcoal surface #1C1C1C */
+  --secondary-foreground: 0 0% 98%;
   
-  --muted: 224 20% 13%;
-  --muted-foreground: 215 16% 62%;
+  --muted: 0 0% 11%;                  /* Subdued dark surface #1C1C1C */
+  --muted-foreground: 0 0% 64%;       /* Neutral light silver gray #A3A3A3 */
   
-  --accent: 224 20% 16%;
-  --accent-foreground: 210 20% 96%;
+  --accent: 0 0% 13%;                 /* Clean neutral hover surface #212121 */
+  --accent-foreground: 0 0% 98%;
   
   --brand: 243 75% 65%;
   --brand-foreground: 0 0% 100%;
@@ -65,9 +65,9 @@
   --destructive: 350 84% 55%;
   --destructive-foreground: 0 0% 100%;
   
-  --border: 224 20% 16%;
-  --input: 224 20% 16%;
-  --ring: 210 20% 98%;
+  --border: 0 0% 14%;                 /* Hairline architectural neutral border #242424 */
+  --input: 0 0% 14%;
+  --ring: 0 0% 90%;
 }
 
 @theme {
@@ -191,8 +191,8 @@ body {
 
 .dark .site-nav,
 [data-theme="dark"] .site-nav {
-  --nav-surface: rgba(14, 17, 24, 0.9);
-  --nav-border: rgba(235, 239, 246, 0.09);
+  --nav-surface: rgba(9, 9, 9, 0.92);
+  --nav-border: rgba(255, 255, 255, 0.08);
 }
 
 .site-logo-mark {
@@ -223,11 +223,11 @@ body {
 
 .dark .home-page,
 [data-theme="dark"] .home-page {
-  --home-paper: #10131a;
-  --home-surface: #171b23;
-  --home-ink: #f0f1ec;
-  --home-muted: #a6ada8;
-  --home-line: rgba(255, 255, 255, 0.11);
+  --home-paper: #090909;
+  --home-surface: #121212;
+  --home-ink: #fafafa;
+  --home-muted: #a3a3a3;
+  --home-line: rgba(255, 255, 255, 0.09);
   --home-violet: #aaa1ff;
   --home-violet-soft: rgba(126, 112, 255, 0.15);
   --home-green: #a7c4a0;
@@ -263,8 +263,8 @@ body {
 .dark .home-hero,
 [data-theme="dark"] .home-hero {
   background:
-    radial-gradient(ellipse at 77% 41%, rgba(105, 91, 212, 0.15), transparent 38%),
-    linear-gradient(180deg, var(--home-paper) 0%, #141821 100%);
+    radial-gradient(ellipse at 77% 41%, rgba(105, 91, 212, 0.08), transparent 38%),
+    linear-gradient(180deg, var(--home-paper) 0%, #050505 100%);
 }
 
 .home-hero-grid {
@@ -1306,7 +1306,7 @@ body {
 
 .dark .home-final-cta,
 [data-theme="dark"] .home-final-cta {
-  background: #1c1b2c;
+  background: #101010;
 }
 
 .home-final-cta-inner {
@@ -1353,7 +1353,7 @@ body {
 .home-footer {
   padding: 46px 24px 20px;
   color: #e9e8e4;
-  background: #20202d;
+  background: #0d0d0d;
 }
 
 .home-footer-main {
@@ -1764,13 +1764,13 @@ body {
 
 .dark .dashboard-app,
 [data-theme="dark"] .dashboard-app {
-  --dashboard-canvas: #11151b;
-  --dashboard-surface: #181d25;
-  --dashboard-ink: #edf0ec;
-  --dashboard-muted: #a5ada8;
-  --dashboard-line: rgba(237, 240, 236, 0.1);
+  --dashboard-canvas: #090909;
+  --dashboard-surface: #121212;
+  --dashboard-ink: #fafafa;
+  --dashboard-muted: #a3a3a3;
+  --dashboard-line: rgba(255, 255, 255, 0.08);
   --dashboard-accent: #aaa1ff;
-  --dashboard-accent-soft: rgba(126, 112, 255, 0.14);
+  --dashboard-accent-soft: rgba(126, 112, 255, 0.12);
 }
 
 .dashboard-sidebar {
@@ -1870,7 +1870,7 @@ body {
 .dark .dashboard-content,
 [data-theme="dark"] .dashboard-content {
   background:
-    radial-gradient(ellipse at 82% 0%, rgba(126, 112, 255, 0.06), transparent 33%),
+    radial-gradient(ellipse at 82% 0%, rgba(126, 112, 255, 0.03), transparent 33%),
     var(--dashboard-canvas);
 }
 
