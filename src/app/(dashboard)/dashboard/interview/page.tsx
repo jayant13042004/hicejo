@@ -214,6 +214,39 @@ function InterviewStudioInner() {
   // Formulation State
   const [isFormulating, setIsFormulating] = React.useState(false);
   const [formulatedPlan, setFormulatedPlan] = React.useState<FormulatedPlan | null>(null);
+  // Selected rounds to practice (allows full loop, solo round, or custom subset)
+  const [selectedRoundNumbers, setSelectedRoundNumbers] = React.useState<number[]>([1, 2, 3]);
+
+  // Derived list of active rounds for the session
+  const activeSessionRounds = React.useMemo(() => {
+    if (!formulatedPlan?.rounds?.length) return [];
+    const filtered = formulatedPlan.rounds.filter((r) =>
+      selectedRoundNumbers.includes(r.roundNumber)
+    );
+    return filtered.length > 0 ? filtered : formulatedPlan.rounds;
+  }, [formulatedPlan, selectedRoundNumbers]);
+
+  const toggleRoundSelection = (roundNum: number) => {
+    setSelectedRoundNumbers((prev) => {
+      if (prev.includes(roundNum)) {
+        // Prevent deselecting everything - keep at least 1 round
+        if (prev.length <= 1) return prev;
+        return prev.filter((n) => n !== roundNum);
+      } else {
+        return [...prev, roundNum].sort((a, b) => a - b);
+      }
+    });
+  };
+
+  const selectAllRounds = () => {
+    if (formulatedPlan?.rounds) {
+      setSelectedRoundNumbers(formulatedPlan.rounds.map((r) => r.roundNumber));
+    }
+  };
+
+  const selectSingleRound = (roundNum: number) => {
+    setSelectedRoundNumbers([roundNum]);
+  };
 
   // Sync with active job context when navigated from target jobs
   React.useEffect(() => {
@@ -294,6 +327,8 @@ function InterviewStudioInner() {
           const json = await res.json();
           if (json.success && json.plan) {
             setFormulatedPlan(json.plan);
+            const rNums = (json.plan.rounds || []).map((r: any) => r.roundNumber);
+            setSelectedRoundNumbers(rNums.length > 0 ? rNums : [1]);
             setStudioStage("plan-preview");
           }
         } catch (err) {
@@ -779,6 +814,8 @@ function InterviewStudioInner() {
       const json = await res.json();
       if (json.success && json.plan) {
         setFormulatedPlan(json.plan);
+        const rNums = (json.plan.rounds || []).map((r: any) => r.roundNumber);
+        setSelectedRoundNumbers(rNums.length > 0 ? rNums : [1]);
         setStudioStage("plan-preview");
       }
     } catch (err) {
@@ -790,14 +827,25 @@ function InterviewStudioInner() {
   };
 
   // Step 2 -> Step 3: Launch Live Practice Studio
-  const handleStartSession = () => {
+  const handleStartSession = (targetRoundNumbers?: number[]) => {
+    let roundsToUse = selectedRoundNumbers;
+    if (targetRoundNumbers && targetRoundNumbers.length > 0) {
+      roundsToUse = targetRoundNumbers;
+      setSelectedRoundNumbers(targetRoundNumbers);
+    }
+
+    const availableRounds = (formulatedPlan?.rounds || []).filter((r) =>
+      roundsToUse.includes(r.roundNumber)
+    );
+    const startingRound = availableRounds[0] || formulatedPlan?.rounds[0];
+
     setStudioStage("active");
     setCurrentRoundIndex(0);
     setSessionSeconds(0);
     setTurnCount(1);
 
     const firstQuestion =
-      formulatedPlan?.rounds[0]?.openingQuestion ||
+      startingRound?.openingQuestion ||
       (studioMode === "practice"
         ? `Let's drill into ${practiceSkillInput || "this core skill"}. Walk me through how you approach designing a production-grade implementation, and what the single most critical trade-off is.`
         : `Thank you for taking the time to meet today. To kick off our discussion for the ${roleInput || "target"} role${companyInput ? ` at ${companyInput}` : ""}, could you give me a brief overview of your background and walk me through a high-impact project relevant to this position?`);
@@ -816,6 +864,32 @@ function InterviewStudioInner() {
       speakText(firstQuestion, () => {
         startListening();
       });
+    }
+  };
+
+  // Move candidate to the next round in active session
+  const handleAdvanceToNextRound = () => {
+    if (currentRoundIndex < activeSessionRounds.length - 1) {
+      const nextIdx = currentRoundIndex + 1;
+      setCurrentRoundIndex(nextIdx);
+      const nextRound = activeSessionRounds[nextIdx];
+
+      const transitionText = `Let's now transition to Round ${nextRound.roundNumber}: ${nextRound.title}. ${nextRound.openingQuestion}`;
+
+      const transitionMsg: ChatMessage = {
+        id: `msg-${Date.now()}`,
+        role: "interviewer",
+        content: transitionText,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      };
+
+      setMessages((prev) => [...prev, transitionMsg]);
+
+      if (prepMode === "voice") {
+        speakText(transitionText, () => {
+          startListening();
+        });
+      }
     }
   };
 
@@ -839,22 +913,37 @@ function InterviewStudioInner() {
     setIsSubmittingTurn(true);
     setInterviewerStatus("thinking");
 
-    // Advance round if needed (3 rounds total over ~6 turns in full interview)
+    // Advance round if needed in multi-round mode
     const nextTurn = turnCount + 1;
     let nextRoundIdx = currentRoundIndex;
-    if (studioMode === "interview") {
-      if (nextTurn === 3 && (formulatedPlan?.rounds.length || 0) > 1) {
-        nextRoundIdx = 1;
-        setCurrentRoundIndex(1);
-      } else if (nextTurn === 5 && (formulatedPlan?.rounds.length || 0) > 2) {
-        nextRoundIdx = 2;
-        setCurrentRoundIndex(2);
+    if (studioMode === "interview" && activeSessionRounds.length > 1) {
+      if (activeSessionRounds.length === 2) {
+        if (nextTurn === 4 && currentRoundIndex === 0) {
+          nextRoundIdx = 1;
+          setCurrentRoundIndex(1);
+        }
+      } else if (activeSessionRounds.length >= 3) {
+        if (nextTurn === 3 && currentRoundIndex === 0) {
+          nextRoundIdx = 1;
+          setCurrentRoundIndex(1);
+        } else if (nextTurn === 5 && currentRoundIndex <= 1) {
+          nextRoundIdx = 2;
+          setCurrentRoundIndex(2);
+        }
       }
     }
+
+    const currentRoundData = activeSessionRounds[nextRoundIdx] || activeSessionRounds[0];
 
     const activeRound =
       availableRoundOptions.find((r) => r.id === roundType) ||
       availableRoundOptions[0];
+
+    const roundTitleToSend = currentRoundData ? currentRoundData.title : activeRound?.label;
+    const roundDescToSend = currentRoundData ? currentRoundData.objective : activeRound?.desc;
+    const roundDirectiveToSend = currentRoundData
+      ? `ROUND FOCUS: ${currentRoundData.title}. Objective: ${currentRoundData.objective}. Keep questions strictly focused on this round dimension.`
+      : activeRound?.focusDirective;
 
     try {
       const res = await fetch("/api/ai/interview-conversation", {
@@ -863,11 +952,11 @@ function InterviewStudioInner() {
         body: JSON.stringify({
           role: roleInput,
           company: isCompanyTargeted ? companyInput.trim() : "",
-          roundType,
-          roundTitle: activeRound?.label,
-          roundDescription: activeRound?.desc,
+          roundType: currentRoundData ? `round_${currentRoundData.roundNumber}` : roundType,
+          roundTitle: roundTitleToSend,
+          roundDescription: roundDescToSend,
           roundCategory: activeRound?.category,
-          roundDirective: activeRound?.focusDirective,
+          roundDirective: roundDirectiveToSend,
           customFocus: customFocusTopics.trim(),
           scratchpadCode: scratchpadCode.trim(),
           scratchpadLanguage: scratchpadLang,
@@ -877,8 +966,8 @@ function InterviewStudioInner() {
           persona: selectedPersonaId,
           messages: updatedMessages.map((m) => ({ role: m.role, content: m.content })),
           turnCount: nextTurn,
-          currentRound: nextRoundIdx + 1,
-          rounds: formulatedPlan?.rounds || [],
+          currentRound: currentRoundData ? currentRoundData.roundNumber : (nextRoundIdx + 1),
+          rounds: activeSessionRounds,
           mode: prepMode
         })
       });
@@ -924,13 +1013,21 @@ function InterviewStudioInner() {
       return;
     }
 
+    const currentSessionActiveRound = activeSessionRounds[currentRoundIndex] || activeSessionRounds[0];
+    const sessionRoleTitle =
+      studioMode === "practice"
+        ? `${practiceSkillInput} Mastery`
+        : activeSessionRounds.length === 1
+          ? `${roleInput} - Round ${currentSessionActiveRound?.roundNumber || 1}: ${currentSessionActiveRound?.title || ""}`
+          : `${roleInput}${companyInput ? ` at ${companyInput}` : ""} (${activeSessionRounds.length} Rounds Interview Loop)`;
+
     setIsEvaluatingSession(true);
     try {
       const res = await fetch("/api/ai/evaluate-interview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          role: studioMode === "practice" ? `${practiceSkillInput} Mastery` : roleInput,
+          role: sessionRoleTitle,
           messages: messages.map((m) => ({ role: m.role, content: m.content }))
         })
       });
@@ -950,7 +1047,7 @@ function InterviewStudioInner() {
 
         recordDetectedInterviewGap({
           id: `eval-${Date.now()}`,
-          role: studioMode === "practice" ? `${practiceSkillInput} Mastery` : roleInput,
+          role: sessionRoleTitle,
           skillName: primaryWeakness,
           detectedProblem: detectedGap,
           feedback: json.data.feedback || "Evidence gap detected during interview debrief.",
@@ -964,7 +1061,7 @@ function InterviewStudioInner() {
             JSON.stringify({
               score: json.data.score,
               date: new Date().toISOString(),
-              role: studioMode === "practice" ? `${practiceSkillInput} Mastery` : roleInput,
+              role: sessionRoleTitle,
               strong: json.data.keyStrengths || [],
               weak: json.data.areasForImprovement || [],
               detectedEvidenceGap: detectedGap,
@@ -995,8 +1092,16 @@ function InterviewStudioInner() {
   // Copy Full Debrief Report
   const handleCopyReport = () => {
     if (!evaluationResult) return;
+    const currentSessionActiveRound = activeSessionRounds[currentRoundIndex] || activeSessionRounds[0];
+    const reportTopic =
+      studioMode === "practice"
+        ? `Skill Sparring on ${practiceSkillInput}`
+        : activeSessionRounds.length === 1
+          ? `${roleInput} (Solo Round ${currentSessionActiveRound?.roundNumber || 1}: ${currentSessionActiveRound?.title || ""})`
+          : `${roleInput}${companyInput ? ` at ${companyInput}` : ""} (${activeSessionRounds.length} Rounds Interview Loop)`;
+
     const reportText = `HICEJO PERFORMANCE DEBRIEF
-Topic: ${studioMode === "practice" ? `Skill Sparring on ${practiceSkillInput}` : roleInput}
+Topic: ${reportTopic}
 Interviewer: ${currentPersona.name} (${studioMode === "practice" ? "Skill Practice Evaluator" : `${roleInput || "Role"} Interviewer`})
 Date: ${new Date().toLocaleDateString()}
 Duration: ${formatTimer(sessionSeconds)}
@@ -1128,25 +1233,40 @@ ${evaluationResult.areasForImprovement.map((a) => `• ${a}`).join("\n")}
                       <p className="text-[11px] text-muted-foreground">{formulatedPlan.title}</p>
                     </div>
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => setStudioStage("plan-preview")}
-                    className="text-xs h-8 px-3 font-semibold bg-primary text-primary-foreground cursor-pointer shadow-xs"
-                  >
-                    <span>View Plan Preview &rarr;</span>
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => setStudioStage("plan-preview")}
+                      className="text-xs h-8 px-3 font-semibold bg-primary text-primary-foreground cursor-pointer shadow-xs gap-1"
+                    >
+                      <span>Select Rounds & Start &rarr;</span>
+                    </Button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   {formulatedPlan.rounds.map((r) => (
-                    <div key={r.roundNumber} className="p-3 rounded-lg border border-border/80 bg-card space-y-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                          Round {r.roundNumber}
-                        </span>
-                        <span className="text-xs font-semibold text-foreground truncate">{r.title}</span>
+                    <div key={r.roundNumber} className="p-3 rounded-lg border border-border/80 bg-card space-y-2 flex flex-col justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                            Round {r.roundNumber}
+                          </span>
+                          <span className="text-xs font-semibold text-foreground truncate">{r.title}</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground line-clamp-2">{r.objective}</p>
                       </div>
-                      <p className="text-[11px] text-muted-foreground line-clamp-2">{r.objective}</p>
+                      <div className="pt-2 border-t border-border/40 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => handleStartSession([r.roundNumber])}
+                          className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <Play className="h-2.5 w-2.5 fill-current" />
+                          <span>Practice Solo &rarr;</span>
+                        </button>
+                        <span className="text-[9px] text-muted-foreground uppercase font-mono">1 Round</span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1736,11 +1856,19 @@ ${evaluationResult.areasForImprovement.map((a) => `• ${a}`).join("\n")}
 
               <div className="flex items-center gap-3">
                 <Button
-                  onClick={handleStartSession}
+                  onClick={() => handleStartSession()}
+                  disabled={activeSessionRounds.length === 0}
                   className="h-11 px-6 font-bold text-xs bg-primary text-primary-foreground shadow-md shadow-primary/20 gap-2 cursor-pointer"
                 >
                   <Play className="h-4 w-4 fill-current" />
-                  <span>Start Session Now</span>
+                  <span>
+                    {activeSessionRounds.length === formulatedPlan.rounds.length
+                      ? `Start Complete Loop (${activeSessionRounds.length} Rounds)`
+                      : activeSessionRounds.length === 1
+                        ? `Start Solo: Round ${activeSessionRounds[0].roundNumber}`
+                        : `Start ${activeSessionRounds.length} Selected Rounds`}
+                  </span>
+                  <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -1771,37 +1899,141 @@ ${evaluationResult.areasForImprovement.map((a) => `• ${a}`).join("\n")}
               </div>
             </Card>
 
-            {/* Rounds Outline */}
+            {/* Rounds Selection & Structure */}
             <div className="space-y-3">
-              <h2 className="text-sm font-bold text-foreground flex items-center gap-2">
-                <ListOrdered className="h-4 w-4 text-primary" />
-                <span>Session Structure ({formulatedPlan.rounds.length} Round{formulatedPlan.rounds.length > 1 ? "s" : ""})</span>
-              </h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <ListOrdered className="h-4 w-4 text-primary" />
+                    <h2 className="text-sm font-bold text-foreground">
+                      Interview Rounds ({formulatedPlan.rounds.length} Total Formulated)
+                    </h2>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Select any single round to practice solo, or take the complete multi-round loop.
+                  </p>
+                </div>
+
+                {/* Scope Presets */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={selectAllRounds}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
+                      selectedRoundNumbers.length === formulatedPlan.rounds.length
+                        ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                        : "bg-card text-foreground hover:bg-muted border-border/70"
+                    }`}
+                  >
+                    All {formulatedPlan.rounds.length} Rounds
+                  </button>
+                  {formulatedPlan.rounds.map((r) => (
+                    <button
+                      key={r.roundNumber}
+                      type="button"
+                      onClick={() => selectSingleRound(r.roundNumber)}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
+                        selectedRoundNumbers.length === 1 && selectedRoundNumbers[0] === r.roundNumber
+                          ? "bg-primary text-primary-foreground border-primary shadow-xs font-bold"
+                          : "bg-card text-muted-foreground hover:text-foreground hover:bg-muted border-border/70"
+                      }`}
+                    >
+                      Round {r.roundNumber} Only
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Status Note */}
+              <div className="px-1 text-[11px] text-muted-foreground flex items-center justify-between">
+                <span>
+                  {activeSessionRounds.length === formulatedPlan.rounds.length ? (
+                    <strong className="text-primary">Complete Loop Selected:</strong>
+                  ) : activeSessionRounds.length === 1 ? (
+                    <strong className="text-emerald-600 dark:text-emerald-400">Single Round Selected:</strong>
+                  ) : (
+                    <strong className="text-primary">Custom Subset Selected:</strong>
+                  )}{" "}
+                  {activeSessionRounds.length === 1
+                    ? `Round ${activeSessionRounds[0].roundNumber} (${activeSessionRounds[0].title})`
+                    : `${activeSessionRounds.length} rounds (${activeSessionRounds.map((r) => `Round ${r.roundNumber}`).join(", ")})`}
+                </span>
+                <span className="text-[10px]">Check boxes below to customize</span>
+              </div>
 
               <div className="grid grid-cols-1 gap-3">
-                {formulatedPlan.rounds.map((round) => (
-                  <Card key={round.roundNumber} className="p-5 border-border/70 bg-card space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground font-black text-xs">
-                          {round.roundNumber}
-                        </span>
-                        <h3 className="text-xs font-bold text-foreground">{round.title}</h3>
+                {formulatedPlan.rounds.map((round) => {
+                  const isSelected = selectedRoundNumbers.includes(round.roundNumber);
+                  return (
+                    <Card
+                      key={round.roundNumber}
+                      className={`p-5 transition-all border ${
+                        isSelected
+                          ? "border-primary/80 ring-1 ring-primary/40 bg-card shadow-xs"
+                          : "border-border/60 bg-muted/20 opacity-70 hover:opacity-90"
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                        <div className="space-y-2 flex-1">
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleRoundSelection(round.roundNumber)}
+                                className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer accent-primary"
+                              />
+                              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground font-black text-xs">
+                                {round.roundNumber}
+                              </span>
+                              <h3 className="text-xs font-bold text-foreground">{round.title}</h3>
+                            </label>
+
+                            {isSelected ? (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                                In Session
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                                Excluded
+                              </span>
+                            )}
+
+                            <span className="text-[10px] text-muted-foreground font-mono ml-auto sm:ml-0">
+                              ~{round.roundNumber === 1 ? "4-5" : "5-6"} min
+                            </span>
+                          </div>
+
+                          <p className="text-xs text-muted-foreground pl-0 sm:pl-8 leading-relaxed">
+                            <strong>Focus:</strong> {round.objective}
+                          </p>
+
+                          <div className="pl-0 sm:pl-8 pt-1">
+                            <p className="text-[11px] text-muted-foreground italic bg-muted/30 p-2.5 rounded-lg border border-border/60">
+                              &quot;{round.openingQuestion}&quot;
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Direct Practice Solo Button */}
+                        <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1.5 pt-2 sm:pt-0 sm:border-l sm:border-border/50 sm:pl-4 shrink-0">
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleStartSession([round.roundNumber])}
+                            className="h-8.5 px-3 text-xs font-bold bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground border border-primary/30 transition-all cursor-pointer shadow-xs gap-1.5"
+                          >
+                            <Play className="h-3 w-3 fill-current" />
+                            <span>Practice Only Round {round.roundNumber} &rarr;</span>
+                          </Button>
+                          <span className="text-[9px] text-muted-foreground">
+                            Single-round solo session
+                          </span>
+                        </div>
                       </div>
-                      <span className="text-[10px] text-muted-foreground font-mono">
-                        ~{round.roundNumber === 1 ? "4-5" : "5-6"} min
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground pl-8">
-                      <strong>Focus:</strong> {round.objective}
-                    </p>
-                    <div className="pl-8 pt-1">
-                      <p className="text-[11px] text-muted-foreground italic bg-muted/30 p-2.5 rounded-lg border border-border/60">
-                        &quot;{round.openingQuestion}&quot;
-                      </p>
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
               </div>
             </div>
 
@@ -1827,11 +2059,19 @@ ${evaluationResult.areasForImprovement.map((a) => `• ${a}`).join("\n")}
                 Back to Configuration
               </Button>
               <Button
-                onClick={handleStartSession}
+                onClick={() => handleStartSession()}
+                disabled={activeSessionRounds.length === 0}
                 className="h-11 px-8 font-bold text-xs bg-primary text-primary-foreground shadow-md shadow-primary/20 gap-2 cursor-pointer"
               >
                 <Play className="h-4 w-4 fill-current" />
-                <span>Launch Active Studio</span>
+                <span>
+                  {activeSessionRounds.length === formulatedPlan.rounds.length
+                    ? `Launch Complete Loop (${activeSessionRounds.length} Rounds)`
+                    : activeSessionRounds.length === 1
+                      ? `Launch Solo Round ${activeSessionRounds[0].roundNumber}`
+                      : `Launch ${activeSessionRounds.length} Selected Rounds`}
+                </span>
+                <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -1862,7 +2102,11 @@ ${evaluationResult.areasForImprovement.map((a) => `• ${a}`).join("\n")}
                     </span>
                     <span className="text-muted-foreground">•</span>
                     <span className="text-[11px] font-mono text-muted-foreground">
-                      {studioMode === "practice" ? `Sparring: ${practiceSkillInput || "Skill"}` : `Round ${currentRoundIndex + 1} of ${formulatedPlan?.rounds.length || 3}`}
+                      {studioMode === "practice"
+                        ? `Sparring: ${practiceSkillInput || "Skill"}`
+                        : activeSessionRounds.length === 1
+                          ? `🎯 Solo Focus: Round ${activeSessionRounds[0]?.roundNumber} - ${activeSessionRounds[0]?.title}`
+                          : `Round ${currentRoundIndex + 1} of ${activeSessionRounds.length}: ${activeSessionRounds[currentRoundIndex]?.title || ""}`}
                     </span>
                   </div>
                 </div>
@@ -1886,6 +2130,54 @@ ${evaluationResult.areasForImprovement.map((a) => `• ${a}`).join("\n")}
                 </Button>
               </div>
             </div>
+
+            {/* Multi-Round Stepper & Round Switcher (shown when more than 1 round is in the active session) */}
+            {studioMode === "interview" && activeSessionRounds.length > 1 && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-2.5 rounded-xl bg-card border border-border/70 text-xs shadow-xs">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-1 shrink-0">
+                    Active Loop:
+                  </span>
+                  {activeSessionRounds.map((r, idx) => {
+                    const isCurrent = idx === currentRoundIndex;
+                    const isPassed = idx < currentRoundIndex;
+                    return (
+                      <button
+                        key={r.roundNumber}
+                        type="button"
+                        onClick={() => setCurrentRoundIndex(idx)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer ${
+                          isCurrent
+                            ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                            : isPassed
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                              : "bg-muted/40 text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <span>{isPassed ? "✓" : isCurrent ? "●" : "○"}</span>
+                        <span>Round {r.roundNumber}: {r.title}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {currentRoundIndex < activeSessionRounds.length - 1 ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleAdvanceToNextRound}
+                    className="h-7 px-3 text-xs font-bold bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground border border-primary/30 shrink-0 gap-1 cursor-pointer"
+                  >
+                    <span>Advance to Round {activeSessionRounds[currentRoundIndex + 1]?.roundNumber}</span>
+                    <ArrowRight className="h-3 w-3" />
+                  </Button>
+                ) : (
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase px-2 py-0.5 rounded bg-muted shrink-0">
+                    Final Round in Progress
+                  </span>
+                )}
+              </div>
+            )}
 
             {/* Split Screen Studio: Left Mirror / Right Transcript */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
