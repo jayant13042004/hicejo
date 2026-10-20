@@ -237,6 +237,14 @@ export default function CoverLetterPage() {
 
       if (dataUrl) {
         pdf.addImage(dataUrl, "PNG", 0, 0, 210, 297, undefined, "FAST");
+        try {
+          if (letterContent && letterContent.trim()) {
+            const splitText = pdf.splitTextToSize(letterContent.trim(), 190);
+            pdf.text(splitText, 10, 10, { renderingMode: "invisible" });
+          }
+        } catch {
+          // Non-blocking fallback
+        }
       } else {
         // Pure text fallback to ensure it is never blank
         pdf.setFont("times", "normal");

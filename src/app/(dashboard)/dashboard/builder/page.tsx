@@ -591,6 +591,17 @@ function ResumeBuilderContent() {
       // Exact A4 dimensions: 210mm x 297mm
       pdf.addImage(dataUrl, "PNG", 0, 0, 210, 297, undefined, "FAST");
 
+      // Embed searchable, ATS-compliant text layer for ATS parsers and text extraction
+      try {
+        const rawText = resumeEl.innerText || "";
+        if (rawText.trim()) {
+          const lines = pdf.splitTextToSize(rawText.trim(), 190);
+          pdf.text(lines, 10, 10, { renderingMode: "invisible" });
+        }
+      } catch {
+        // Non-blocking if invisible text embedding has browser constraints
+      }
+
       const defaultName = (data.personalInfo.fullName || title || "Resume")
         .trim()
         .replace(/[^a-zA-Z0-9_\-\s]/g, "")
@@ -609,6 +620,16 @@ function ResumeBuilderContent() {
         const imgData = canvas.toDataURL("image/jpeg", 0.98);
         const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
         pdf.addImage(imgData, "JPEG", 0, 0, 210, 297);
+
+        try {
+          const rawText = resumeEl.innerText || "";
+          if (rawText.trim()) {
+            const lines = pdf.splitTextToSize(rawText.trim(), 190);
+            pdf.text(lines, 10, 10, { renderingMode: "invisible" });
+          }
+        } catch {
+          // Non-blocking fallback
+        }
         const defaultName = (data.personalInfo.fullName || title || "Resume").trim().replace(/[^a-zA-Z0-9_\-\s]/g, "").replace(/\s+/g, "_");
         pdf.save(`${defaultName || "Resume"}.pdf`);
         setIsDownloadModalOpen(false);
