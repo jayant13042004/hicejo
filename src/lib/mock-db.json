@@ -13,6 +13,45 @@
   },
   "resumes": [
     {
+      "id": "1792507710918",
+      "user_id": "demo-user-id",
+      "title": "Custom Role Resume",
+      "content": {
+        "personalInfo": {
+          "fullName": "",
+          "email": "",
+          "phone": "",
+          "location": "",
+          "website": "",
+          "linkedin": ""
+        },
+        "summary": "",
+        "experience": [],
+        "education": [],
+        "projects": [],
+        "skills": [],
+        "design": {
+          "fontFamily": "font-sans",
+          "fontSize": "md",
+          "sectionOrder": [
+            "summary",
+            "experience",
+            "projects",
+            "education",
+            "skills"
+          ],
+          "density": "normal",
+          "sectionSpacing": 1,
+          "itemSpacing": 1,
+          "lineHeight": 1.4,
+          "autoFitOnePage": false
+        }
+      },
+      "ats_score": 0,
+      "created_at": "2026-10-20T14:48:30.918Z",
+      "updated_at": "2026-10-20T14:48:30.918Z"
+    },
+    {
       "id": "1792491004793",
       "user_id": "demo-user-id",
       "title": "Scale AI - Business Intelligence & Data Analyst Tailored",
