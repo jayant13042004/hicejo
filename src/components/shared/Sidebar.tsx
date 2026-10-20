@@ -18,13 +18,15 @@ import {
   FileUp,
   ShieldCheck
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { BrandMark } from "@/components/shared/BrandMark";
 
 export interface NavItem {
   label: string;
   href: string;
-  icon: any;
+  icon: LucideIcon;
 }
 
 export interface NavGroup {
@@ -81,13 +83,13 @@ export function Sidebar() {
 
   return (
     <motion.div
-      animate={{ width: isCollapsed ? 64 : 240 }}
+      animate={{ width: isCollapsed ? 72 : 248 }}
       transition={{ type: "spring", stiffness: 350, damping: 30 }}
-      className="no-print relative hidden md:flex flex-col h-screen border-r border-border/70 bg-card text-foreground select-none shrink-0"
+      className="dashboard-sidebar no-print relative hidden md:flex flex-col h-screen border-r border-border/70 bg-card text-foreground select-none shrink-0"
     >
       {/* Collapse button */}
       <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
+        onClick={() => setIsCollapsed((collapsed) => !collapsed)}
         className="absolute -right-3 top-5 z-20 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground shadow-xs cursor-pointer transition-colors"
         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
@@ -95,18 +97,18 @@ export function Sidebar() {
       </button>
 
       {/* Brand Header */}
-      <div className="flex h-14 items-center px-4 border-b border-border/50">
+      <div className="dashboard-sidebar-brand flex h-16 items-center px-4 border-b border-border/50">
         <Link href="/dashboard" className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground font-black text-xs shrink-0 shadow-xs">
-            H
+          <div className="dashboard-sidebar-mark flex h-9 w-9 items-center justify-center rounded-xl shrink-0">
+            <BrandMark className="h-7 w-7" />
           </div>
           {!isCollapsed && (
-            <div className="flex items-baseline gap-1.5 overflow-hidden">
+            <div className="flex flex-col gap-0.5 overflow-hidden">
               <span className="text-sm font-bold tracking-tight text-foreground">
                 Hicejo
               </span>
-              <span className="text-[10px] text-muted-foreground font-mono">
-                workspace
+              <span className="text-[9px] text-muted-foreground tracking-wide">
+                CAREER WORKSPACE
               </span>
             </div>
           )}
@@ -114,11 +116,11 @@ export function Sidebar() {
       </div>
 
       {/* Navigation list */}
-      <div className="flex-1 py-3 px-2 space-y-4 overflow-y-auto overflow-x-hidden">
+      <div className="dashboard-sidebar-nav flex-1 py-5 px-3 space-y-6 overflow-y-auto overflow-x-hidden">
         {NAV_GROUPS.map((group) => (
-          <div key={group.group} className="space-y-0.5">
+          <div key={group.group} className="space-y-1">
             {!isCollapsed && (
-              <div className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <div className="dashboard-nav-label px-2.5 py-1.5 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/70">
                 {group.group}
               </div>
             )}
@@ -134,14 +136,15 @@ export function Sidebar() {
                   href={item.href}
                   title={isCollapsed ? item.label : undefined}
                   className={cn(
-                    "group relative flex items-center h-8.5 px-2.5 rounded-md text-xs font-medium transition-colors",
+                    "dashboard-nav-item group relative flex items-center h-10 px-2.5 rounded-lg text-[12px] font-medium transition-colors",
                     isActive
-                      ? "bg-secondary text-foreground font-semibold"
+                      ? "dashboard-nav-item-active bg-secondary text-foreground font-semibold"
                       : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
                   )}
+                  aria-current={isActive ? "page" : undefined}
                 >
                   {isActive && (
-                    <div className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-primary" />
+                    <div className="dashboard-nav-indicator absolute left-0 top-2 bottom-2 w-0.5 rounded-r bg-primary" />
                   )}
                   <Icon
                     className={cn(
@@ -160,15 +163,16 @@ export function Sidebar() {
       </div>
 
       {/* Bottom User Area */}
-      <div className="p-2 border-t border-border/50">
-        <div className="flex items-center justify-between p-1.5 rounded-md hover:bg-secondary/60 transition-colors">
+      <div className="dashboard-sidebar-account p-3 border-t border-border/50">
+        <div className="flex items-center justify-between p-2 rounded-lg hover:bg-secondary/60 transition-colors">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-foreground font-bold text-[10px] shrink-0 border border-border">
+            <div className="dashboard-avatar flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-foreground font-bold text-[11px] shrink-0 border border-border">
               J
             </div>
             {!isCollapsed && (
               <div className="min-w-0">
-                <p className="text-xs font-medium text-foreground truncate">Jayant</p>
+                <p className="text-xs font-semibold text-foreground truncate">Jayant</p>
+                <span className="text-[10px] text-muted-foreground">Personal workspace</span>
               </div>
             )}
           </div>
@@ -203,7 +207,7 @@ export function MobileDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: ()
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
+        <div id="dashboard-mobile-navigation" className="fixed inset-0 z-50 md:hidden">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -219,13 +223,13 @@ export function MobileDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: ()
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 300 }}
-            className="relative flex flex-col w-68 max-w-[80vw] h-full bg-card border-r border-border text-foreground shadow-xl z-10"
+            className="dashboard-mobile-drawer relative flex flex-col w-68 max-w-[80vw] h-full bg-card border-r border-border text-foreground shadow-xl z-10"
           >
             {/* Header */}
             <div className="flex h-14 items-center justify-between px-4 border-b border-border/50">
               <Link href="/dashboard" onClick={onClose} className="flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground font-black text-xs shrink-0">
-                  H
+                <div className="dashboard-sidebar-mark flex h-8 w-8 items-center justify-center rounded-lg shrink-0">
+                  <BrandMark className="h-6 w-6" />
                 </div>
                 <span className="text-sm font-bold tracking-tight">Hicejo</span>
               </Link>
@@ -257,11 +261,12 @@ export function MobileDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: ()
                         href={item.href}
                         onClick={onClose}
                         className={cn(
-                          "flex items-center h-8.5 px-2.5 rounded-md text-xs font-medium transition-colors",
+                          "dashboard-nav-item flex items-center h-10 px-2.5 rounded-lg text-xs font-medium transition-colors",
                           isActive
-                            ? "bg-secondary text-foreground font-semibold"
+                            ? "dashboard-nav-item-active bg-secondary text-foreground font-semibold"
                             : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
                         )}
+                        aria-current={isActive ? "page" : undefined}
                       >
                         <Icon className={cn("h-4 w-4 mr-2.5 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
                         <span>{item.label}</span>

@@ -1,16 +1,9 @@
 import { NextResponse } from "next/server";
 import { getAIClient } from "@/lib/ai";
-
-function isTechnicalRole(role: string): boolean {
-  const r = (role || "").toLowerCase();
-  const techKeywords = [
-    "software", "engineer", "developer", "frontend", "backend", "fullstack", "full stack",
-    "devops", "cloud", "sre", "data engineer", "data scientist", "machine learning", "ml ", "ai ",
-    "security engineer", "qa", "qa engineer", "systems engineer",
-    "ios", "android", "mobile engineer", "embedded", "firmware", "architect", "database administrator", "dba"
-  ];
-  return techKeywords.some((kw) => r.includes(kw));
-}
+import {
+  getInterviewRoundsForRoleAndCompany,
+  isTechnicalRole
+} from "@/lib/interviewRoundCatalog";
 
 export async function POST(request: Request) {
   try {
@@ -21,6 +14,9 @@ export async function POST(request: Request) {
       jobDescription = "",
       resumeText = "",
       roundType = "full_loop",
+      roundTitle = "",
+      roundDescription = "",
+      roundDirective = "",
       customFocus = "",
       scratchpadCode = "",
       scratchpadLanguage = "python",
@@ -42,6 +38,16 @@ export async function POST(request: Request) {
     const cleanScratchpad = String(scratchpadCode || "").slice(0, 3000).trim();
     const cleanLanguage = String(scratchpadLanguage || "python").slice(0, 30).trim();
     const isTech = isTechnicalRole(cleanRole);
+
+    const availableRounds = getInterviewRoundsForRoleAndCompany(cleanRole, cleanCompany);
+    const matchedRound =
+      availableRounds.find(
+        (r) => r.id === cleanRoundType || r.label.toLowerCase() === String(roundTitle).toLowerCase()
+      ) || availableRounds[0];
+
+    const activeRoundTitle = String(roundTitle || matchedRound?.label || cleanRoundType).trim();
+    const activeRoundDesc = String(roundDescription || matchedRound?.desc || "").trim();
+    let roundFocusDirective = String(roundDirective || matchedRound?.focusDirective || "").trim();
 
     // Pure voice tone profiles (speech/conversational delivery style, NO fake roles or titles)
     const voiceProfiles: Record<string, { name: string; tone: string }> = {
@@ -92,25 +98,23 @@ export async function POST(request: Request) {
     }
 
     const maxWords = mode === "voice" ? "under 60-70 words" : "under 90-100 words";
-
-    const companyContext = cleanCompany ? ` at ${cleanCompany}` : "";
-    const topicLabel = cleanSkill ? `Skill Sparring on "${cleanSkill}"` : `${cleanRole} Interview${companyContext}`;
     
-    let roundFocusDirective = "";
-    if (cleanRoundType === "technical") {
-      roundFocusDirective = isTech
-        ? "ROUND FOCUS: Purely TECHNICAL Coding, Data Structures, Concurrency & Algorithms. Probe time/space complexity, edge cases, and code design. DO NOT ask HR, managerial, or generic behavioral questions."
-        : "ROUND FOCUS: REAL-WORLD DOMAIN CASE STUDY & QUANTITATIVE EXECUTION. Probe domain frameworks (e.g. CAC/LTV, funnel drop-offs for marketing; discovery, objections, enterprise sales cycles for sales; DCF/3-statement models, margins for finance; SLAs, bottlenecks, capacity planning for operations). DO NOT ask coding or software engineering questions.";
-    } else if (cleanRoundType === "system_design") {
-      roundFocusDirective = isTech
-        ? "ROUND FOCUS: SYSTEM DESIGN & ARCHITECTURE. Probe high-level component diagrams, database partitioning, caching layers, API gateways, latency, and single points of failure."
-        : "ROUND FOCUS: STRATEGY, OPERATING FRAMEWORKS & SCALING. Probe Go-To-Market execution, operating models, resource allocation, KPI benchmarks, and business scaling.";
-    } else if (cleanRoundType === "managerial") {
-      roundFocusDirective = isTech
-        ? "ROUND FOCUS: MANAGERIAL & LEADERSHIP. Probe how the candidate manages deadlines, resolves technical or strategic deadlocks, handles underperformance, and navigates cross-functional trade-offs."
-        : "ROUND FOCUS: STAKEHOLDER MANAGEMENT & TEAM LEADERSHIP. Probe cross-functional alignment, managing underperforming team members, negotiating conflicting priorities, and executive influence.";
-    } else if (cleanRoundType === "behavioral") {
-      roundFocusDirective = `ROUND FOCUS: BEHAVIORAL & CULTURE ALIGNMENT (STAR METHOD). Probe Situation, Task, Action, and Result. Evaluate communication, conflict resolution${cleanCompany ? `, and ${cleanCompany} core values` : ""}.`;
+    if (!roundFocusDirective) {
+      if (cleanRoundType === "technical" || cleanRoundType === "coding_2") {
+        roundFocusDirective = isTech
+          ? "ROUND FOCUS: Purely TECHNICAL Coding, Data Structures, Concurrency & Algorithms. Probe time/space complexity, edge cases, and code design. DO NOT ask HR, managerial, or generic behavioral questions."
+          : "ROUND FOCUS: REAL-WORLD DOMAIN CASE STUDY & QUANTITATIVE EXECUTION. Probe domain frameworks (e.g. CAC/LTV, funnel drop-offs for marketing; discovery, objections, enterprise sales cycles for sales; DCF/3-statement models, margins for finance; SLAs, bottlenecks, capacity planning for operations). DO NOT ask coding or software engineering questions.";
+      } else if (cleanRoundType === "system_design") {
+        roundFocusDirective = isTech
+          ? "ROUND FOCUS: SYSTEM DESIGN & ARCHITECTURE. Probe high-level component diagrams, database partitioning, caching layers, API gateways, latency, and single points of failure."
+          : "ROUND FOCUS: STRATEGY, OPERATING FRAMEWORKS & SCALING. Probe Go-To-Market execution, operating models, resource allocation, KPI benchmarks, and business scaling.";
+      } else if (cleanRoundType === "managerial") {
+        roundFocusDirective = isTech
+          ? "ROUND FOCUS: MANAGERIAL & LEADERSHIP. Probe how the candidate manages deadlines, resolves technical or strategic deadlocks, handles underperformance, and navigates cross-functional trade-offs."
+          : "ROUND FOCUS: STAKEHOLDER MANAGEMENT & TEAM LEADERSHIP. Probe cross-functional alignment, managing underperforming team members, negotiating conflicting priorities, and executive influence.";
+      } else if (cleanRoundType === "behavioral") {
+        roundFocusDirective = `ROUND FOCUS: BEHAVIORAL & CULTURE ALIGNMENT (STAR METHOD). Probe Situation, Task, Action, and Result. Evaluate communication, conflict resolution${cleanCompany ? `, and ${cleanCompany} core values` : ""}.`;
+      }
     }
 
     const interviewerRoleDescription = cleanCompany
@@ -120,9 +124,11 @@ export async function POST(request: Request) {
     const systemPrompt = `You are ${activeVoice.name}, ${interviewerRoleDescription}.
 Conversational Tone: ${activeVoice.tone}
 Mode: ${mode === "text" ? "Text-Based Studio" : "Live Voice Simulation"}
+${activeRoundTitle ? `Target Dimension / Round: ${activeRoundTitle}` : ""}
+${activeRoundDesc ? `Round Dimension Focus: ${activeRoundDesc}` : ""}
 ${roundFocusDirective}
 
-Active Interview Round: ${activeRoundInfo ? `Round ${activeRoundInfo.roundNumber}: ${activeRoundInfo.title} (Objective: ${activeRoundInfo.objective})` : `Round ${currentRound}`}
+Active Interview Round: ${activeRoundInfo ? `Round ${activeRoundInfo.roundNumber}: ${activeRoundInfo.title} (Objective: ${activeRoundInfo.objective})` : (activeRoundTitle || `Round ${currentRound}`)}
 
 YOUR OBJECTIVE:
 - Act like an authentic, highly experienced hiring manager for ${cleanRole}${cleanCompany ? ` at ${cleanCompany}` : ""}.
@@ -143,12 +149,14 @@ ${cleanJd ? `Target Job Requirements Context:\n${cleanJd}\n` : ""}
 ${cleanResume ? `Candidate Experience Context:\n${cleanResume}\n` : ""}`;
 
     // Format conversation history for LLM
-    const formattedHistory = (messages || []).slice(-6).map((m: any) => ({
-      role: m.role === "interviewer" ? "assistant" : "user",
-      content: String(m.content || "").slice(0, 1000)
-    }));
+    const formattedHistory = (messages || [])
+      .slice(-6)
+      .map((m: { role: string; content: string }) => ({
+        role: m.role === "interviewer" ? ("assistant" as const) : ("user" as const),
+        content: String(m.content || "").slice(0, 1000)
+      }));
 
-    const apiMessages = [
+    const apiMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
       { role: "system", content: systemPrompt },
       ...formattedHistory
     ];
@@ -162,7 +170,7 @@ ${cleanResume ? `Candidate Experience Context:\n${cleanResume}\n` : ""}`;
 
     const response = await openai.chat.completions.create({
       model: modelMini,
-      messages: apiMessages as any,
+      messages: apiMessages,
       temperature: 0.5,
       max_tokens: 250
     });
@@ -176,7 +184,7 @@ ${cleanResume ? `Candidate Experience Context:\n${cleanResume}\n` : ""}`;
       isClosing: turnCount >= 4,
       followUpType: turnCount >= 4 ? "wrapup" : "probe"
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Interview conversation turn error:", err);
     return NextResponse.json({
       success: true,

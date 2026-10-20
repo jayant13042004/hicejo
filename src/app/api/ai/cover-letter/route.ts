@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAIClient } from "@/lib/ai";
+import { isTechnicalRole } from "@/lib/interviewRoundCatalog";
 import { createServerSideClient } from "@/lib/supabase/server";
 import { isDemoMode, getDemoResume, getDemoResumes, insertDemoCoverLetter } from "@/lib/supabase/demo";
 
@@ -132,17 +133,6 @@ Candidate Name`;
 
       return NextResponse.json({ success: true, data: { content: mockContent, id: crypto.randomUUID() } });
     }
-
-    const isTechnicalRole = (roleStr: string) => {
-      const lower = (roleStr || "").toLowerCase();
-      const techKeywords = [
-        "engineer", "developer", "software", "architect", "data science",
-        "data scientist", "backend", "frontend", "full stack", "fullstack",
-        "devops", "sre", "machine learning", "ml", "ai engineer", "cloud",
-        "qa", "tester", "systems", "security engineer", "mobile", "ios", "android"
-      ];
-      return techKeywords.some(k => lower.includes(k));
-    };
 
     const isTech = isTechnicalRole(targetJobTitle);
 

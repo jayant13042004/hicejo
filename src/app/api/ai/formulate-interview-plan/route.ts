@@ -1,16 +1,10 @@
 import { NextResponse } from "next/server";
 import { getAIClient } from "@/lib/ai";
-
-function isTechnicalRole(role: string): boolean {
-  const r = (role || "").toLowerCase();
-  const techKeywords = [
-    "software", "engineer", "developer", "frontend", "backend", "fullstack", "full stack",
-    "devops", "cloud", "sre", "data engineer", "data scientist", "machine learning", "ml ", "ai ",
-    "security engineer", "qa", "qa engineer", "systems engineer",
-    "ios", "android", "mobile engineer", "embedded", "firmware", "architect", "database administrator", "dba"
-  ];
-  return techKeywords.some((kw) => r.includes(kw));
-}
+import {
+  detectRoleCategory,
+  getInterviewRoundsForRoleAndCompany,
+  isTechnicalRole
+} from "@/lib/interviewRoundCatalog";
 
 export async function POST(request: Request) {
   let cleanRole = "Software Engineer";
@@ -28,10 +22,12 @@ export async function POST(request: Request) {
       experienceLevel = "Mid-Level",
       jobDescription = "",
       resumeText = "",
-      roundType = "full_loop", // "full_loop" | "technical" | "system_design" | "managerial" | "behavioral"
+      roundType = "full_loop",
+      roundTitle = "",
+      roundDescription = "",
+      roundDirective = "",
       customFocus = "",
-      focusArea = "comprehensive",
-      persona = "alex"
+      focusArea = "comprehensive"
     } = await request.json().catch(() => ({}));
 
     cleanRole = String(role).slice(0, 100).trim() || "Software Engineer";
@@ -42,6 +38,7 @@ export async function POST(request: Request) {
     const cleanResume = String(resumeText).slice(0, 3000).trim();
     cleanRoundType = String(roundType || "full_loop").trim();
     const cleanCustomFocus = String(customFocus || "").slice(0, 2000).trim();
+    const roleCategory = detectRoleCategory(cleanRole);
     isTech = isTechnicalRole(cleanRole);
 
     const { openai, modelMini, isConfigured } = getAIClient();
@@ -120,124 +117,30 @@ Return only valid JSON.`;
       return NextResponse.json({ success: true, plan: JSON.parse(cleanJson) });
     }
 
-    // Mode B: Mock Interview with Round Isolation & Company Targeting
+    // Mode B: Mock Interview with Dynamic Role & Company Round Isolation
     const companyTitle = cleanCompany ? `${cleanCompany} ` : "";
-    isTech = isTechnicalRole(cleanRole);
+    const availableRounds = getInterviewRoundsForRoleAndCompany(cleanRole, cleanCompany);
+    const matchedRound =
+      availableRounds.find(
+        (r) => r.id === cleanRoundType || r.label.toLowerCase() === String(roundTitle).toLowerCase()
+      ) || availableRounds[0];
 
-    const roundTypeDescriptions: Record<string, { title: string; desc: string }> = isTech
-      ? {
-          technical: {
-            title: `${companyTitle}${cleanRole} Technical Coding & Algorithms Round`,
-            desc: `A dedicated technical round focusing strictly on data structures, algorithmic problem solving, code reasoning, and time/space complexity.`
-          },
-          system_design: {
-            title: `${companyTitle}${cleanRole} System Design & Architecture Round`,
-            desc: `A dedicated systems architecture round focusing strictly on distributed systems design, scalability, database partitioning, caching, and failure recovery.`
-          },
-          managerial: {
-            title: `${companyTitle}${cleanRole} Engineering Leadership & Managerial Round`,
-            desc: `A dedicated managerial round focusing on technical decision-making under ambiguity, cross-functional delivery, team conflict, and execution tradeoffs.`
-          },
-          behavioral: {
-            title: `${companyTitle}${cleanRole} Behavioral & Culture Alignment Round`,
-            desc: `A dedicated behavioral round assessing STAR competency delivery, work style, values alignment${cleanCompany ? `, and ${cleanCompany}'s cultural tenets` : ""}.`
-          },
-          full_loop: {
-            title: `${companyTitle}${cleanRole} Full Hiring Loop Simulation`,
-            desc: `A comprehensive multi-round interview loop structured to simulate the exact hiring sequence used at ${cleanCompany || "top tech companies"}.`
-          }
-        }
-      : {
-          technical: {
-            title: `${companyTitle}${cleanRole} Practical Case Study & Domain Execution`,
-            desc: `A dedicated domain round focusing on real-world case analysis, quantitative metrics, domain frameworks, and problem-solving execution.`
-          },
-          system_design: {
-            title: `${companyTitle}${cleanRole} Strategy, Frameworks & Scaling Round`,
-            desc: `A dedicated strategic round focusing on operating models, resource allocation, Go-To-Market execution, and business scaling.`
-          },
-          managerial: {
-            title: `${companyTitle}${cleanRole} Stakeholder Alignment & Leadership Round`,
-            desc: `A dedicated leadership round focusing on cross-functional alignment, managing underperformance, negotiating priorities, and organizational influence.`
-          },
-          behavioral: {
-            title: `${companyTitle}${cleanRole} Behavioral & Culture Alignment Round`,
-            desc: `A dedicated behavioral round assessing STAR competency delivery, work style, ownership, and values alignment${cleanCompany ? ` at ${cleanCompany}` : ""}.`
-          },
-          full_loop: {
-            title: `${companyTitle}${cleanRole} Full Hiring Loop Simulation`,
-            desc: `A comprehensive multi-round interview loop structured to simulate the exact hiring sequence used at ${cleanCompany || "top employers"}.`
-          }
-        };
-
-    const activeRoundConfig = roundTypeDescriptions[cleanRoundType] || roundTypeDescriptions.full_loop;
+    const activeRoundTitle = String(roundTitle || matchedRound?.label || `${companyTitle}${cleanRole} Interview`).trim();
+    const activeRoundDesc = String(roundDescription || matchedRound?.desc || "Authentic interview simulation").trim();
+    const activeDirective = String(roundDirective || matchedRound?.focusDirective || "").trim();
 
     if (!isConfigured) {
       // Mock plan fallback with isolated rounds
-      let mockRounds = isTech
-        ? [
-            {
-              roundNumber: 1,
-              title: "Technical Foundations & Problem Solving",
-              objective: "Assess core engineering execution, data structures, and algorithmic decision making.",
-              openingQuestion: `Welcome to the interview for the ${cleanRole} role${cleanCompany ? ` at ${cleanCompany}` : ""}. To start our technical evaluation, walk me through how you would design an efficient in-memory cache with eviction under high concurrent traffic.`
-            }
-          ]
-        : [
-            {
-              roundNumber: 1,
-              title: "Domain Problem Solving & Case Analysis",
-              objective: `Assess practical problem solving, analytical frameworks, and execution metrics in ${cleanRole}.`,
-              openingQuestion: `Welcome to the interview for the ${cleanRole} position${cleanCompany ? ` at ${cleanCompany}` : ""}. To begin our domain evaluation, walk me through a high-stakes initiative you owned from problem definition to measurable business ROI.`
-            }
-          ];
+      let mockRounds = [
+        {
+          roundNumber: 1,
+          title: activeRoundTitle,
+          objective: activeRoundDesc,
+          openingQuestion: `Welcome to the interview for the ${cleanRole} position${cleanCompany ? ` at ${cleanCompany}` : ""}. Let's begin our evaluation for ${activeRoundTitle}: Walk me through a high-impact initiative you led, detailing the key technical or domain trade-offs you made.`
+        }
+      ];
 
-      if (cleanRoundType === "system_design") {
-        mockRounds = isTech
-          ? [
-              {
-                roundNumber: 1,
-                title: "Scalable System Architecture & Failure Modes",
-                objective: "Assess how you architect distributed services, handle bottlenecks, and evaluate database trade-offs.",
-                openingQuestion: `Let's dive into system design for ${cleanCompany || "production scale"}. Design a distributed rate limiter that handles 500,000 requests per second across multiple regional clusters with sub-millisecond overhead.`
-              }
-            ]
-          : [
-              {
-                roundNumber: 1,
-                title: "Strategy, Operating Models & Scaling",
-                objective: "Assess high-level strategic reasoning, resource allocation, and operating models.",
-                openingQuestion: `Let's look at strategic scaling: When expanding our current offering into an adjacent market segment, what operating model and milestone checkpoints would you establish to validate demand before heavy capital commitment?`
-              }
-            ];
-      } else if (cleanRoundType === "managerial") {
-        mockRounds = isTech
-          ? [
-              {
-                roundNumber: 1,
-                title: "Engineering Leadership, Prioritization & Deadlocks",
-                objective: "Evaluate decision making under ambiguity, team execution, and technical trade-offs.",
-                openingQuestion: `Tell me about a situation where product requirements demanded a release in 2 weeks, but your engineering team flagged severe technical debt risks. How did you negotiate and deliver?`
-              }
-            ]
-          : [
-              {
-                roundNumber: 1,
-                title: "Stakeholder Alignment & Influence Under Ambiguity",
-                objective: "Evaluate cross-functional leadership, conflict resolution, and executive communication.",
-                openingQuestion: `Tell me about a time you had to persuade senior leadership or an uncooperative cross-functional team to approve a strategy they initially opposed. How did you build consensus and deliver?`
-              }
-            ];
-      } else if (cleanRoundType === "behavioral") {
-        mockRounds = [
-          {
-            roundNumber: 1,
-            title: "Behavioral Delivery & Cultural Alignment (STAR)",
-            objective: "Verify leadership ownership, cross-functional alignment, and handling conflict.",
-            openingQuestion: `Can you share an example of a project where an initiative you led failed or missed a critical deadline? What did you learn and how did you adapt your process going forward?`
-          }
-        ];
-      } else if (cleanRoundType === "full_loop") {
+      if (cleanRoundType === "full_loop") {
         mockRounds = isTech
           ? [
               {
@@ -284,8 +187,8 @@ Return only valid JSON.`;
       return NextResponse.json({
         success: true,
         plan: {
-          title: activeRoundConfig.title,
-          overview: activeRoundConfig.desc,
+          title: activeRoundTitle,
+          overview: activeRoundDesc,
           targetCompetencies: isTech
             ? [
                 "Technical Problem Solving",
@@ -317,11 +220,19 @@ Return only valid JSON.`;
 
     const systemPrompt = `You are an Executive Bar Raiser and Senior Hiring Director formulating an authentic interview plan.
 Target Company: ${cleanCompany ? cleanCompany : "General Industry Best Practice"}
-Target Role: ${cleanRole} (${cleanLevel}) [${isTech ? "Technical Engineering Track" : "Business / Non-Technical Track"}]
-Selected Round Type: ${cleanRoundType.toUpperCase()}
+Target Role: ${cleanRole} (${cleanLevel}) [Discipline: ${roleCategory.toUpperCase()}]
+Selected Round Type: ${activeRoundTitle}
+Round Objective & Scope: ${activeRoundDesc}
+${activeDirective ? `Strict Round Directive: ${activeDirective}` : ""}
 ${cleanCustomFocus ? `Candidate's Custom Focus Topics / Past Questions:\n${cleanCustomFocus}` : ""}
 
-CRITICAL ROLE & ROUND SEPARATION RULES:
+CRITICAL ROLE & ROUND ISOLATION RULES:
+1. If Selected Round Type is 'FULL_LOOP' or a multi-round hiring loop:
+   - Formulate a 3-round authentic hiring loop representing the actual interview stages of ${cleanCompany || "top employers"} for ${cleanRole}.
+2. If an isolated round was selected (e.g. "${activeRoundTitle}"):
+   - Generate ONLY 1 single, hyper-focused, rigorous round matching "${activeRoundTitle}".
+   - Target strictly: "${activeRoundDesc}".
+   - DO NOT mix unrelated dimensions (e.g. in a Technical Coding / DSA round, do NOT ask HR, behavioral, or salary questions; in a System Design round, do NOT ask LeetCode coding or generic HR questions; in a Domain Case round, ask realistic domain case problems; in a Behavioral / STAR round, evaluate STAR past experiences).
 ${isTech ? `
 TECHNICAL ROLE RULES:
 1. If Selected Round Type is 'TECHNICAL':
@@ -369,7 +280,8 @@ Return only valid JSON with no markdown formatting.`;
 
     const userPrompt = `Company: ${cleanCompany || "General Tech Firm"}
 Role: ${cleanRole} (${cleanLevel})
-Round Type: ${cleanRoundType}
+Round Type: ${activeRoundTitle}
+Round Objective: ${activeRoundDesc}
 ${cleanCustomFocus ? `Candidate Custom Focus / Past Questions:\n${cleanCustomFocus}\n` : ""}
 ${cleanJd ? `Target Job Description:\n${cleanJd}\n` : ""}
 ${cleanResume ? `Candidate Resume / Key Experience:\n${cleanResume}\n` : ""}`;
@@ -401,7 +313,7 @@ ${cleanResume ? `Candidate Resume / Key Experience:\n${cleanResume}\n` : ""}`;
       success: true,
       plan: parsed
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Formulate interview plan error:", err);
 
     // Build dynamic JD-grounded fallback plan

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAIClient } from "@/lib/ai";
+import { isTechnicalRole } from "@/lib/interviewRoundCatalog";
 
 // POST /api/ai/enhance-bullet - Optimize resume bullet points using Google XYZ format
 export async function POST(request: Request) {
@@ -18,17 +19,6 @@ export async function POST(request: Request) {
       .split("\n")
       .map((l) => l.trim().replace(/^[•\-\*\s]+/, ""))
       .filter((l) => l.length > 0);
-
-    const isTechnicalRole = (roleStr: string) => {
-      const lower = (roleStr || "").toLowerCase();
-      const techKeywords = [
-        "engineer", "developer", "software", "architect", "data science",
-        "data scientist", "backend", "frontend", "full stack", "fullstack",
-        "devops", "sre", "machine learning", "ml", "ai engineer", "cloud",
-        "qa", "tester", "systems", "security engineer", "mobile", "ios", "android"
-      ];
-      return techKeywords.some(k => lower.includes(k));
-    };
 
     const isTech = isTechnicalRole(jobTitle);
 

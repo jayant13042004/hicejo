@@ -22,21 +22,27 @@ export function DashboardShell({ children, title = "Overview", featureKey, maxWi
   const [isMobileOpen, setIsMobileOpen] = React.useState(false);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
+    <div className="dashboard-app flex h-screen w-screen overflow-hidden bg-background text-foreground">
       {/* Desktop Navigation Sidebar */}
       <Sidebar />
 
       {/* Mobile Off-canvas Navigation Drawer */}
-      <MobileDrawer isOpen={isMobileOpen} onClose={() => setIsMobileOpen(false)} />
+      <MobileDrawer
+        isOpen={isMobileOpen}
+        onClose={() => setIsMobileOpen(false)}
+      />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Top Slim Header */}
-        <header className="no-print flex h-13 items-center justify-between px-4 sm:px-6 border-b border-border/60 bg-card/60 backdrop-blur-xs shrink-0 z-10">
+        <header className="dashboard-topbar no-print flex h-13 items-center justify-between px-4 sm:px-6 border-b border-border/60 bg-card/60 backdrop-blur-xs shrink-0 z-10">
           <div className="flex items-center gap-3">
             {/* Mobile Hamburger Button */}
             <button
               onClick={() => setIsMobileOpen(true)}
+              type="button"
+              aria-expanded={isMobileOpen}
+              aria-controls="dashboard-mobile-navigation"
               className="md:hidden flex h-8 w-8 items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-secondary cursor-pointer"
               aria-label="Open menu"
             >
@@ -85,7 +91,7 @@ export function DashboardShell({ children, title = "Overview", featureKey, maxWi
             </button>
 
             {/* User Profile Avatar */}
-            <div className="flex items-center pl-1.5 border-l border-border/60">
+            <div className="dashboard-user-profile flex items-center pl-1.5 border-l border-border/60">
               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary border border-border text-foreground font-semibold text-xs">
                 J
               </div>
@@ -94,8 +100,8 @@ export function DashboardShell({ children, title = "Overview", featureKey, maxWi
         </header>
 
         {/* Viewport Content */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-background">
-          <div className={cn("mx-auto space-y-6", maxWidth || "max-w-5xl")}>
+        <main className="dashboard-content flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-background">
+          <div className={cn("dashboard-page-container mx-auto space-y-6", maxWidth || "max-w-6xl")}>
             {children}
           </div>
         </main>

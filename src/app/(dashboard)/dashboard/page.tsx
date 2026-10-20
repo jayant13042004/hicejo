@@ -288,11 +288,11 @@ export default function DashboardPage() {
 
   return (
     <DashboardShell title="Career Command Center">
-      <div className="space-y-8 max-w-4xl mx-auto pb-12 text-foreground">
+      <div className="dashboard-overview space-y-8 max-w-5xl mx-auto pb-12 text-foreground">
         {/* ========================================================================= */}
         {/* A. TARGET ROLE                                                            */}
         {/* ========================================================================= */}
-        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 pb-5 border-b border-border/60">
+        <div className="dashboard-target-header flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 pb-5 border-b border-border/60">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-semibold">
@@ -345,7 +345,7 @@ export default function DashboardPage() {
         {/* ========================================================================= */}
         {/* B. PREPARATION READINESS (HONEST ASSESSMENT, NOT PROBABILITY OF GETTING HIRED) */}
         {/* ========================================================================= */}
-        <div className="p-5 rounded-lg border border-border/80 bg-card space-y-4">
+        <div className="dashboard-panel dashboard-readiness p-5 sm:p-6 rounded-xl border border-border/80 bg-card space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/60">
             <div className="space-y-0.5">
               <div className="flex items-center gap-2">
@@ -360,7 +360,7 @@ export default function DashboardPage() {
                 Hicejo&apos;s preparation assessment based on verified evidence — not a guarantee of employment.
               </p>
             </div>
-            <div className="flex items-baseline gap-1.5">
+            <div className="dashboard-readiness-total flex items-baseline gap-1.5">
               <span className="text-2xl sm:text-3xl font-black text-foreground font-mono">
                 {readiness.overallScore}%
               </span>
@@ -369,7 +369,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Sub-scores Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+          <div className="dashboard-score-grid grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
             <div className="p-3 rounded-md border border-border/60 bg-secondary/30 space-y-1.5">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground font-medium">Skills</span>
@@ -439,7 +439,7 @@ export default function DashboardPage() {
         {/* ========================================================================= */}
         {/* C. NEXT BEST ACTION (MOST IMPORTANT COMPONENT ON THE PAGE)               */}
         {/* ========================================================================= */}
-        <div className="p-5 rounded-lg border-2 border-primary/20 bg-card space-y-3 shadow-xs">
+        <div className="dashboard-panel dashboard-next-action p-5 sm:p-6 rounded-xl border-2 border-primary/20 bg-card space-y-3 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-primary">
               Next Best Action
@@ -487,7 +487,7 @@ export default function DashboardPage() {
         {/* ========================================================================= */}
         {/* D. CAREER JOURNEY (TARGET JOB → DIAGNOSE → CLOSE GAPS → BUILD PROOF → APPLY → INTERVIEW) */}
         {/* ========================================================================= */}
-        <div className="space-y-3">
+        <div className="dashboard-overview-section dashboard-journey space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Career Journey
@@ -551,7 +551,7 @@ export default function DashboardPage() {
               <Link
                 key={stage.step}
                 href={stage.href}
-                className={`p-3 rounded-md border transition-colors flex flex-col justify-between space-y-2 ${
+                className={`dashboard-journey-step p-3 rounded-lg border transition-colors flex flex-col justify-between space-y-2 ${
                   stage.isCurrent
                     ? "bg-secondary/80 border-primary/50 text-foreground ring-1 ring-primary/20"
                     : stage.isDone
@@ -581,7 +581,7 @@ export default function DashboardPage() {
         {/* ========================================================================= */}
         {/* E. PRIORITY GAPS (SHOW ONLY TOP 3 HIGHEST-IMPACT GAPS)                    */}
         {/* ========================================================================= */}
-        <div className="space-y-3">
+        <div className="dashboard-overview-section dashboard-priority-gaps space-y-3">
           <div className="flex items-center justify-between pb-1 border-b border-border/60">
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Priority Gaps (Top 3)
@@ -592,7 +592,7 @@ export default function DashboardPage() {
           </div>
 
           {priorityGaps.length > 0 ? (
-            <div className="border border-border/70 rounded-md bg-card divide-y divide-border/60 overflow-hidden text-xs">
+            <div className="dashboard-panel dashboard-gap-list border border-border/70 rounded-xl bg-card divide-y divide-border/60 overflow-hidden text-xs">
               {priorityGaps.map((gap) => (
                 <div key={gap.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-secondary/20 transition-colors">
                   <div className="space-y-1 min-w-0 flex-1">
@@ -632,7 +632,7 @@ export default function DashboardPage() {
         {/* ========================================================================= */}
         {/* F. RECENT WORK                                                            */}
         {/* ========================================================================= */}
-        <div className="space-y-3 pt-2">
+        <div className="dashboard-overview-section dashboard-recent-work space-y-3 pt-2">
           <div className="flex items-center justify-between pb-1 border-b border-border/60">
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
               Recent Work & Sessions
@@ -647,7 +647,7 @@ export default function DashboardPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             {/* 1. Resumes Drafts */}
-            <div className="p-4 rounded-md border border-border/70 bg-card space-y-3">
+            <div className="dashboard-panel p-4 sm:p-5 rounded-xl border border-border/70 bg-card space-y-3">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-foreground flex items-center gap-1.5">
                   <FileText className="h-3.5 w-3.5 text-primary" />
@@ -686,7 +686,7 @@ export default function DashboardPage() {
             </div>
 
             {/* 2. Target Jobs & Interview Sessions */}
-            <div className="p-4 rounded-md border border-border/70 bg-card space-y-3">
+            <div className="dashboard-panel p-4 sm:p-5 rounded-xl border border-border/70 bg-card space-y-3">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-foreground flex items-center gap-1.5">
                   <Mic className="h-3.5 w-3.5 text-primary" />

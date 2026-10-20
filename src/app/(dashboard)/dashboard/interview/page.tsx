@@ -48,6 +48,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useResumeStore } from "@/store/useResumeStore";
 import { POPULAR_ROLES } from "@/data/learningCurricula";
 import { recordDetectedInterviewGap, STORAGE_KEYS } from "@/lib/hicejoState";
+import {
+  detectRoleCategory,
+  getInterviewRoundsForRoleAndCompany,
+  isTechnicalRole
+} from "@/lib/interviewRoundCatalog";
 
 interface PersonaConfig {
   id: "alex" | "sarah" | "david" | "maya";
@@ -59,17 +64,6 @@ interface PersonaConfig {
   pitch: number;
   rate: number;
   testPhrase: string;
-}
-
-function isTechnicalRole(role: string): boolean {
-  const r = (role || "").toLowerCase();
-  const techKeywords = [
-    "software", "engineer", "developer", "frontend", "backend", "fullstack", "full stack",
-    "devops", "cloud", "sre", "data engineer", "data scientist", "machine learning", "ml ", "ai ",
-    "security engineer", "qa", "qa engineer", "systems engineer",
-    "ios", "android", "mobile engineer", "embedded", "firmware", "architect", "database administrator", "dba"
-  ];
-  return techKeywords.some((kw) => r.includes(kw));
 }
 
 const PERSONAS: PersonaConfig[] = [
@@ -189,7 +183,23 @@ function InterviewStudioInner() {
   const [roleInput, setRoleInput] = React.useState(activeJobContext?.jobTitle || careerProfile?.targetRole || "Software Engineer");
   const [isCompanyTargeted, setIsCompanyTargeted] = React.useState<boolean>(Boolean(activeJobContext?.company));
   const [companyInput, setCompanyInput] = React.useState(activeJobContext?.company || "");
-  const [roundType, setRoundType] = React.useState<"full_loop" | "technical" | "system_design" | "managerial" | "behavioral">("full_loop");
+  const [roundType, setRoundType] = React.useState<string>("full_loop");
+
+  // Dynamically compute authentic interview rounds tailored to role and company
+  const availableRoundOptions = React.useMemo(() => {
+    return getInterviewRoundsForRoleAndCompany(
+      roleInput,
+      isCompanyTargeted ? companyInput : ""
+    );
+  }, [roleInput, companyInput, isCompanyTargeted]);
+
+  // Keep roundType aligned whenever role or company changes
+  React.useEffect(() => {
+    const validIds = availableRoundOptions.map((r) => r.id);
+    if (!validIds.includes(roundType)) {
+      setRoundType(validIds[0] || "full_loop");
+    }
+  }, [availableRoundOptions, roundType]);
   const [customFocusTopics, setCustomFocusTopics] = React.useState("");
   const [practiceSkillInput, setPracticeSkillInput] = React.useState(urlSkill || "");
   const [experienceLevel, setExperienceLevel] = React.useState(careerProfile?.experienceLevel || "Mid-Level");
@@ -738,6 +748,10 @@ function InterviewStudioInner() {
       if (!roleInput.trim()) return;
     }
 
+    const activeRound =
+      availableRoundOptions.find((r) => r.id === roundType) ||
+      availableRoundOptions[0];
+
     setIsFormulating(true);
     try {
       const res = await fetch("/api/ai/formulate-interview-plan", {
@@ -748,6 +762,10 @@ function InterviewStudioInner() {
           role: roleInput.trim(),
           company: isCompanyTargeted ? companyInput.trim() : "",
           roundType,
+          roundTitle: activeRound?.label,
+          roundDescription: activeRound?.desc,
+          roundCategory: activeRound?.category,
+          roundDirective: activeRound?.focusDirective,
           customFocus: customFocusTopics.trim(),
           skill: practiceSkillInput.trim(),
           experienceLevel,
@@ -834,6 +852,10 @@ function InterviewStudioInner() {
       }
     }
 
+    const activeRound =
+      availableRoundOptions.find((r) => r.id === roundType) ||
+      availableRoundOptions[0];
+
     try {
       const res = await fetch("/api/ai/interview-conversation", {
         method: "POST",
@@ -842,6 +864,10 @@ function InterviewStudioInner() {
           role: roleInput,
           company: isCompanyTargeted ? companyInput.trim() : "",
           roundType,
+          roundTitle: activeRound?.label,
+          roundDescription: activeRound?.desc,
+          roundCategory: activeRound?.category,
+          roundDirective: activeRound?.focusDirective,
           customFocus: customFocusTopics.trim(),
           scratchpadCode: scratchpadCode.trim(),
           scratchpadLanguage: scratchpadLang,
@@ -1428,7 +1454,7 @@ ${evaluationResult.areasForImprovement.map((a) => `• ${a}`).join("\n")}
                       />
                       {/* Quick Suggestions */}
                       <div className="flex flex-wrap gap-1.5 pt-1">
-                        {["Software Engineer", "Full Stack Developer", "Backend Engineer", "Product Manager", "Data Analyst"].map((role) => (
+                        {["SDE", "Software Engineer", "Full Stack Developer", "Product Manager", "Data Analyst", "Data Scientist"].map((role) => (
                           <button
                             key={role}
                             type="button"
@@ -1464,86 +1490,24 @@ ${evaluationResult.areasForImprovement.map((a) => `• ${a}`).join("\n")}
                         <ListOrdered className="h-3.5 w-3.5 text-primary" />
                         <span>Select Interview Round Type</span>
                       </label>
-                      <span className="text-[10px] text-muted-foreground">Each round focuses strictly on that dimension</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {isCompanyTargeted && companyInput.trim() ? `${companyInput.trim()} Specific • ` : ""}
+                        Tailored for {roleInput.trim() || "Target Role"}
+                      </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
-                      {(isTechnicalRole(roleInput)
-                        ? [
-                            {
-                              id: "full_loop",
-                              label: "Full Hiring Loop",
-                              tag: "All Stages",
-                              desc: "Multi-round sequence simulating the complete hiring pipeline from technical to final bar raiser."
-                            },
-                            {
-                              id: "technical",
-                              label: "Technical / DSA",
-                              tag: "Pure Coding",
-                              desc: "Algorithms, data structures, code reasoning & complexity. Zero HR or salary fluff."
-                            },
-                            {
-                              id: "system_design",
-                              label: "System Design",
-                              tag: "Architecture",
-                              desc: "Distributed systems, scale bottlenecks, caching, database partitioning & failure modes."
-                            },
-                            {
-                              id: "managerial",
-                              label: "Managerial & Lead",
-                              tag: "Leadership",
-                              desc: "Sprint delivery under pressure, handling technical deadlocks, ambiguity & team leadership."
-                            },
-                            {
-                              id: "behavioral",
-                              label: "HR & Culture (STAR)",
-                              tag: "STAR Stories",
-                              desc: "Behavioral delivery, conflict resolution, values alignment & company principles."
-                            }
-                          ]
-                        : [
-                            {
-                              id: "full_loop",
-                              label: "Complete Hiring Loop",
-                              tag: "All Stages",
-                              desc: "Multi-round sequence simulating the complete hiring pipeline from domain case to final executive round."
-                            },
-                            {
-                              id: "technical",
-                              label: "Case Study & Domain",
-                              tag: "Practical Execution",
-                              desc: "Real-world problem solving, quantitative metrics, domain frameworks & scenario execution."
-                            },
-                            {
-                              id: "system_design",
-                              label: "Strategy & Frameworks",
-                              tag: "Strategic Thinking",
-                              desc: "Strategic planning, Go-To-Market, unit economics, operating models & business scaling."
-                            },
-                            {
-                              id: "managerial",
-                              label: "People & Stakeholder",
-                              tag: "Leadership",
-                              desc: "Cross-functional influence, managing underperformers, negotiating priorities & conflict."
-                            },
-                            {
-                              id: "behavioral",
-                              label: "HR & Culture (STAR)",
-                              tag: "STAR Stories",
-                              desc: "Behavioral delivery, personal ownership, culture fit, and values alignment."
-                            }
-                          ]
-                      ).map((item) => {
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2.5">
+                      {availableRoundOptions.map((item) => {
                         const isSelected = roundType === item.id;
                         return (
                           <div
                             key={item.id}
                             onClick={() => {
-                              setRoundType(item.id as any);
+                              setRoundType(item.id);
                               // Sync focusArea for backward compatibility
-                              if (item.id === "technical") setFocusArea("technical");
-                              else if (item.id === "system_design") setFocusArea("system-design");
-                              else if (item.id === "behavioral" || item.id === "managerial") setFocusArea("behavioral");
+                              if (item.category === "technical") setFocusArea("technical");
+                              else if (item.category === "system_design") setFocusArea("system-design");
+                              else if (item.category === "behavioral" || item.category === "managerial") setFocusArea("behavioral");
                               else setFocusArea("full");
                             }}
                             className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between space-y-1.5 ${
@@ -1552,15 +1516,15 @@ ${evaluationResult.areasForImprovement.map((a) => `• ${a}`).join("\n")}
                                 : "bg-muted/20 border-border/70 hover:bg-muted/40 hover:border-border text-foreground"
                             }`}
                           >
-                            <div className="flex items-center justify-between gap-1">
-                              <span className="text-xs font-bold text-foreground">{item.label}</span>
-                              <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
+                            <div className="flex items-start justify-between gap-1">
+                              <span className="text-xs font-bold text-foreground leading-snug">{item.label}</span>
+                              <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded shrink-0 ${
                                 isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                               }`}>
                                 {item.tag}
                               </span>
                             </div>
-                            <p className="text-[10px] text-muted-foreground leading-relaxed">
+                            <p className="text-[10px] text-muted-foreground leading-relaxed line-clamp-3">
                               {item.desc}
                             </p>
                           </div>
