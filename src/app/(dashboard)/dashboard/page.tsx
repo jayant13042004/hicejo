@@ -245,18 +245,21 @@ export default function DashboardPage() {
     return roleCurriculum.modules.flatMap((m) => m.skills);
   }, [roleCurriculum]);
 
+  const highestAtsScore = React.useMemo(() => {
+    return resumes.reduce((max, r) => Math.max(max, r.ats_score || 0), 0);
+  }, [resumes]);
+
   // Measured Readiness breakdown (honest calculation)
   const readiness: PreparationReadiness = React.useMemo(() => {
-    const highestAts = resumes.reduce((max, r) => Math.max(max, r.ats_score || 0), 0);
     return calculatePreparationReadiness(
       activeTargetRole,
       activeExperienceLevel,
       allSkills,
       resumes.length,
-      highestAts > 0 ? highestAts : null,
+      highestAtsScore > 0 ? highestAtsScore : null,
       lastInterview?.score || null
     );
-  }, [activeTargetRole, activeExperienceLevel, allSkills, resumes, lastInterview]);
+  }, [activeTargetRole, activeExperienceLevel, allSkills, resumes.length, highestAtsScore, lastInterview]);
 
   // Priority Gaps (Top 3 highest impact)
   const priorityGaps: PriorityGap[] = React.useMemo(() => {
@@ -268,15 +271,14 @@ export default function DashboardPage() {
     return getNextBestAction(activeTargetRole, savedTargets, priorityGaps, resumes.length);
   }, [activeTargetRole, savedTargets, priorityGaps, resumes.length]);
 
-  // Determine Current Career Journey Step (1 to 6)
+  // Determine Current Career Pipeline Step (1 to 5)
   const journeyStage = React.useMemo(() => {
     if (!activeTargetRole) return 1;
-    if (savedTargets.length === 0) return 2;
-    if (readiness.evidenceCount < 3) return 3;
-    if (readiness.demonstratedCount < 2) return 4;
-    if (resumes.length === 0) return 5;
-    return 6;
-  }, [activeTargetRole, savedTargets.length, readiness.evidenceCount, readiness.demonstratedCount, resumes.length]);
+    if (resumes.length === 0) return 2;
+    if (savedTargets.length === 0) return 3;
+    if (highestAtsScore < 85) return 4;
+    return 5;
+  }, [activeTargetRole, resumes.length, savedTargets.length, highestAtsScore]);
 
   // Greeting time of day
   const greeting = React.useMemo(() => {
@@ -343,96 +345,122 @@ export default function DashboardPage() {
         </div>
 
         {/* ========================================================================= */}
-        {/* B. PREPARATION READINESS (HONEST ASSESSMENT, NOT PROBABILITY OF GETTING HIRED) */}
+        {/* B. APPLICATION COMMAND HUB                                                */}
         {/* ========================================================================= */}
-        <div className="dashboard-panel dashboard-readiness p-5 sm:p-6 rounded-xl border border-border/80 bg-card space-y-4">
+        <div className="dashboard-panel p-5 sm:p-6 rounded-xl border border-border/80 bg-card space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/60">
             <div className="space-y-0.5">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Preparation Readiness
+                  Application Command Hub
                 </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-secondary text-muted-foreground font-semibold">
-                  Evidence-Calibrated
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/20">
+                  Active Workspace
                 </span>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Hicejo&apos;s preparation assessment based on verified evidence — not a guarantee of employment.
+                Your hiring assets and practice status for <span className="font-semibold text-foreground">{activeTargetRole || "your target role"}</span>.
               </p>
             </div>
-            <div className="dashboard-readiness-total flex items-baseline gap-1.5">
-              <span className="text-2xl sm:text-3xl font-black text-foreground font-mono">
-                {readiness.overallScore}%
-              </span>
-              <span className="text-xs font-semibold text-muted-foreground">Prepared</span>
+            <div className="flex items-center gap-2">
+              <Link href="/dashboard/tailor">
+                <Button size="sm" className="h-8 px-3 text-xs font-semibold gap-1.5 shadow-xs cursor-pointer bg-primary text-primary-foreground">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>Tailor for a Job</span>
+                </Button>
+              </Link>
             </div>
           </div>
 
-          {/* Sub-scores Grid */}
-          <div className="dashboard-score-grid grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-            <div className="p-3 rounded-md border border-border/60 bg-secondary/30 space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground font-medium">Skills</span>
-                <span className="font-mono font-bold text-foreground">{readiness.skillsScore}%</span>
+          {/* 4 Core Pillars of Candidate Action */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+            {/* 1. Resume Drafts */}
+            <Link
+              href="/dashboard/builder"
+              className="p-3.5 rounded-lg border border-border/70 bg-secondary/30 hover:border-primary/50 hover:bg-secondary/60 transition-all flex flex-col justify-between space-y-3 group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5 text-primary" />
+                  <span>Resumes</span>
+                </span>
+                <ArrowRight className="h-3 w-3 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
               </div>
-              <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary rounded-full transition-all duration-500"
-                  style={{ width: `${readiness.skillsScore}%` }}
-                />
+              <div>
+                <p className="text-xl font-bold font-mono text-foreground">
+                  {resumes.length > 0 ? `${resumes.length} Draft${resumes.length > 1 ? "s" : ""}` : "Create Draft"}
+                </p>
+                <span className="text-[10px] text-muted-foreground block truncate mt-0.5">
+                  {resumes.length > 0 ? `Latest: ${resumes[0].title || "Master Resume"}` : "1-page ATS ready"}
+                </span>
               </div>
-              <span className="text-[10px] text-muted-foreground block truncate">
-                {readiness.learnedCount + readiness.practicedCount}/{readiness.totalRequirements} topics covered
-              </span>
-            </div>
+            </Link>
 
-            <div className="p-3 rounded-md border border-border/60 bg-secondary/30 space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground font-medium">Evidence</span>
-                <span className="font-mono font-bold text-foreground">{readiness.evidenceScore}%</span>
+            {/* 2. ATS Audit Health */}
+            <Link
+              href="/dashboard/checker"
+              className="p-3.5 rounded-lg border border-border/70 bg-secondary/30 hover:border-primary/50 hover:bg-secondary/60 transition-all flex flex-col justify-between space-y-3 group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                  <span>ATS Health</span>
+                </span>
+                <ArrowRight className="h-3 w-3 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
               </div>
-              <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                  style={{ width: `${readiness.evidenceScore}%` }}
-                />
+              <div>
+                <p className="text-xl font-bold font-mono text-foreground">
+                  {highestAtsScore > 0 ? `${highestAtsScore}% Score` : "Audit Ready"}
+                </p>
+                <span className="text-[10px] text-muted-foreground block truncate mt-0.5">
+                  {highestAtsScore >= 85 ? "Recruiter pass benchmark" : "Run 4-pillar keyword scan"}
+                </span>
               </div>
-              <span className="text-[10px] text-muted-foreground block truncate">
-                {readiness.demonstratedCount}/{readiness.totalRequirements} proven artifacts
-              </span>
-            </div>
+            </Link>
 
-            <div className="p-3 rounded-md border border-border/60 bg-secondary/30 space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground font-medium">Application</span>
-                <span className="font-mono font-bold text-foreground">{readiness.applicationScore}%</span>
+            {/* 3. Target Roles & JDs */}
+            <Link
+              href="/dashboard/jobs"
+              className="p-3.5 rounded-lg border border-border/70 bg-secondary/30 hover:border-primary/50 hover:bg-secondary/60 transition-all flex flex-col justify-between space-y-3 group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                  <Briefcase className="h-3.5 w-3.5 text-primary" />
+                  <span>Target Jobs</span>
+                </span>
+                <ArrowRight className="h-3 w-3 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
               </div>
-              <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary rounded-full transition-all duration-500"
-                  style={{ width: `${readiness.applicationScore}%` }}
-                />
+              <div>
+                <p className="text-xl font-bold font-mono text-foreground">
+                  {savedTargets.length > 0 ? `${savedTargets.length} Tracked` : "Import Role"}
+                </p>
+                <span className="text-[10px] text-muted-foreground block truncate mt-0.5">
+                  {savedTargets.length > 0 ? `${savedTargets[0].company || savedTargets[0].title || "Active"}` : "Extract requirements from JD"}
+                </span>
               </div>
-              <span className="text-[10px] text-muted-foreground block truncate">
-                {resumes.length > 0 ? `${resumes.length} active resume${resumes.length > 1 ? "s" : ""}` : "No draft yet"}
-              </span>
-            </div>
+            </Link>
 
-            <div className="p-3 rounded-md border border-border/60 bg-secondary/30 space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground font-medium">Interview</span>
-                <span className="font-mono font-bold text-foreground">{readiness.interviewScore}%</span>
+            {/* 4. Interview Studio */}
+            <Link
+              href="/dashboard/interview"
+              className="p-3.5 rounded-lg border border-border/70 bg-secondary/30 hover:border-primary/50 hover:bg-secondary/60 transition-all flex flex-col justify-between space-y-3 group"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+                  <Mic className="h-3.5 w-3.5 text-amber-500" />
+                  <span>Mock Interview</span>
+                </span>
+                <ArrowRight className="h-3 w-3 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
               </div>
-              <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-amber-500 rounded-full transition-all duration-500"
-                  style={{ width: `${readiness.interviewScore}%` }}
-                />
+              <div>
+                <p className="text-xl font-bold font-mono text-foreground">
+                  {lastInterview ? `${lastInterview.score}/100 Scored` : "Ready to Start"}
+                </p>
+                <span className="text-[10px] text-muted-foreground block truncate mt-0.5">
+                  {lastInterview ? `${lastInterview.hiringRecommendation || "Session Complete"}` : "Simulate authentic hiring loop"}
+                </span>
               </div>
-              <span className="text-[10px] text-muted-foreground block truncate">
-                {lastInterview ? `${lastInterview.score}% last session` : "Simulation ready"}
-              </span>
-            </div>
+            </Link>
           </div>
         </div>
 
@@ -485,67 +513,59 @@ export default function DashboardPage() {
         </div>
 
         {/* ========================================================================= */}
-        {/* D. CAREER JOURNEY (TARGET JOB → DIAGNOSE → CLOSE GAPS → BUILD PROOF → APPLY → INTERVIEW) */}
+        {/* D. CAREER JOURNEY                                                         */}
         {/* ========================================================================= */}
         <div className="dashboard-overview-section dashboard-journey space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Career Journey
+              Application Pipeline
             </span>
-            <Link href="/dashboard/journey" className="text-xs text-primary hover:underline font-medium">
-              View Complete Journey &rarr;
+            <Link href="/dashboard/jobs" className="text-xs text-primary hover:underline font-medium">
+              View Target Pipeline &rarr;
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
             {[
               {
                 step: 1,
-                name: "Target Job",
-                desc: activeTargetRole ? "Configured" : "Unset",
+                name: "Target Position",
+                desc: activeTargetRole ? "Defined" : "Set Target",
                 href: "/dashboard/jobs",
                 isDone: Boolean(activeTargetRole),
                 isCurrent: journeyStage === 1
               },
               {
                 step: 2,
-                name: "Diagnose",
-                desc: `${savedTargets.length} Analyzed`,
-                href: "/dashboard/jobs",
-                isDone: savedTargets.length > 0,
+                name: "Base Resume",
+                desc: resumes.length > 0 ? `${resumes.length} Ready` : "Create Draft",
+                href: "/dashboard/builder",
+                isDone: resumes.length > 0,
                 isCurrent: journeyStage === 2
               },
               {
                 step: 3,
-                name: "Close Gaps",
-                desc: `${readiness.totalRequirements - readiness.evidenceCount} Remaining`,
-                href: "/dashboard/learning",
-                isDone: readiness.evidenceCount >= 3,
+                name: "Tailor for JD",
+                desc: savedTargets.length > 0 ? "Role Aligned" : "Tailor Experience",
+                href: "/dashboard/tailor",
+                isDone: savedTargets.length > 0,
                 isCurrent: journeyStage === 3
               },
               {
                 step: 4,
-                name: "Build Proof",
-                desc: `${readiness.demonstratedCount}/${readiness.totalRequirements} Proven`,
-                href: "/dashboard/learning",
-                isDone: readiness.demonstratedCount >= 2,
+                name: "ATS Audit",
+                desc: highestAtsScore > 0 ? `${highestAtsScore}% Score` : "Run Check",
+                href: "/dashboard/checker",
+                isDone: highestAtsScore >= 85,
                 isCurrent: journeyStage === 4
               },
               {
                 step: 5,
-                name: "Apply",
-                desc: resumes.length > 0 ? "Draft Ready" : "Create Draft",
-                href: "/dashboard/builder",
-                isDone: resumes.length > 0,
-                isCurrent: journeyStage === 5
-              },
-              {
-                step: 6,
-                name: "Interview",
-                desc: lastInterview ? `${lastInterview.score}% Scored` : "Practice",
+                name: "Interview Loop",
+                desc: lastInterview ? `${lastInterview.score}% Scored` : "Practice Voice",
                 href: "/dashboard/interview",
                 isDone: Boolean(lastInterview),
-                isCurrent: journeyStage === 6
+                isCurrent: journeyStage === 5
               },
             ].map((stage) => (
               <Link

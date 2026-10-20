@@ -13,6 +13,275 @@
   },
   "resumes": [
     {
+      "id": "1792487372910",
+      "user_id": "demo-user-id",
+      "title": "Medline - Data Scientist Tailored",
+      "content": {
+        "personalInfo": {
+          "fullName": "Jayant Jagtap",
+          "email": "jayantjagtap2004@gmail.com",
+          "phone": "09356934045",
+          "location": "",
+          "website": "https://jayantjagtap.com",
+          "linkedin": "https://www.linkedin.com/in/jayantjagtap"
+        },
+        "summary": "Data Scientist targeting machine learning and software engineering roles at Medline, leveraging expertise in predictive modeling, scalable pipeline development, and robust backend architectures. Proficient in Python, FastAPI, and system design to deliver high-performance, production-ready solutions integrated via CI/CD workflows.",
+        "experience": [
+          {
+            "id": "123e4567-e89b-12d3-a456-426614174001",
+            "company": "AVEVA",
+            "position": "Software Development Intern",
+            "location": "Pune, India",
+            "startDate": "May 2025",
+            "endDate": "July 2025",
+            "current": false,
+            "description": "Optimized C#, .NET, and WinForms services and UI with pagination, filtering, and Unit Testing to ensure high code quality.\nEngineered and deployed high-performance cross-platform C++ File Reader SDK enabling Linux support, streamlining Cloud Deployment pipelines and CI/CD integrations.\nDesigned RESTful product-browsing APIs, partnering cross-functionally to align system design with requirements."
+          }
+        ],
+        "education": [
+          {
+            "id": "123e4567-e89b-12d3-a456-426614174002",
+            "school": "Indian Institute of Technology Hyderabad",
+            "degree": "B.Tech",
+            "fieldOfStudy": "Chemical Engineering",
+            "location": "Hyderabad, India",
+            "startDate": "2022",
+            "endDate": "2026",
+            "current": false
+          }
+        ],
+        "projects": [
+          {
+            "id": "123e4567-e89b-12d3-a456-426614174003",
+            "name": "Customer Churn Prediction System",
+            "role": "Developer",
+            "link": "",
+            "startDate": "",
+            "endDate": "",
+            "description": "• Built robust data processing and feature engineering pipelines for structured inputs, achieving 0.85+ ROC-AUC performance.\n• Evaluated machine learning models and deployed prediction backends using FastAPI alongside a functional Streamlit user interface."
+          },
+          {
+            "id": "123e4567-e89b-12d3-a456-426614174004",
+            "name": "Demand Forecasting System",
+            "role": "Developer",
+            "link": "",
+            "startDate": "",
+            "endDate": "",
+            "description": "• Designed automated time-series forecasting pipelines to model business trends, implementing ARIMA and XGBoost with lag-based features.\n• Reduced prediction error metrics by approximately 18 to 22 percent over baseline models while automating outputs across data clusters."
+          },
+          {
+            "id": "123e4567-e89b-12d3-a456-426614174005",
+            "name": "Hybrid Recommendation System",
+            "role": "Developer",
+            "link": "",
+            "startDate": "",
+            "endDate": "",
+            "description": "• Implemented a hybrid recommendation system combining collaborative filtering and content-based techniques to address user-item sparsity.\n• Analyzed recommendation quality using Precision@K and Recall@K metrics to improve overall performance over baseline strategies."
+          }
+        ],
+        "skills": [
+          {
+            "id": "123e4567-e89b-12d3-a456-426614174006",
+            "name": "Python",
+            "category": "Languages"
+          },
+          {
+            "id": "123e4567-e89b-12d3-a456-426614174007",
+            "name": "C++",
+            "category": "Languages"
+          },
+          {
+            "id": "123e4567-e89b-12d3-a456-426614174008",
+            "name": "Machine Learning",
+            "category": "Core Concepts"
+          },
+          {
+            "id": "123e4567-e89b-12d3-a456-426614174009",
+            "name": "FastAPI",
+            "category": "Software Development"
+          },
+          {
+            "id": "123e4567-e89b-12d3-a456-426614174010",
+            "name": "Scikit-learn",
+            "category": "Libraries"
+          },
+          {
+            "id": "123e4567-e89b-12d3-a456-426614174011",
+            "name": "PyTorch",
+            "category": "Libraries"
+          },
+          {
+            "id": "123e4567-e89b-12d3-a456-426614174012",
+            "name": "Time Series Forecasting",
+            "category": "Additional"
+          },
+          {
+            "id": "123e4567-e89b-12d3-a456-426614174013",
+            "name": "CI/CD",
+            "category": "DevOps & Tools"
+          },
+          {
+            "id": "123e4567-e89b-12d3-a456-426614174014",
+            "name": "Unit Testing",
+            "category": "Software Development"
+          },
+          {
+            "id": "123e4567-e89b-12d3-a456-426614174015",
+            "name": "Agile",
+            "category": "Methodologies"
+          },
+          {
+            "id": "123e4567-e89b-12d3-a456-426614174016",
+            "name": "RESTful APIs",
+            "category": "Software Development"
+          },
+          {
+            "id": "123e4567-e89b-12d3-a456-426614174017",
+            "name": "Cloud Deployment",
+            "category": "DevOps & Tools"
+          },
+          {
+            "id": "123e4567-e89b-12d3-a456-426614174018",
+            "name": "System Design",
+            "category": "Core Concepts"
+          }
+        ],
+        "design": {
+          "fontFamily": "font-geometric",
+          "fontSize": "md",
+          "sectionOrder": [
+            "summary",
+            "experience",
+            "projects",
+            "education",
+            "skills"
+          ],
+          "density": "ultra-compact",
+          "sectionSpacing": 0.65,
+          "itemSpacing": 0.65,
+          "lineHeight": 1.22,
+          "autoFitOnePage": false,
+          "balancePageHeight": false,
+          "resumeStyle": "classic"
+        }
+      },
+      "ats_score": 90,
+      "created_at": "2026-10-20T09:09:32.910Z",
+      "updated_at": "2026-10-20T09:21:54.030Z"
+    },
+    {
+      "id": "1792486619128",
+      "user_id": "demo-user-id",
+      "title": "Scale AI - Business Intelligence & Data Analyst Tailored",
+      "content": {
+        "personalInfo": {
+          "fullName": "Jayant Jagtap",
+          "email": "jayant@example.com",
+          "phone": "+91-0000000000",
+          "location": "Hyderabad, India",
+          "website": "github.com/jayantjagtap",
+          "linkedin": "linkedin.com/in/jayantjagtap"
+        },
+        "summary": "Data analyst with strong foundations in Python, SQL, and predictive modeling, specializing in building data pipelines and customer analytics dashboards to guide strategic decisions.",
+        "experience": [
+          {
+            "id": "exp-1",
+            "company": "AVEVA",
+            "position": "Software Development Intern",
+            "location": "India",
+            "startDate": "May 2025",
+            "endDate": "July 2025",
+            "current": false,
+            "description": "• Built backend data browsing features using C# and SQL filters, writing automated test suites to validate internal product metrics and maintain data integrity."
+          }
+        ],
+        "education": [
+          {
+            "id": "edu-1",
+            "school": "Indian Institute of Technology Hyderabad",
+            "degree": "B.Tech",
+            "fieldOfStudy": "Chemical Engineering and Entrepreneurship",
+            "location": "Hyderabad, India",
+            "startDate": "2022",
+            "endDate": "2026",
+            "current": false
+          }
+        ],
+        "projects": [
+          {
+            "id": "proj-1",
+            "name": "Customer Churn Prediction System",
+            "role": "Creator",
+            "link": "github.com/jayantjagtap",
+            "startDate": "2024",
+            "endDate": "2024",
+            "description": "• Built data-processing pipelines in Python using Pandas and XGBoost to analyze structured business data, conducting exploratory data analysis to isolate customer retention bottlenecks and achieving 0.85+ ROC-AUC."
+          },
+          {
+            "id": "proj-2",
+            "name": "Demand Forecasting System",
+            "role": "Creator",
+            "link": "github.com/jayantjagtap",
+            "startDate": "2024",
+            "endDate": "2024",
+            "description": "• Designed automated time-series forecasting pipelines using ARIMA and XGBoost models, reducing error metrics by 18-22% over baseline models and generating executive dashboards to interpret trends."
+          }
+        ],
+        "skills": [
+          {
+            "id": "skill-1",
+            "name": "SQL",
+            "category": "Languages"
+          },
+          {
+            "id": "skill-2",
+            "name": "Python",
+            "category": "Languages"
+          },
+          {
+            "id": "skill-3",
+            "name": "Pandas",
+            "category": "Libraries"
+          },
+          {
+            "id": "skill-4",
+            "name": "NumPy",
+            "category": "Libraries"
+          },
+          {
+            "id": "skill-5",
+            "name": "MySQL",
+            "category": "Tools"
+          },
+          {
+            "id": "skill-6",
+            "name": "Git",
+            "category": "Tools"
+          }
+        ],
+        "design": {
+          "fontFamily": "font-sans",
+          "fontSize": "lg",
+          "sectionOrder": [
+            "summary",
+            "experience",
+            "projects",
+            "education",
+            "skills"
+          ],
+          "density": "relaxed",
+          "sectionSpacing": 1.2,
+          "itemSpacing": 1.25,
+          "lineHeight": 1.55,
+          "autoFitOnePage": false,
+          "balancePageHeight": true
+        }
+      },
+      "ats_score": 0,
+      "created_at": "2026-10-20T08:56:59.128Z",
+      "updated_at": "2026-10-20T08:57:21.772Z"
+    },
+    {
       "id": "1792430171650",
       "user_id": "demo-user-id",
       "title": "IAPWE - Freelance Writer Tailored",
@@ -507,6 +776,15 @@
     }
   ],
   "coverLetters": [
+    {
+      "id": "1792488170502",
+      "user_id": "demo-user-id",
+      "company": "BairesDev",
+      "job_title": "Machine Learning Engineer (Python) - Remote Work | REF#297202",
+      "content": "I am applying for the Machine Learning Engineer position at BairesDev, bringing hands-on expertise in building production-ready predictive pipelines, scalable REST APIs, and robust backend architectures. BairesDev's commitment to delivering top-tier software solutions globally aligns closely with my background in deploying high-performance machine learning systems using Python and FastAPI.\n\nAt AVEVA, I engineered and deployed a cross-platform C++ File Reader SDK that streamlined cloud deployment pipelines and CI/CD integrations, while designing reliable RESTful APIs through cross-functional collaboration. On the machine learning side, I developed a Demand Forecasting System leveraging ARIMA and XGBoost with lag-based features, cutting prediction error by roughly 18 to 22 percent over baseline models. Additionally, my Customer Churn Prediction System combined rigorous data processing with FastAPI backends and Streamlit interfaces, achieving a 0.85+ ROC-AUC. \n\nMy technical toolkit spans PyTorch, Scikit-learn, automated time-series pipelines, and rigorous unit testing, allowing me to translate complex data science concepts into clean, maintainable software. I am eager to contribute my technical foundation to BairesDev's distributed engineering teams.\n\nI would welcome the opportunity to discuss how my background matches your engineering needs.\n\nBest regards,\n\nJayant Jagtap",
+      "resume_id": "1792487372910",
+      "created_at": "2026-10-20T09:22:50.502Z"
+    },
     {
       "id": "1792430297165",
       "user_id": "demo-user-id",
