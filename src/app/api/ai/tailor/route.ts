@@ -189,7 +189,9 @@ Respond in a STRICT, single JSON object matching this schema:
         "location": "string",
         "startDate": "string",
         "endDate": "string",
-        "current": boolean
+        "current": boolean,
+        "gradeType": "string (optional: 'cgpa' | 'percentage' | 'gpa')",
+        "grade": "string (optional: e.g. '8.8 / 10' or '85%')"
       }
     ],
     "projects": [

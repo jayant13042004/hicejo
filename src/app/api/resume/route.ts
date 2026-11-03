@@ -64,7 +64,7 @@ export async function POST(request: Request) {
 
     const title = body.title || "Untitled Resume";
     const content = body.content || {
-      personalInfo: { fullName: "", email: "", phone: "", location: "", website: "", linkedin: "" },
+      personalInfo: { fullName: "", email: "", phone: "", location: "", website: "", linkedin: "", github: "" },
       summary: "",
       experience: [],
       education: [],

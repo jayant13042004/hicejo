@@ -6,6 +6,7 @@ import { LayoutTemplate, ArrowRight, CheckCircle2, FileText, Download, Sparkles,
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/shared/Navbar";
 import { STARTER_TEMPLATES } from "@/data/starterTemplates";
+import { formatEducationGrade } from "@/types/resume";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -191,12 +192,34 @@ export default async function TemplateDetailsPage({ params }: Props) {
                   <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-200 pb-0.5">
                     Education
                   </h3>
-                  {data.education.map((edu) => (
-                    <div key={edu.id} className="flex items-center justify-between text-zinc-800">
-                      <span className="font-bold">{edu.degree} in {edu.fieldOfStudy} — {edu.school}</span>
-                      <span className="text-zinc-500 text-[10.5px]">{edu.startDate} - {edu.endDate}</span>
-                    </div>
-                  ))}
+                  {data.education.map((edu) => {
+                    const gradeText = formatEducationGrade(edu);
+                    const degreeAndField = [
+                      edu.degree,
+                      edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ""
+                    ].filter(Boolean).join(" ");
+                    const dateRange = edu.startDate && edu.endDate
+                      ? `${edu.startDate} - ${edu.endDate}`
+                      : edu.startDate || edu.endDate || "";
+
+                    return (
+                      <div key={edu.id} className="flex items-center justify-between text-zinc-800">
+                        <div>
+                          <span className="font-bold">
+                            {degreeAndField ? `${degreeAndField} — ` : ""}{edu.school}
+                          </span>
+                          {gradeText && (
+                            <span className="text-zinc-600 text-xs font-semibold ml-2">
+                              • {gradeText}
+                            </span>
+                          )}
+                        </div>
+                        {dateRange && (
+                          <span className="text-zinc-500 text-[10.5px]">{dateRange}</span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

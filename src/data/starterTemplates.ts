@@ -363,12 +363,14 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
         {
           id: "edu-1",
           school: "University of Texas at Austin",
-          degree: "Bachelor of Science in Computer Science",
-          fieldOfStudy: "GPA: 3.82 / 4.0",
+          degree: "Bachelor of Science",
+          fieldOfStudy: "Computer Science",
           location: "Austin, TX",
           startDate: "Aug 2021",
           endDate: "May 2025",
-          current: true
+          current: true,
+          gradeType: "gpa",
+          grade: "3.82 / 4.0"
         }
       ],
       projects: [

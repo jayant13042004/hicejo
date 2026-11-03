@@ -81,7 +81,7 @@ export async function POST(request: Request) {
         parts.push(`Work Experience:\n` + resumeContent.experience.map((e: any) => `• ${e.position || 'Position'} at ${e.company || 'Company'} (${e.startDate || ''} - ${e.endDate || ''}):\n  ${e.description || 'No description'}`).join("\n"));
       }
       if (Array.isArray(resumeContent.education) && resumeContent.education.length > 0) {
-        parts.push(`Education:\n` + resumeContent.education.map((e: any) => `• ${e.degree || 'Degree'} in ${e.fieldOfStudy || ''} from ${e.school || 'School'}`).join("\n"));
+        parts.push(`Education:\n` + resumeContent.education.map((e: any) => `• ${e.degree || 'Degree'} in ${e.fieldOfStudy || ''} from ${e.school || 'School'}${e.grade ? ` [${e.gradeType === 'percentage' ? 'Percentage' : 'CGPA'}: ${e.grade}]` : ''}`).join("\n"));
       }
       if (Array.isArray(resumeContent.projects) && resumeContent.projects.length > 0) {
         parts.push(`Projects:\n` + resumeContent.projects.map((p: any) => `• ${p.name || 'Project'} (${p.role || ''}): ${p.description || ''}`).join("\n"));

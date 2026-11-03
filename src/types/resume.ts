@@ -5,6 +5,7 @@ export interface PersonalInfo {
   location: string;
   website: string;
   linkedin: string;
+  github?: string;
 }
 
 export interface Experience {
@@ -18,6 +19,8 @@ export interface Experience {
   description: string; // Bullet points separated by newlines
 }
 
+export type GradeType = "cgpa" | "percentage" | "gpa" | "none" | string;
+
 export interface Education {
   id: string;
   school: string;
@@ -28,6 +31,55 @@ export interface Education {
   endDate: string;
   current: boolean;
   description?: string;
+  gradeType?: GradeType;
+  grade?: string; // e.g. "8.8 / 10", "85%", "3.8 / 4.0"
+}
+
+export function formatEducationGrade(edu?: Partial<Education> | null): string | null {
+  if (!edu) return null;
+  const gradeType = (edu.gradeType || "").toLowerCase();
+  if (gradeType === "none") return null;
+
+  let rawGrade = (edu.grade || "").trim();
+  if (!rawGrade && edu.description) {
+    const match = edu.description.match(/(?:cgpa|gpa|percentage|score|grade)\s*[:=-]?\s*([^\n,]+)/i);
+    if (match) {
+      rawGrade = match[1].trim();
+    } else if (/\b\d+(?:\.\d+)?\s*%/i.test(edu.description)) {
+      rawGrade = edu.description.trim();
+    }
+  }
+
+  if (!rawGrade) return null;
+
+  // Determine effective type
+  const effectiveType = gradeType || (
+    rawGrade.includes("%") || /percent/i.test(rawGrade) ? "percentage" :
+    /gpa/i.test(rawGrade) && !/cgpa/i.test(rawGrade) ? "gpa" : "cgpa"
+  );
+
+  // If rawGrade already includes a prefix, standardize it
+  if (/^cgpa\s*[:=-]?\s*/i.test(rawGrade)) {
+    return rawGrade.replace(/^cgpa\s*[:=-]?\s*/i, "CGPA: ");
+  }
+  if (/^gpa\s*[:=-]?\s*/i.test(rawGrade)) {
+    return rawGrade.replace(/^gpa\s*[:=-]?\s*/i, "GPA: ");
+  }
+  if (/^percentage\s*[:=-]?\s*/i.test(rawGrade)) {
+    return rawGrade.replace(/^percentage\s*[:=-]?\s*/i, "Percentage: ");
+  }
+
+  if (effectiveType === "percentage") {
+    const hasPercent = rawGrade.endsWith("%");
+    return `Percentage: ${rawGrade}${hasPercent ? "" : "%"}`;
+  }
+
+  if (effectiveType === "gpa") {
+    return `GPA: ${rawGrade}`;
+  }
+
+  // Default is CGPA
+  return `CGPA: ${rawGrade}`;
 }
 
 export interface Project {

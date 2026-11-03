@@ -13,6 +13,211 @@
   },
   "resumes": [
     {
+      "id": "1793679267422",
+      "user_id": "demo-user-id",
+      "title": "Custom Role Resume",
+      "content": {
+        "personalInfo": {
+          "fullName": "",
+          "email": "",
+          "phone": "",
+          "location": "",
+          "website": "",
+          "linkedin": ""
+        },
+        "summary": "",
+        "experience": [],
+        "education": [],
+        "projects": [],
+        "skills": [],
+        "design": {
+          "fontFamily": "font-sans",
+          "fontSize": "md",
+          "sectionOrder": [
+            "summary",
+            "experience",
+            "projects",
+            "education",
+            "skills"
+          ],
+          "density": "normal",
+          "sectionSpacing": 1,
+          "itemSpacing": 1,
+          "lineHeight": 1.4,
+          "autoFitOnePage": false
+        }
+      },
+      "ats_score": 0,
+      "created_at": "2026-11-03T04:14:27.422Z",
+      "updated_at": "2026-11-03T04:14:27.422Z"
+    },
+    {
+      "id": "1792507913582",
+      "user_id": "demo-user-id",
+      "title": "Senior Full Stack Engineer Resume",
+      "content": {
+        "personalInfo": {
+          "fullName": "Jayant Jagtap",
+          "email": "jayantjagtap2004@gmail.com",
+          "phone": "9356934045",
+          "location": "",
+          "website": "",
+          "linkedin": "https://www.linkedin.com/in/jayantjagtap/"
+        },
+        "summary": "",
+        "experience": [
+          {
+            "id": "1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+            "company": "AVEVA",
+            "position": "Software Development Intern",
+            "location": "",
+            "startDate": "May 2025",
+            "endDate": "July 2025",
+            "current": false,
+            "description": "Designed and implemented HTTP client-server model for internal communication workflows\nBuilt file reader SDK to efficiently process and parse structured data\nWorked with C++, C#, and .NET in a production codebase\nCollaborated in Agile environment with iterative development and testing\n\nDesigned and implemented HTTP client-server model for internal communication workflows\nBuilt file reader SDK to efficiently process and parse structured data\nWorked with C++, C#, and .NET in a production codebase\nCollaborated in Agile environment with iterative development and testing"
+          }
+        ],
+        "education": [
+          {
+            "id": "2c9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+            "school": "Indian Institute of Technology Hyderabad",
+            "degree": "B.Tech",
+            "fieldOfStudy": "Chemical Engineering",
+            "location": "",
+            "startDate": "2022",
+            "endDate": "2026",
+            "current": true,
+            "gradeType": "cgpa",
+            "grade": "8.08 / 10",
+            "description": "CGPA: 8.08 / 10"
+          },
+          {
+            "id": "3d9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+            "school": "Indian Institute of Technology Hyderabad",
+            "degree": "Double Major",
+            "fieldOfStudy": "Entrepreneurship",
+            "location": "",
+            "startDate": "2022",
+            "endDate": "2026",
+            "current": true,
+            "gradeType": "cgpa",
+            "grade": "7.67 / 10",
+            "description": "CGPA: 7.67 / 10"
+          }
+        ],
+        "projects": [
+          {
+            "id": "4e9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+            "name": "Customer Churn Prediction System",
+            "role": "",
+            "link": "",
+            "startDate": "",
+            "endDate": "",
+            "description": "Built end-to-end classification system to predict customer churn using structured business data\nAchieved ∼0.85+ ROC-AUC by improving recall on minority class through class balancing techniques\nEngineered features from categorical and numerical data to improve model performance\nEvaluated Logistic Regression and XGBoost, selecting model based on generalization performance\nDeployed prediction pipeline using FastAPI and integrated with a Streamlit interface"
+          },
+          {
+            "id": "5f9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+            "name": "Demand Forecasting System",
+            "role": "",
+            "link": "",
+            "startDate": "",
+            "endDate": "",
+            "description": "Developed forecasting models on time-series dataset to capture trend and seasonality patterns\nReduced RMSE by ∼18–22% over baseline using feature-driven ML models\nImplemented ARIMA and XGBoost with lag-based feature engineering\nCompared statistical vs ML approaches to improve forecasting accuracy\nBuilt visualizations to interpret model outputs and business trends"
+          },
+          {
+            "id": "6a9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+            "name": "Hybrid Recommendation System",
+            "role": "",
+            "link": "",
+            "startDate": "",
+            "endDate": "",
+            "description": "Designed hybrid recommender combining collaborative filtering and content-based methods\nImproved Precision@K and Recall@K over baseline recommendation strategies\nAddressed sparsity in user-item matrix and handled cold-start scenarios\nGenerated personalized recommendations using similarity scoring and interaction patterns"
+          }
+        ],
+        "skills": [
+          {
+            "id": "7b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+            "name": "Python",
+            "category": "Programming",
+            "level": ""
+          },
+          {
+            "id": "8c9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+            "name": "SQL",
+            "category": "Programming",
+            "level": ""
+          },
+          {
+            "id": "9d9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+            "name": "C++",
+            "category": "Programming",
+            "level": ""
+          },
+          {
+            "id": "0e9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+            "name": "Regression, Classification, Clustering, Recommendation Systems, Time Series Forecasting",
+            "category": "Machine Learning",
+            "level": ""
+          },
+          {
+            "id": "1a9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+            "name": "Transformers (BERT), Neural Networks",
+            "category": "Deep Learning",
+            "level": ""
+          },
+          {
+            "id": "2b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+            "name": "EDA, Feature Engineering, Data Cleaning",
+            "category": "Data",
+            "level": ""
+          },
+          {
+            "id": "3c9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+            "name": "Pandas, NumPy, Scikit-learn, PyTorch",
+            "category": "Libraries",
+            "level": ""
+          },
+          {
+            "id": "4d9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+            "name": "Power BI, Tableau, Matplotlib, Streamlit",
+            "category": "Tools",
+            "level": ""
+          },
+          {
+            "id": "5e9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+            "name": "FastAPI, Docker",
+            "category": "Deployment",
+            "level": ""
+          },
+          {
+            "id": "6f9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed",
+            "name": "MySQL, PostgreSQL",
+            "category": "Databases",
+            "level": ""
+          }
+        ],
+        "design": {
+          "fontFamily": "font-sans",
+          "fontSize": "md",
+          "sectionOrder": [
+            "summary",
+            "experience",
+            "projects",
+            "education",
+            "skills"
+          ],
+          "density": "ultra-compact",
+          "sectionSpacing": 0.65,
+          "itemSpacing": 0.65,
+          "lineHeight": 1.22,
+          "autoFitOnePage": false
+        }
+      },
+      "ats_score": 0,
+      "created_at": "2026-10-20T14:51:53.582Z",
+      "updated_at": "2026-10-20T15:55:29.967Z"
+    },
+    {
       "id": "1792507710918",
       "user_id": "demo-user-id",
       "title": "Custom Role Resume",

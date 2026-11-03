@@ -242,7 +242,7 @@ export async function POST(request: Request) {
         parts.push(
           `Education:\n` +
             resumeContent.education
-              .map((e: any) => `• ${e.degree || ""} in ${e.fieldOfStudy || ""} from ${e.school || ""}`)
+              .map((e: any) => `• ${e.degree || ""} in ${e.fieldOfStudy || ""} from ${e.school || ""}${e.grade ? ` [${e.gradeType === 'percentage' ? 'Percentage' : 'CGPA'}: ${e.grade}]` : ""}`)
               .join("\n")
         );
       }

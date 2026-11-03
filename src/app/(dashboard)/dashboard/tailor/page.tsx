@@ -314,7 +314,7 @@ export default function TailorPage() {
                           <span>{isExtractingFile ? "Extracting..." : "Upload File"}</span>
                           <input
                             type="file"
-                            accept=".txt,.pdf,.docx"
+                            accept=".txt,.pdf,.docx,.png,.jpg,.jpeg,.webp"
                             onChange={handleFileUpload}
                             disabled={isExtractingFile}
                             className="hidden"

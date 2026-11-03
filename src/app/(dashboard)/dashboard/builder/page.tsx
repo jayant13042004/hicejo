@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useResumeStore } from "@/store/useResumeStore";
-import { Skill, FitAnalysis, ResumeDensity } from "@/types/resume";
+import { Skill, FitAnalysis, ResumeDensity, formatEducationGrade } from "@/types/resume";
 import { DensityController } from "@/components/builder/DensityController";
 import { FitIndicatorBar } from "@/components/builder/FitIndicatorBar";
 import { FitAnalysisDrawer } from "@/components/builder/FitAnalysisDrawer";
@@ -171,7 +171,7 @@ function ResumeBuilderContent() {
           return;
         }
         loadResume(null, "Untitled Resume", {
-          personalInfo: { fullName: "", email: "", phone: "", location: "", website: "", linkedin: "" },
+          personalInfo: { fullName: "", email: "", phone: "", location: "", website: "", linkedin: "", github: "" },
           summary: "",
           experience: [],
           education: [],
@@ -591,6 +591,48 @@ function ResumeBuilderContent() {
       // Exact A4 dimensions: 210mm x 297mm
       pdf.addImage(dataUrl, "PNG", 0, 0, 210, 297, undefined, "FAST");
 
+      // Embed interactive, clickable hyperlink annotations over every <a> tag in the resume
+      try {
+        const resumeRect = resumeEl.getBoundingClientRect();
+        if (resumeRect.width > 0 && resumeRect.height > 0) {
+          const anchors = resumeEl.querySelectorAll<HTMLAnchorElement>("a[href]");
+          anchors.forEach((a) => {
+            let href = a.getAttribute("href") || a.href;
+            if (!href || href === "#" || href.trim() === "") return;
+
+            // Normalize protocol
+            if (
+              !href.startsWith("http://") &&
+              !href.startsWith("https://") &&
+              !href.startsWith("mailto:") &&
+              !href.startsWith("tel:")
+            ) {
+              href = `https://${href}`;
+            }
+
+            const rect = a.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              // Exact coordinate mapping to A4 dimensions (210mm x 297mm)
+              const x = ((rect.left - resumeRect.left) / resumeRect.width) * 210;
+              const y = ((rect.top - resumeRect.top) / resumeRect.height) * 297;
+              const w = (rect.width / resumeRect.width) * 210;
+              const h = (rect.height / resumeRect.height) * 297;
+
+              // Generous 0.5mm hit target padding for easy clicking in PDF viewers
+              const pad = 0.5;
+              const safeX = Math.max(0, x - pad);
+              const safeY = Math.max(0, y - pad);
+              const safeW = Math.min(210 - safeX, w + pad * 2);
+              const safeH = Math.min(297 - safeY, h + pad * 2);
+
+              pdf.link(safeX, safeY, safeW, safeH, { url: href });
+            }
+          });
+        }
+      } catch (linkErr) {
+        console.warn("Could not embed PDF hyperlink annotations:", linkErr);
+      }
+
       // Embed searchable, ATS-compliant text layer for ATS parsers and text extraction
       try {
         const rawText = resumeEl.innerText || "";
@@ -621,6 +663,45 @@ function ResumeBuilderContent() {
         const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
         pdf.addImage(imgData, "JPEG", 0, 0, 210, 297);
 
+        // Embed interactive, clickable hyperlink annotations over every <a> tag in the resume
+        try {
+          const resumeRect = resumeEl.getBoundingClientRect();
+          if (resumeRect.width > 0 && resumeRect.height > 0) {
+            const anchors = resumeEl.querySelectorAll<HTMLAnchorElement>("a[href]");
+            anchors.forEach((a) => {
+              let href = a.getAttribute("href") || a.href;
+              if (!href || href === "#" || href.trim() === "") return;
+
+              if (
+                !href.startsWith("http://") &&
+                !href.startsWith("https://") &&
+                !href.startsWith("mailto:") &&
+                !href.startsWith("tel:")
+              ) {
+                href = `https://${href}`;
+              }
+
+              const rect = a.getBoundingClientRect();
+              if (rect.width > 0 && rect.height > 0) {
+                const x = ((rect.left - resumeRect.left) / resumeRect.width) * 210;
+                const y = ((rect.top - resumeRect.top) / resumeRect.height) * 297;
+                const w = (rect.width / resumeRect.width) * 210;
+                const h = (rect.height / resumeRect.height) * 297;
+
+                const pad = 0.5;
+                const safeX = Math.max(0, x - pad);
+                const safeY = Math.max(0, y - pad);
+                const safeW = Math.min(210 - safeX, w + pad * 2);
+                const safeH = Math.min(297 - safeY, h + pad * 2);
+
+                pdf.link(safeX, safeY, safeW, safeH, { url: href });
+              }
+            });
+          }
+        } catch (linkErr) {
+          console.warn("Could not embed PDF hyperlink annotations:", linkErr);
+        }
+
         try {
           const rawText = resumeEl.innerText || "";
           if (rawText.trim()) {
@@ -631,7 +712,8 @@ function ResumeBuilderContent() {
           // Non-blocking fallback
         }
         const defaultName = (data.personalInfo.fullName || title || "Resume").trim().replace(/[^a-zA-Z0-9_\-\s]/g, "").replace(/\s+/g, "_");
-        pdf.save(`${defaultName || "Resume"}.pdf`);
+        const cleanName = (downloadFileName.trim() || defaultName || "Resume").replace(/[^a-zA-Z0-9_\-\s]/g, "");
+        pdf.save(`${cleanName || "Resume"}.pdf`);
         setIsDownloadModalOpen(false);
         setAutoFitNotification("✨ Resume PDF downloaded directly to your downloads folder!");
       } catch (fallbackErr) {
@@ -876,7 +958,7 @@ function ResumeBuilderContent() {
             onClick={() => {
               if (window.confirm("Start a new blank resume from scratch?")) {
                 loadResume(null, "Untitled Resume", {
-                  personalInfo: { fullName: "", email: "", phone: "", location: "", website: "", linkedin: "" },
+                  personalInfo: { fullName: "", email: "", phone: "", location: "", website: "", linkedin: "", github: "" },
                   summary: "",
                   experience: [],
                   education: [],
@@ -1091,6 +1173,12 @@ function ResumeBuilderContent() {
                     placeholder="https://linkedin.com/in/yourusername"
                     value={data.personalInfo.linkedin}
                     onChange={(e) => updatePersonalInfo({ linkedin: e.target.value })}
+                  />
+                  <Input
+                    label="GitHub Profile Link"
+                    placeholder="https://github.com/yourusername"
+                    value={data.personalInfo.github || ""}
+                    onChange={(e) => updatePersonalInfo({ github: e.target.value })}
                   />
                 </div>
               </div>
@@ -1311,67 +1399,193 @@ function ResumeBuilderContent() {
                 </div>
 
                 <div className="space-y-6">
-                  {data.education.map((edu, index) => (
-                    <Card key={edu.id} className="border border-border/70 overflow-hidden bg-card/60 shadow-2xs">
-                      <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border/50 text-xs">
-                        <span className="font-semibold text-foreground truncate">
-                          {edu.degree || edu.school ? `${edu.degree || "Degree"}${edu.school ? ` • ${edu.school}` : ""}` : `Education #${index + 1}`}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removeEducation(edu.id)}
-                          className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-destructive transition-colors cursor-pointer px-1.5 py-0.5 rounded hover:bg-destructive/10"
-                          title="Remove education"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          <span>Remove</span>
-                        </button>
-                      </div>
+                  {data.education.map((edu, index) => {
+                    const resolvedGradeType = ((): "cgpa" | "percentage" | "gpa" | "none" => {
+                      if (edu.gradeType) {
+                        const gt = edu.gradeType.toLowerCase();
+                        if (gt === "percentage" || gt === "percent") return "percentage";
+                        if (gt === "gpa") return "gpa";
+                        if (gt === "none") return "none";
+                        if (gt === "cgpa") return "cgpa";
+                      }
+                      if (edu.grade) {
+                        if (edu.grade.includes("%") || /percent/i.test(edu.grade)) return "percentage";
+                        if (/gpa/i.test(edu.grade) && !/cgpa/i.test(edu.grade)) return "gpa";
+                        return "cgpa";
+                      }
+                      if (edu.description) {
+                        if (/percentage|%/i.test(edu.description)) return "percentage";
+                        if (/gpa/i.test(edu.description) && !/cgpa/i.test(edu.description)) return "gpa";
+                        if (/cgpa/i.test(edu.description)) return "cgpa";
+                      }
+                      return "none";
+                    })();
 
-                      <CardContent className="p-4 space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <Input
-                            label="University / Institution"
-                            placeholder="Stanford University"
-                            value={edu.school}
-                            onChange={(e) => updateEducation(edu.id, { school: e.target.value })}
-                          />
-                          <Input
-                            label="Degree Name"
-                            placeholder="Bachelor of Science"
-                            value={edu.degree}
-                            onChange={(e) => updateEducation(edu.id, { degree: e.target.value })}
-                          />
-                          <Input
-                            label="Field of Study"
-                            placeholder="Computer Science"
-                            value={edu.fieldOfStudy}
-                            onChange={(e) => updateEducation(edu.id, { fieldOfStudy: e.target.value })}
-                          />
-                          <Input
-                            label="Location"
-                            placeholder="Stanford, CA"
-                            value={edu.location}
-                            onChange={(e) => updateEducation(edu.id, { location: e.target.value })}
-                          />
-                          <div className="grid grid-cols-2 gap-2 md:col-span-2">
-                            <Input
-                              label="Start Date"
-                              placeholder="Sep 2018"
-                              value={edu.startDate}
-                              onChange={(e) => updateEducation(edu.id, { startDate: e.target.value })}
-                            />
-                            <Input
-                              label="Graduation Date"
-                              placeholder="Jun 2022"
-                              value={edu.endDate}
-                              onChange={(e) => updateEducation(edu.id, { endDate: e.target.value })}
-                            />
+                    const previewGrade = formatEducationGrade({ ...edu, gradeType: resolvedGradeType });
+
+                    return (
+                      <Card key={edu.id} className="border border-border/70 overflow-hidden bg-card/60 shadow-2xs">
+                        <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border/50 text-xs">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="font-semibold text-foreground truncate">
+                              {edu.degree || edu.school ? `${edu.degree || "Degree"}${edu.school ? ` • ${edu.school}` : ""}` : `Education #${index + 1}`}
+                            </span>
+                            {previewGrade && (
+                              <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium text-[10px] shrink-0 border border-primary/20">
+                                {previewGrade}
+                              </span>
+                            )}
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => removeEducation(edu.id)}
+                            className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-destructive transition-colors cursor-pointer px-1.5 py-0.5 rounded hover:bg-destructive/10"
+                            title="Remove education"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span>Remove</span>
+                          </button>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+
+                        <CardContent className="p-4 space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Input
+                              label="University / Institution"
+                              placeholder="Stanford University"
+                              value={edu.school}
+                              onChange={(e) => updateEducation(edu.id, { school: e.target.value })}
+                            />
+                            <Input
+                              label="Degree Name"
+                              placeholder="Bachelor of Science"
+                              value={edu.degree}
+                              onChange={(e) => updateEducation(edu.id, { degree: e.target.value })}
+                            />
+                            <Input
+                              label="Field of Study"
+                              placeholder="Computer Science"
+                              value={edu.fieldOfStudy}
+                              onChange={(e) => updateEducation(edu.id, { fieldOfStudy: e.target.value })}
+                            />
+                            <Input
+                              label="Location"
+                              placeholder="Stanford, CA"
+                              value={edu.location}
+                              onChange={(e) => updateEducation(edu.id, { location: e.target.value })}
+                            />
+                            <div className="grid grid-cols-2 gap-2 md:col-span-2">
+                              <Input
+                                label="Start Date"
+                                placeholder="Sep 2018"
+                                value={edu.startDate}
+                                onChange={(e) => updateEducation(edu.id, { startDate: e.target.value })}
+                              />
+                              <Input
+                                label="Graduation Date"
+                                placeholder="Jun 2022"
+                                value={edu.endDate}
+                                onChange={(e) => updateEducation(edu.id, { endDate: e.target.value })}
+                              />
+                            </div>
+
+                            {/* Academic Score: CGPA or Percentage option */}
+                            <div className="md:col-span-2 pt-3 border-t border-border/60 space-y-3">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                <div>
+                                  <label className="text-xs font-semibold text-foreground/90 block">
+                                    Academic Score / Grade Format
+                                  </label>
+                                  <p className="text-[11px] text-muted-foreground">
+                                    Optionally display your CGPA, Percentage, or GPA on this degree
+                                  </p>
+                                </div>
+                                <div className="inline-flex items-center bg-muted/80 p-0.5 rounded-lg border border-border/60 text-xs shrink-0 shadow-2xs">
+                                  <button
+                                    type="button"
+                                    onClick={() => updateEducation(edu.id, { gradeType: "cgpa" })}
+                                    className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                                      resolvedGradeType === "cgpa"
+                                        ? "bg-primary text-primary-foreground shadow-xs"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-background/60"
+                                    }`}
+                                  >
+                                    CGPA
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateEducation(edu.id, { gradeType: "percentage" })}
+                                    className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                                      resolvedGradeType === "percentage"
+                                        ? "bg-primary text-primary-foreground shadow-xs"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-background/60"
+                                    }`}
+                                  >
+                                    Percentage (%)
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateEducation(edu.id, { gradeType: "gpa" })}
+                                    className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                                      resolvedGradeType === "gpa"
+                                        ? "bg-primary text-primary-foreground shadow-xs"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-background/60"
+                                    }`}
+                                  >
+                                    GPA
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => updateEducation(edu.id, { gradeType: "none", grade: "" })}
+                                    className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                                      resolvedGradeType === "none"
+                                        ? "bg-background text-foreground shadow-xs"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-background/60"
+                                    }`}
+                                  >
+                                    None
+                                  </button>
+                                </div>
+                              </div>
+
+                              {resolvedGradeType !== "none" && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-muted/20 p-3 rounded-lg border border-border/50 items-center">
+                                  <Input
+                                    label={
+                                      resolvedGradeType === "percentage"
+                                        ? "Percentage Score"
+                                        : resolvedGradeType === "gpa"
+                                        ? "GPA Score (4.0 Scale)"
+                                        : "CGPA Score (Scale of 10 or 4)"
+                                    }
+                                    placeholder={
+                                      resolvedGradeType === "percentage"
+                                        ? "e.g. 85% or 92.4"
+                                        : resolvedGradeType === "gpa"
+                                        ? "e.g. 3.8 / 4.0"
+                                        : "e.g. 8.8 / 10 or 9.1"
+                                    }
+                                    value={edu.grade || ""}
+                                    onChange={(e) => updateEducation(edu.id, {
+                                      grade: e.target.value,
+                                      gradeType: resolvedGradeType
+                                    })}
+                                  />
+                                  <div className="flex flex-col justify-center space-y-1 text-xs">
+                                    <span className="text-muted-foreground font-medium">Resume Format Preview:</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-mono text-xs font-bold text-foreground bg-background px-2.5 py-1.5 rounded border border-border/70 inline-block shadow-2xs">
+                                        {previewGrade || "Enter score on the left..."}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
 
                   {data.education.length === 0 && (
                     <div className="text-center py-10 border border-dashed border-border rounded-xl text-muted-foreground text-sm">
@@ -2002,6 +2216,17 @@ function ResumeBuilderContent() {
                               {isTechnical ? `[linkedin]` : "LinkedIn"}
                             </a>
                           )}
+                          {data.personalInfo.github && (
+                            <a
+                              href={data.personalInfo.github.startsWith("http") ? data.personalInfo.github : `https://${data.personalInfo.github}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:text-primary hover:underline transition-colors"
+                              title={data.personalInfo.github}
+                            >
+                              {isTechnical ? `[github]` : "GitHub"}
+                            </a>
+                          )}
                         </div>
                       </div>
                     );
@@ -2122,17 +2347,33 @@ function ResumeBuilderContent() {
                             Education
                           </h3>
                           <div style={{ display: "flex", flexDirection: "column", gap: `${8 * itemSpacingMultiplier}px` }}>
-                            {data.education.map((edu) => (
-                              isSplit ? (
+                            {data.education.map((edu) => {
+                              const gradeText = formatEducationGrade(edu);
+                              const degreeAndField = [
+                                edu.degree,
+                                edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ""
+                              ].filter(Boolean).join(" ");
+                              const dateRange = edu.startDate && edu.endDate
+                                ? `${edu.startDate} – ${edu.endDate}`
+                                : edu.startDate || edu.endDate || "";
+
+                              return isSplit ? (
                                 <div key={edu.id} className="space-y-0.5 text-[0.9em]">
                                   <div className="font-bold text-[0.95em] text-zinc-950 leading-tight">
                                     {edu.school}
                                   </div>
-                                  <div className="text-zinc-700 text-[0.9em] leading-tight">
-                                    {edu.degree}{edu.fieldOfStudy ? ` in ${edu.fieldOfStudy}` : ""}
-                                  </div>
+                                  {degreeAndField && (
+                                    <div className="text-zinc-700 text-[0.9em] leading-tight">
+                                      {degreeAndField}
+                                    </div>
+                                  )}
+                                  {gradeText && (
+                                    <div className={`text-zinc-800 font-semibold text-[0.85em] ${isTechnical ? "font-mono" : ""}`}>
+                                      {gradeText}
+                                    </div>
+                                  )}
                                   <div className="text-zinc-500 font-medium text-[0.82em]">
-                                    {edu.startDate} – {edu.endDate}
+                                    {dateRange}
                                     {edu.location ? ` · ${edu.location}` : ""}
                                   </div>
                                 </div>
@@ -2140,15 +2381,24 @@ function ResumeBuilderContent() {
                                 <div key={edu.id} className="space-y-0.5 text-[0.95em]">
                                   <div className="flex items-center justify-between font-bold text-[1em]">
                                     <span className="text-zinc-900">{edu.school}</span>
-                                    <span className="text-zinc-600 font-medium text-[0.9em]">{edu.startDate} - {edu.endDate}</span>
+                                    {dateRange && (
+                                      <span className="text-zinc-600 font-medium text-[0.9em]">{dateRange}</span>
+                                    )}
                                   </div>
                                   <div className="flex items-center justify-between text-zinc-700 text-[0.95em]">
-                                    <span>{edu.degree} in {edu.fieldOfStudy}</span>
+                                    <span>
+                                      {degreeAndField}
+                                      {gradeText && (
+                                        <span className={`text-zinc-600 font-medium ${degreeAndField ? "ml-2" : ""}`}>
+                                          {degreeAndField ? "• " : ""}<span className={`font-semibold text-zinc-800 ${isTechnical ? "font-mono" : ""}`}>{gradeText}</span>
+                                        </span>
+                                      )}
+                                    </span>
                                     {edu.location && <span className="text-zinc-500 font-medium">{edu.location}</span>}
                                   </div>
                                 </div>
-                              )
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       ) : null;
@@ -2489,10 +2739,11 @@ function ResumeBuilderContent() {
                       </label>
                       <label className="flex items-center gap-1.5 text-xs text-primary hover:underline cursor-pointer font-medium">
                         <Upload className="h-3.5 w-3.5" />
-                        <span>Upload File (.pdf, .docx, .txt)</span>
+                        <span>{isParsing ? "Extracting text..." : "Upload File (.pdf, .docx, .txt, .png, .jpg)"}</span>
                         <input
                           type="file"
-                          accept=".txt,.pdf,.docx"
+                          accept=".txt,.pdf,.docx,.png,.jpg,.jpeg,.webp"
+                          disabled={isParsing}
                           onChange={async (e) => {
                             const file = e.target.files?.[0];
                             if (!file) return;

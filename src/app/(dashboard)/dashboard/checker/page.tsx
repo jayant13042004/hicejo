@@ -475,10 +475,10 @@ export default function CheckerPage() {
                         </label>
                         <label className="flex items-center gap-1 text-[11px] text-primary hover:underline cursor-pointer font-semibold uppercase tracking-wider">
                           <Upload className="h-3 w-3" />
-                          <span>Upload File (PDF/DOCX)</span>
+                          <span>Upload File (.pdf, .docx, .png, .jpg)</span>
                           <input
                             type="file"
-                            accept=".txt,.pdf,.docx"
+                            accept=".txt,.pdf,.docx,.png,.jpg,.jpeg,.webp"
                             onChange={handleFileUpload}
                             className="hidden"
                           />

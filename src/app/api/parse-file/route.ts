@@ -8,6 +8,115 @@ import { getAIClient } from "@/lib/ai";
 
 const require = createRequire(import.meta.url);
 
+/**
+ * Perform high-precision Vision OCR on rendered document pages or image files
+ */
+async function performVisionOcr(imageBuffers: Buffer[]): Promise<string> {
+  if (!imageBuffers || imageBuffers.length === 0) return "";
+  const { openai, modelMini, isConfigured } = getAIClient();
+  if (!isConfigured || !openai) return "";
+
+  const pageTexts: string[] = [];
+  for (const imgBuf of imageBuffers) {
+    try {
+      const base64 = imgBuf.toString("base64");
+      const res = await openai.chat.completions.create({
+        model: modelMini,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "You are an expert resume parser and OCR system. Extract and return ALL textual content visible on this document page verbatim. Preserve all names, contact details, job titles, companies, dates, metrics, skills, education, and bullet points. Output ONLY the clean extracted text with natural line breaks. Do NOT add commentary, explanations, or markdown code blocks."
+              },
+              {
+                type: "image_url",
+                image_url: { url: `data:image/jpeg;base64,${base64}` }
+              }
+            ]
+          }
+        ],
+        temperature: 0.1
+      });
+
+      const pageText = res.choices[0]?.message?.content?.trim();
+      if (pageText) {
+        pageTexts.push(pageText);
+      }
+    } catch (pageOcrErr) {
+      console.warn("Vision OCR request error on page:", pageOcrErr);
+    }
+  }
+
+  return pageTexts.join("\n\n");
+}
+
+/**
+ * Render PDF pages directly to raster images using @napi-rs/canvas.
+ * This guarantees capturing scanned PDFs, Canva designs, vector outlines, and heavily stylized resumes.
+ */
+async function renderPdfPagesToImages(buffer: Buffer, maxPages = 4): Promise<Buffer[]> {
+  try {
+    const { createCanvas } = require("@napi-rs/canvas");
+    const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+
+    const fontPath = path.join(process.cwd(), "node_modules", "pdfjs-dist", "standard_fonts");
+    const cmapPath = path.join(process.cwd(), "node_modules", "pdfjs-dist", "cmaps");
+    let standardFontDataUrl: string | undefined;
+    let cMapUrl: string | undefined;
+    if (fs.existsSync(fontPath)) {
+      standardFontDataUrl = pathToFileURL(fontPath).href + "/";
+    }
+    if (fs.existsSync(cmapPath)) {
+      cMapUrl = pathToFileURL(cmapPath).href + "/";
+    }
+
+    const doc = await pdfjs.getDocument({
+      data: new Uint8Array(buffer),
+      ...(standardFontDataUrl ? { standardFontDataUrl } : {}),
+      ...(cMapUrl ? { cMapUrl, cMapPacked: true } : {}),
+      disableFontFace: true,
+      useSystemFonts: true,
+      verbosity: 0
+    }).promise;
+
+    const pageCount = Math.min(doc.numPages, maxPages);
+    const jpegBuffers: Buffer[] = [];
+
+    for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
+      const page = await doc.getPage(pageNum);
+      // scale 1.5 provides high DPI clarity for OCR while keeping image size small (~40-80KB)
+      const viewport = page.getViewport({ scale: 1.5 });
+      const canvas = createCanvas(viewport.width, viewport.height);
+      const ctx = canvas.getContext("2d");
+
+      // Fill white background for transparent or default canvas pages
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, viewport.width, viewport.height);
+
+      await (page.render as any)({
+        canvasContext: ctx,
+        canvas: canvas as any,
+        viewport
+      }).promise;
+
+      const pageJpg = canvas.toBuffer("image/jpeg");
+      if (pageJpg && pageJpg.length > 500) {
+        jpegBuffers.push(pageJpg);
+      }
+    }
+
+    return jpegBuffers;
+  } catch (canvasErr) {
+    console.warn("Direct canvas PDF render encountered an issue, trying raw image extraction:", canvasErr);
+    return [];
+  }
+}
+
+/**
+ * Secondary fallback: Extract raw image XObjects from PDF if canvas rendering is unavailable
+ */
 async function extractImagesFromPdf(buffer: Buffer, maxPages = 4): Promise<Buffer[]> {
   try {
     const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
@@ -37,7 +146,7 @@ async function extractImagesFromPdf(buffer: Buffer, maxPages = 4): Promise<Buffe
 
           if (imgObj && imgObj.width && imgObj.height && imgObj.data) {
             const area = imgObj.width * imgObj.height;
-            if (area > maxArea && imgObj.width >= 200 && imgObj.height >= 200) {
+            if (area > maxArea && imgObj.width >= 100 && imgObj.height >= 100) {
               maxArea = area;
               bestImg = imgObj;
             }
@@ -69,7 +178,7 @@ async function extractImagesFromPdf(buffer: Buffer, maxPages = 4): Promise<Buffe
 
     return jpegBuffers;
   } catch (err) {
-    console.warn("PDF image extraction encountered an error:", err);
+    console.warn("PDF raw image extraction encountered an error:", err);
     return [];
   }
 }
@@ -129,7 +238,8 @@ async function parsePdfBuffer(buffer: Buffer): Promise<string> {
   }
 
   // Strategy 2: Direct pdfjs-dist fallback if pdf-parse returned insufficient text
-  if (!text || text.trim().length < 30) {
+  const initialWords = text.split(/\s+/).filter((w) => w.length > 1);
+  if (!text || text.trim().length < 60 || initialWords.length < 12) {
     try {
       const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
       const loadingTask = pdfjs.getDocument({
@@ -137,25 +247,27 @@ async function parsePdfBuffer(buffer: Buffer): Promise<string> {
         ...(fontUrl ? { standardFontDataUrl: fontUrl } : {}),
         ...(cMapUrl ? { cMapUrl, cMapPacked: true } : {}),
         useSystemFonts: true,
-        disableFontFace: true
+        disableFontFace: true,
+        verbosity: 0
       });
       const doc = await loadingTask.promise;
       const pagesText: string[] = [];
       for (let i = 1; i <= doc.numPages; i++) {
         const page = await doc.getPage(i);
         const content = await page.getTextContent();
-        const strings: string[] = [];
+        let pageStr = "";
         for (const item of content.items) {
           if ("str" in item && typeof item.str === "string") {
-            strings.push(item.str);
+            pageStr += item.str + (item.hasEOL ? "\n" : " ");
           }
         }
-        if (strings.length > 0) {
-          pagesText.push(strings.join(" "));
+        if (pageStr.trim().length > 0) {
+          pagesText.push(pageStr.trim());
         }
       }
-      if (pagesText.length > 0) {
-        text = pagesText.join("\n\n");
+      const combined = pagesText.join("\n\n").trim();
+      if (combined.length > text.trim().length) {
+        text = combined;
       }
     } catch (fallbackErr: unknown) {
       const message = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
@@ -163,49 +275,25 @@ async function parsePdfBuffer(buffer: Buffer): Promise<string> {
     }
   }
 
-  // Strategy 3: AI Vision OCR for image-based/scanned PDFs (e.g. Canva exports, legacy Hicejo downloads, scans)
-  if (!text || text.trim().length < 30) {
+  // Strategy 3: AI Vision OCR for image-based/scanned/Canva PDFs with no direct text layer
+  const extractedWords = text.split(/\s+/).filter((w) => w.length > 1);
+  const isSufficientText = text.trim().length >= 60 && extractedWords.length >= 12;
+
+  if (!isSufficientText) {
     try {
-      const imageBuffers = await extractImagesFromPdf(buffer);
+      // Step 3A: Render full page canvases directly (handles vector outlines, Canva elements, full scans)
+      let imageBuffers = await renderPdfPagesToImages(buffer, 4);
+
+      // Step 3B: If canvas render yielded no images, try raw XObject extraction
+      if (imageBuffers.length === 0) {
+        imageBuffers = await extractImagesFromPdf(buffer, 4);
+      }
+
+      // Step 3C: Run Gemini Vision OCR on the rendered pages
       if (imageBuffers.length > 0) {
-        const { openai, modelMini, isConfigured } = getAIClient();
-        if (isConfigured && openai) {
-          const ocrPages: string[] = [];
-          for (const imgBuf of imageBuffers) {
-            try {
-              const base64 = imgBuf.toString("base64");
-              const res = await openai.chat.completions.create({
-                model: modelMini,
-                messages: [
-                  {
-                    role: "user",
-                    content: [
-                      {
-                        type: "text",
-                        text: "You are an expert resume parser and OCR system. Extract and return ALL textual content visible on this document page verbatim. Preserve all names, contact details, job titles, companies, dates, metrics, skills, education, and bullet points. Output ONLY the clean extracted text with natural line breaks. Do NOT add commentary, explanations, or markdown code blocks."
-                      },
-                      {
-                        type: "image_url",
-                        image_url: { url: `data:image/jpeg;base64,${base64}` }
-                      }
-                    ]
-                  }
-                ],
-                temperature: 0.1
-              });
-
-              const pageText = res.choices[0]?.message?.content?.trim();
-              if (pageText) {
-                ocrPages.push(pageText);
-              }
-            } catch (pageOcrErr) {
-              console.warn("Page OCR request error:", pageOcrErr);
-            }
-          }
-
-          if (ocrPages.length > 0) {
-            text = ocrPages.join("\n\n");
-          }
+        const ocrText = await performVisionOcr(imageBuffers);
+        if (ocrText && ocrText.trim().length > text.trim().length) {
+          text = ocrText;
         }
       }
     } catch (ocrStrategyErr) {
@@ -252,10 +340,36 @@ export async function POST(request: Request) {
       }
     } else if (fileName.endsWith(".txt")) {
       text = buffer.toString("utf-8");
+    } else if (
+      fileName.endsWith(".png") ||
+      fileName.endsWith(".jpg") ||
+      fileName.endsWith(".jpeg") ||
+      fileName.endsWith(".webp")
+    ) {
+      // Direct image file uploaded by user (e.g. screenshot or photo of resume)
+      try {
+        let preparedImg = buffer;
+        try {
+          const sharp = require("sharp");
+          preparedImg = await sharp(buffer)
+            .resize({ width: 1600, height: 2400, fit: "inside", withoutEnlargement: true })
+            .jpeg({ quality: 85 })
+            .toBuffer();
+        } catch {
+          // Sharp resize optional
+        }
+        text = await performVisionOcr([preparedImg]);
+      } catch (imgOcrErr) {
+        console.error("Image OCR error:", imgOcrErr);
+        return NextResponse.json({
+          success: false,
+          error: "Could not perform OCR on this image. Please copy and paste the text directly."
+        }, { status: 422 });
+      }
     } else {
       return NextResponse.json({
         success: false,
-        error: "Unsupported file format. Please upload a PDF, DOCX, or TXT file."
+        error: "Unsupported file format. Please upload a PDF, DOCX, TXT, or Image file (.png, .jpg)."
       }, { status: 400 });
     }
 

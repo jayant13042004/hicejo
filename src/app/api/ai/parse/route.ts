@@ -25,7 +25,8 @@ export async function POST(request: Request) {
       const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
       const phoneMatch = text.match(/(?:\+91[\s-]?)?[6-9]\d{9}|(?:\+?1[\s-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}|\+\d{10,13}/);
       const linkedinMatch = text.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[a-zA-Z0-9_-]+/i);
-      const websiteMatch = text.match(/(?:https?:\/\/)?(?:www\.)?(?!linkedin)[a-zA-Z0-9-]+\.(?:com|io|dev|org|net|me|in)(?:\/[^\s]*)?/i);
+      const githubMatch = text.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[a-zA-Z0-9_-]+/i);
+      const websiteMatch = text.match(/(?:https?:\/\/)?(?:www\.)?(?!linkedin|github)[a-zA-Z0-9-]+\.(?:com|io|dev|org|net|me|in)(?:\/[^\s]*)?/i);
 
       // Name is usually the first non-contact line
       let fullName = "";
@@ -83,6 +84,18 @@ export async function POST(request: Request) {
           else if (/m\.tech/i.test(line)) degree = "M.Tech";
           else if (/xii|hsc|senior secondary/i.test(line)) degree = "Senior Secondary (XII)";
 
+          let gradeType = "none";
+          let grade = "";
+          const cgpaMatch = line.match(/\b(?:cgpa|gpa)\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?(?:\s*\/\s*[0-9]+(?:\.[0-9]+)?)?)/i);
+          const percentMatch = line.match(/\b([0-9]+(?:\.[0-9]+)?)\s*%/i) || line.match(/\bpercentage\s*[:=-]?\s*([0-9]+(?:\.[0-9]+)?%?)/i);
+          if (cgpaMatch) {
+            gradeType = /gpa/i.test(line) && !/cgpa/i.test(line) ? "gpa" : "cgpa";
+            grade = cgpaMatch[1];
+          } else if (percentMatch) {
+            gradeType = "percentage";
+            grade = percentMatch[1].endsWith("%") ? percentMatch[1] : `${percentMatch[1]}%`;
+          }
+
           education.push({
             id: crypto.randomUUID(),
             school,
@@ -92,6 +105,8 @@ export async function POST(request: Request) {
             startDate: "",
             endDate: yearMatch ? yearMatch[0] : "Present",
             current: !yearMatch || parseInt(yearMatch[0]) >= new Date().getFullYear(),
+            gradeType,
+            grade,
             description: line
           });
         }
@@ -123,7 +138,8 @@ export async function POST(request: Request) {
           phone: phoneMatch ? phoneMatch[0] : "",
           location: "",
           website: websiteMatch ? websiteMatch[0] : "",
-          linkedin: linkedinMatch ? linkedinMatch[0] : ""
+          linkedin: linkedinMatch ? linkedinMatch[0] : "",
+          github: githubMatch ? githubMatch[0] : ""
         },
         summary: summary || "Engineered candidate with hands-on technical and project experience.",
         experience: [],
@@ -158,7 +174,8 @@ You MUST respond in a strict JSON format matching this schema:
     "phone": "string",
     "location": "string",
     "website": "string",
-    "linkedin": "string"
+    "linkedin": "string",
+    "github": "string"
   },
   "summary": "string",
   "experience": [
@@ -183,6 +200,8 @@ You MUST respond in a strict JSON format matching this schema:
       "startDate": "string",
       "endDate": "string",
       "current": boolean,
+      "gradeType": "string ('cgpa' | 'percentage' | 'gpa' | 'none')",
+      "grade": "string (e.g. '8.8 / 10' or '85%' or '3.8 / 4.0')",
       "description": "string"
     }
   ],

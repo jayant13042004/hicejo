@@ -108,6 +108,7 @@ const initialResumeData: ResumeData = {
     location: "",
     website: "",
     linkedin: "",
+    github: "",
   },
   summary: "",
   experience: [],
@@ -386,6 +387,8 @@ export const useResumeStore = create<ResumeStore>((set, get) => {
         endDate: "",
         current: false,
         description: "",
+        gradeType: "none",
+        grade: "",
       };
       return {
         ...saveHistory(state),
