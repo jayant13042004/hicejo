@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getAIClient } from "@/lib/ai";
 import { isTechnicalRole } from "@/lib/interviewRoundCatalog";
 import { createServerSideClient } from "@/lib/supabase/server";
-import { isDemoMode, getDemoResume, insertDemoResume } from "@/lib/supabase/demo";
+import { isDemoMode, getDemoResume, insertDemoResume, getDemoProfile } from "@/lib/supabase/demo";
+import { getFactBankTextSummary, mergeWithDefaultFactBank } from "@/lib/factBank";
 
 export async function POST(request: Request) {
   try {
@@ -126,35 +127,73 @@ export async function POST(request: Request) {
       });
     }
 
+    // Fetch candidate's verified fact bank so tailoring engine can choose from all verified projects & skills
+    let customFactBank: any = null;
+    try {
+      if (await isDemoMode()) {
+        const demo = getDemoProfile();
+        if (demo?.fact_bank) customFactBank = demo.fact_bank;
+        else if (demo?.resume_text) {
+          try { customFactBank = JSON.parse(demo.resume_text); } catch {}
+        }
+      } else {
+        const supabase = await createServerSideClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("fact_bank, resume_text")
+            .eq("id", user.id)
+            .maybeSingle();
+          if (profile?.fact_bank) customFactBank = profile.fact_bank;
+          else if (profile?.resume_text) {
+            try { customFactBank = JSON.parse(profile.resume_text); } catch {}
+          }
+        }
+      }
+    } catch {}
+
+    const activeFactBank = mergeWithDefaultFactBank(customFactBank);
+    const factBankSummary = getFactBankTextSummary(activeFactBank);
+
     const isTech = isTechnicalRole(jobTitle);
 
     const systemPrompt = `You are a principal recruiter and elite resume strategist known for producing resumes that read 100% HUMAN-WRITTEN, natural, and authentic.
-You will receive a candidate's resume and a target job description.
-Your goal is to tailor the candidate's summary, work experience bullet points, projects, and skills to highlight keywords and competencies matching the target job description WITHOUT sounding like generic AI generated text.
+You will receive a candidate's resume, their complete verified fact bank of projects and skills, and a target job description.
+Your goal is to tailor the candidate's summary, work experience bullet points, projects, and skills to maximize ATS match probability and recruiter impact for the target role WITHOUT sounding like generic AI generated text.
 
-CRITICAL ANTI-AI-SLOP & HUMAN WRITING RULES:
-1. STRICTLY FORBIDDEN WORDS/CLICHÉS:
-   - NEVER use: "spearheaded", "orchestrated", "synergized", "leveraged", "pioneered", "game-changing", "cutting-edge", "transformative", "tapestry", "seamlessly", "testament to", "delved", "fostered", "dynamic", "beacon", "unwavering", "catalyst", "harnessed", "endeavor", "realm".
-2. USE CRISP, NATURAL ACTION VERBS:
-   - Use direct, authentic active verbs: ${isTech ? "Built, Designed, Shipped, Scaled, Automated, Migrated, Refactored, Reduced, Wrote, Integrated, Deployed, Benchmarked, Optimized, Implemented." : "Negotiated, Closed, Managed, Structured, Scaled, Forecasted, Standardized, Executed, Launched, Partnered, Streamlined, Reduced, Analyzed."}
-3. GROUND IN REALITY (NO FAKE METRICS):
-   - Preserve all real metrics from the candidate's background.
-   - NEVER fabricate unbelievable business stats (e.g. do NOT invent "boosted company revenue by 48%" or "increased enterprise sales by $2M" if not present in the candidate's original resume).
-   - If introducing numbers or impact, keep them grounded in realistic scope (${isTech ? "latency reduction, test coverage %, database query times, API response times, number of daily events, batch runtimes" : "deal cycle times, conversion rates, pipeline retention, cost reduction %, deal size, SLAs, operational throughput"}).
-4. BULLET POINT DENSITY & STYLE:
-   - Each bullet point must be between 15 and 28 words.
-   - Format each bullet as: Action Verb + Scope/Problem + Concrete Result or Method.
-   - Each bullet MUST start with a bullet character "• ".
-5. SUMMARY SECTION RULES:
-   - NO generic fluff: Do NOT say "Results-oriented, passionate professional with a proven track record of excellence."
-   - Write a crisp, 2 to 3 sentence summary stating exact domain, primary expertise, and key focus matching the target job.
-6. EXHAUSTIVE JD KEYWORD & TECHNICAL COMPETENCY MATCHING:
-   - Thoroughly parse the ENTIRE Target Job Description (including Responsibilities, Technical Requirements, Team Architecture, and Nice-to-Haves).
-   - Defensibly map and integrate the job's high-value keywords, architectures, methodologies (e.g. CI/CD, telemetry, unit testing, agile, microservices, distributed systems), and domain tools into the candidate's bullets, skills, and summary.
-   - Maximize ATS match rate while ensuring every achievement reads natural, believable, and authentic.
-7. PRESERVE FACTUAL INTEGRITY:
+CRITICAL ATS SELECTION, PROJECT SELECTION & SKILLS CURATION RULES:
+
+1. INTELLIGENT PROJECT SELECTION (KEEP ONLY THE BEST 2-3):
+   - Review ALL verified projects from the candidate's Fact Bank and Resume.
+   - Select the 2 to 3 projects that most directly demonstrate the core competencies required by the Target Job Description.
+   - For Data Analyst / BI roles: prioritize projects with SQL, Power BI, Tableau, cohort analysis, customer segmentation, or revenue metrics.
+   - For Data Science / ML roles: prioritize projects with time-series forecasting, predictive modeling, Scikit-Learn, XGBoost, or ROC-AUC metrics.
+   - For SDE / Engineering roles: prioritize projects with API design, backend architecture, C++, Python, or SDK development.
+   - DO NOT include all projects. Prune irrelevant or lower-priority projects so the resume fits cleanly on 1 page with maximum relevance.
+
+2. SKILLS CURATION & ATS KEYWORD ALIGNMENT:
+   - Analyze the target JD's required and preferred technologies, tools, and methodologies.
+   - Curate and re-order the candidate's verified skills: place the exact skills matching the JD at the very top of the list.
+   - Match the exact casing and phrasing used by the employer (e.g. if JD specifies "Power BI", "Exploratory Data Analysis", "PostgreSQL", or "RESTful APIs", use that exact terminology).
+   - Group the skills into 3 to 4 clean, structured categories (e.g. "Programming & Scripting", "Data Analysis & BI", "Databases & Frameworks").
+   - NEVER invent or claim skills the candidate does not have; only draw from their verified skill groups and project evidence.
+
+3. EXHAUSTIVE FULL-JD KEYWORD PARSING:
+   - Thoroughly parse the ENTIRE Target Job Description (Responsibilities, Minimum Requirements, Preferred Qualifications, Team Stack).
+   - Naturally weave high-frequency JD keywords, technical tools, and problem-solving language into the experience bullets, projects, and summary.
+   - Ensure high ATS match score while keeping every achievement natural and believable.
+
+4. CRITICAL ANTI-AI-SLOP & HUMAN WRITING RULES:
+   - STRICTLY FORBIDDEN WORDS/CLICHÉS: NEVER use "spearheaded", "orchestrated", "synergized", "leveraged", "pioneered", "game-changing", "cutting-edge", "transformative", "tapestry", "seamlessly", "testament to", "delved", "fostered", "dynamic", "beacon", "unwavering", "catalyst", "harnessed", "endeavor", "realm".
+   - USE CRISP, NATURAL ACTION VERBS: ${isTech ? "Built, Designed, Shipped, Scaled, Automated, Migrated, Refactored, Reduced, Wrote, Integrated, Deployed, Benchmarked, Optimized, Implemented." : "Negotiated, Closed, Managed, Structured, Scaled, Forecasted, Standardized, Executed, Launched, Partnered, Streamlined, Reduced, Analyzed."}
+   - GROUND IN REALITY (NO FAKE METRICS): Preserve real metrics from the candidate's background. NEVER fabricate fake business metrics.
+   - BULLET POINT DENSITY: Each bullet point must be between 15 and 28 words, formatted as: Action Verb + Scope/Problem + Concrete Result. Start each with "• ".
+   - SUMMARY: Crisp 2-3 sentence statement of exact domain, technical expertise, and alignment with the target role.
+
+5. PRESERVE FACTUAL INTEGRITY:
    - Keep candidate contact info, company names, school names, degrees, and dates factual and unchanged.
-8. Generate valid UUID strings for 'id' fields in experience, education, projects, and skills.
+   - Generate valid UUID strings for 'id' fields.
 
 Respond in a STRICT, single JSON object matching this schema:
 {
@@ -221,13 +260,16 @@ Respond in a STRICT, single JSON object matching this schema:
 }
 Return only raw JSON without markdown code fences.`;
 
-    const userPrompt = `Candidate Resume Data:
+    const userPrompt = `CANDIDATE'S VERIFIED FACT BANK (SOURCE OF ALL PROJECTS, SKILLS & EVIDENCE):
+${factBankSummary}
+
+CURRENT RESUME DATA:
 ${typeof resumeContent === "string" ? resumeContent.slice(0, 15000) : JSON.stringify(resumeContent)}
 
-Target Company: ${company}
-Target Job Title: ${jobTitle}
-Target Job Description:
-${jobDescription.slice(0, 15000)}`;
+TARGET COMPANY: ${company}
+TARGET JOB TITLE: ${jobTitle}
+TARGET JOB DESCRIPTION (ANALYZE FULLY FOR KEYWORDS & REQUIREMENTS):
+${jobDescription.slice(0, 20000)}`;
 
     const chatResponse = await openai.chat.completions.create({
       model: modelPro,
@@ -237,7 +279,7 @@ ${jobDescription.slice(0, 15000)}`;
       ],
       response_format: { type: "json_object" },
       temperature: 0.25,
-      max_tokens: 3500
+      max_tokens: 8192
     });
 
     const rawContent = chatResponse.choices[0]?.message?.content?.trim();

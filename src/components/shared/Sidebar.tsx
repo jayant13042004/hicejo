@@ -17,7 +17,13 @@ import {
   X,
   FileUp,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  Zap,
+  BarChart3,
+  MessageSquare,
+  Flame,
+  History,
+  Map
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -46,9 +52,11 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     group: "Apply",
     items: [
+      { label: "Apply", href: "/dashboard/apply", icon: Zap },
+      { label: "Tracker", href: "/dashboard/tracker", icon: BarChart3 },
       { label: "Resume Builder", href: "/dashboard/builder", icon: FileText },
       { label: "Tailor Resume", href: "/dashboard/tailor", icon: Sparkles },
-      { label: "ATS Resume Checker", href: "/dashboard/checker", icon: ShieldCheck },
+      { label: "ATS Checker", href: "/dashboard/checker", icon: ShieldCheck },
       { label: "Cover Letter", href: "/dashboard/cover-letter", icon: FileUp },
     ],
   },
@@ -57,11 +65,15 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Interview Studio", href: "/dashboard/interview", icon: Mic },
       { label: "Skills Roadmap", href: "/dashboard/learning", icon: BookOpen },
+      { label: "Career Chat", href: "/dashboard/chat", icon: MessageSquare },
     ],
   },
   {
-    group: "Account",
+    group: "More",
     items: [
+      { label: "Resume Vault", href: "/dashboard/history", icon: History },
+      { label: "Resume Roast", href: "/dashboard/roast", icon: Flame },
+      { label: "My Journey", href: "/dashboard/journey", icon: Map },
       { label: "Settings", href: "/dashboard/settings", icon: Settings },
     ],
   },

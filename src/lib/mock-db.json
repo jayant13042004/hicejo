@@ -13,6 +13,407 @@
   },
   "resumes": [
     {
+      "id": "1793770936823",
+      "user_id": "demo-user-id",
+      "title": "JAYANT JAGTAP's Resume",
+      "content": {
+        "personalInfo": {
+          "fullName": "JAYANT JAGTAP",
+          "email": "",
+          "phone": "+91 9356934045",
+          "location": "Pune, India",
+          "website": "",
+          "linkedin": "LinkedIn",
+          "github": "GitHub"
+        },
+        "summary": "",
+        "experience": [
+          {
+            "id": "c796caad-96f2-4a0e-b209-c4c785ee8dcc",
+            "company": "AVEVA",
+            "position": "Software Development Intern",
+            "location": "",
+            "startDate": "May 2025",
+            "endDate": "July 2025",
+            "current": false,
+            "description": "• Designed and built an HTTP client-server model for communication between internal workflows.\n• Built a FileReaderSDK in C++ and .NET that parses structured data.\n• Learned how AVEVA’s gateway product works and how to work in an Agile team."
+          }
+        ],
+        "education": [
+          {
+            "id": "a8fb73ab-b8e5-4227-9f0e-9fe22528d136",
+            "school": "Indian Institute of Technology Hyderabad (IITH)",
+            "degree": "B.Tech",
+            "fieldOfStudy": "Chemical Engineering",
+            "location": "",
+            "startDate": "2022",
+            "endDate": "2026",
+            "current": true,
+            "gradeType": "cgpa",
+            "grade": "7.99/10",
+            "description": ""
+          },
+          {
+            "id": "7d877cfa-1581-4c88-88c4-207f303cca67",
+            "school": "Indian Institute of Technology Hyderabad (IITH)",
+            "degree": "B.Tech",
+            "fieldOfStudy": "Entrepreneurship (Double Major)",
+            "location": "",
+            "startDate": "2022",
+            "endDate": "2026",
+            "current": true,
+            "gradeType": "cgpa",
+            "grade": "7.98/10",
+            "description": ""
+          }
+        ],
+        "projects": [
+          {
+            "id": "bcf976e4-dfdc-4469-a5d8-87960462fcd5",
+            "name": "Credit Risk Assessment and Explainable ML",
+            "role": "",
+            "link": "",
+            "startDate": "",
+            "endDate": "",
+            "description": "• Built a full pipeline on 30,000+ loan records and compared 5 classifiers using stratified cross-validation and hyperparameter tuning. The best model reached 92% ROC-AUC and 84% recall on high-risk applicants.\n• Set the classification threshold through a cost analysis of misclassification errors.\n• Used SHAP to show which features drive each risk prediction."
+          },
+          {
+            "id": "5658d973-1710-4d38-93ff-42592195913f",
+            "name": "Customer Churn Prediction and Retention Intelligence",
+            "role": "",
+            "link": "",
+            "startDate": "",
+            "endDate": "",
+            "description": "• Trained churn models on 7,000+ customer records using behavioral features, with class balancing to handle the imbalance.\n• Compared Logistic Regression and XGBoost, reaching about 0.85 ROC-AUC, and used feature importance to find the main churn drivers.\n• Deployed the pipeline as an app with FastAPI and Streamlit."
+          },
+          {
+            "id": "796f806c-9a59-4e0a-9705-9d562548eac8",
+            "name": "Demand Forecasting and Inventory Optimization",
+            "role": "",
+            "link": "",
+            "startDate": "",
+            "endDate": "",
+            "description": "• Modeled trend and seasonality in historical sales data with ARIMA and with XGBoost on lag-based features.\n• Reduced RMSE by about 18 to 22% over the baseline.\n• Used time-aware validation to compare the statistical and ML approaches fairly."
+          }
+        ],
+        "skills": [
+          {
+            "id": "0656ec5f-9d27-4460-b1f5-1f2cb4329b8f",
+            "name": "Python",
+            "category": "Languages",
+            "level": "Intermediate"
+          },
+          {
+            "id": "2d876420-0624-4ab0-9601-3be114c46839",
+            "name": "SQL",
+            "category": "Languages",
+            "level": "Intermediate"
+          },
+          {
+            "id": "138dc671-e2e5-432d-a6a6-48255d80e06a",
+            "name": "C++",
+            "category": "Languages",
+            "level": "Intermediate"
+          },
+          {
+            "id": "092eb453-b6d6-43f8-8fe2-acf9fadc7d94",
+            "name": "Pandas",
+            "category": "Data Analysis",
+            "level": "Intermediate"
+          },
+          {
+            "id": "f7451e35-86a0-4c75-b60f-845e28cea6fc",
+            "name": "NumPy",
+            "category": "Data Analysis",
+            "level": "Intermediate"
+          },
+          {
+            "id": "16ee8d68-2f5d-4b8d-80fe-497547fe5f9b",
+            "name": "EDA",
+            "category": "Data Analysis",
+            "level": "Intermediate"
+          },
+          {
+            "id": "b007f0ab-d0b8-495d-969c-2546e9a8759e",
+            "name": "Statistical Analysis",
+            "category": "Data Analysis",
+            "level": "Intermediate"
+          },
+          {
+            "id": "6742d401-3505-4565-a425-8b4ce6dc1863",
+            "name": "Regression",
+            "category": "Machine Learning",
+            "level": "Intermediate"
+          },
+          {
+            "id": "4bd53dee-9a95-454e-aaa0-bd47c6b94ba6",
+            "name": "Classification",
+            "category": "Machine Learning",
+            "level": "Intermediate"
+          },
+          {
+            "id": "57fc4145-1c9d-40a0-a78e-0af228b89483",
+            "name": "Ensemble Methods",
+            "category": "Machine Learning",
+            "level": "Intermediate"
+          },
+          {
+            "id": "87f5baca-d059-4a88-8708-3acf0485592c",
+            "name": "Time-Series Forecasting",
+            "category": "Machine Learning",
+            "level": "Intermediate"
+          },
+          {
+            "id": "57f6d19f-52f4-4223-a3b9-0d395ddba90a",
+            "name": "Feature Engineering",
+            "category": "Machine Learning",
+            "level": "Intermediate"
+          },
+          {
+            "id": "4e1265a9-dd47-4f55-8ba1-693ae670b1e1",
+            "name": "Cross-Validation",
+            "category": "Machine Learning",
+            "level": "Intermediate"
+          },
+          {
+            "id": "dc848eea-168a-41a0-8f47-cba5d0051682",
+            "name": "Hyperparameter Tuning",
+            "category": "Machine Learning",
+            "level": "Intermediate"
+          },
+          {
+            "id": "b97ce0bd-62f7-4803-923a-952bbf591660",
+            "name": "Scikit-learn",
+            "category": "Libraries",
+            "level": "Intermediate"
+          },
+          {
+            "id": "5a924dd7-c3d1-43c4-a947-a4145caec159",
+            "name": "XGBoost",
+            "category": "Libraries",
+            "level": "Intermediate"
+          },
+          {
+            "id": "79ef088e-a85e-4d37-9896-b80da9acb3b9",
+            "name": "SHAP",
+            "category": "Libraries",
+            "level": "Intermediate"
+          },
+          {
+            "id": "b99b5405-5a2a-4511-9c94-dd1a2d2c157f",
+            "name": "Matplotlib",
+            "category": "Visualization and Deployment",
+            "level": "Intermediate"
+          },
+          {
+            "id": "412429dc-ff81-4f2f-9dc9-262e657ae5e4",
+            "name": "Seaborn",
+            "category": "Visualization and Deployment",
+            "level": "Intermediate"
+          },
+          {
+            "id": "4ffa48cb-3d68-4b69-90e3-0f78a4130c20",
+            "name": "FastAPI",
+            "category": "Visualization and Deployment",
+            "level": "Intermediate"
+          },
+          {
+            "id": "7a66ac8c-99a5-470e-a7af-dab939f4aac6",
+            "name": "Streamlit",
+            "category": "Visualization and Deployment",
+            "level": "Intermediate"
+          },
+          {
+            "id": "48dbe531-fcf2-4933-bbec-24ab5577283f",
+            "name": "Git",
+            "category": "Tools",
+            "level": "Intermediate"
+          },
+          {
+            "id": "b9135da8-7031-4c88-8e07-387a77fc7164",
+            "name": "GitHub",
+            "category": "Tools",
+            "level": "Intermediate"
+          },
+          {
+            "id": "a079ff73-76fd-4837-bb03-699aef4a2f41",
+            "name": "Jupyter Notebook",
+            "category": "Tools",
+            "level": "Intermediate"
+          }
+        ],
+        "design": {
+          "fontFamily": "font-sans",
+          "fontSize": "md",
+          "sectionOrder": [
+            "summary",
+            "experience",
+            "projects",
+            "education",
+            "skills"
+          ],
+          "density": "normal",
+          "sectionSpacing": 1,
+          "itemSpacing": 1,
+          "lineHeight": 1.4,
+          "autoFitOnePage": false
+        }
+      },
+      "ats_score": 0,
+      "created_at": "2026-11-04T05:42:16.823Z",
+      "updated_at": "2026-11-04T05:42:16.823Z"
+    },
+    {
+      "id": "1793768123176",
+      "user_id": "demo-user-id",
+      "title": "Jayant Jagtap's Resume",
+      "content": {
+        "personalInfo": {
+          "fullName": "Jayant Jagtap",
+          "email": "jayantjagtap2004@gmail.com",
+          "phone": "9356934045",
+          "location": "",
+          "website": "",
+          "linkedin": "https://www.linkedin.com/in/jayantjagtap/",
+          "github": ""
+        },
+        "summary": "",
+        "experience": [
+          {
+            "id": "6da5cf42-8a14-4f67-9f09-6388bf8fb594",
+            "company": "AVEVA",
+            "position": "Software Development Intern",
+            "location": "",
+            "startDate": "May 2025",
+            "endDate": "July 2025",
+            "current": false,
+            "description": "• Designed and built an HTTP client-server model for communication between internal workflows.\n• Built a FileReaderSDK in C++ and .NET that parses structured data.\n• Learned how AVEVA’s gateway product works and how to work in an Agile team."
+          }
+        ],
+        "education": [
+          {
+            "id": "667734dd-9182-46c8-8234-03912bc8080d",
+            "school": "Indian Institute of Technology Hyderabad (IITH)",
+            "degree": "B.Tech",
+            "fieldOfStudy": "Chemical Engineering",
+            "location": "",
+            "startDate": "2022",
+            "endDate": "2026",
+            "current": true,
+            "gradeType": "cgpa",
+            "grade": "7.99/10",
+            "description": ""
+          },
+          {
+            "id": "ac3f049d-476d-4023-90a3-084208e13f0e",
+            "school": "Indian Institute of Technology Hyderabad (IITH)",
+            "degree": "B.Tech",
+            "fieldOfStudy": "Entrepreneurship (Double Major)",
+            "location": "",
+            "startDate": "2022",
+            "endDate": "2026",
+            "current": true,
+            "gradeType": "cgpa",
+            "grade": "7.98/10",
+            "description": ""
+          }
+        ],
+        "projects": [
+          {
+            "id": "b4b315f2-7bc5-4792-9f8c-6feacde8de7d",
+            "name": "Customer Churn and Retention Intelligence",
+            "role": "",
+            "link": "",
+            "startDate": "",
+            "endDate": "",
+            "description": "• Analyzed 7,000+ customer records using SQL and Python to identify churn patterns, customer behavior, and revenue drivers.\n• Ran exploratory, cohort, and customer segmentation analysis to find high-risk customers and key churn indicators.\n• Developed an interactive Power BI dashboard with 15+ KPIs across churn, retention, revenue, and customer lifetime value."
+          },
+          {
+            "id": "69f1eb57-23c8-4e59-9d20-2d347b693818",
+            "name": "Vendor Performance and Procurement Analytics",
+            "role": "",
+            "link": "",
+            "startDate": "",
+            "endDate": "",
+            "description": "• Analyzed 50,000+ purchase transactions using SQL and Python to evaluate vendor performance, purchasing trends, inventory efficiency, and profitability.\n• Used hypothesis testing and statistical analysis to investigate vendor performance differences and procurement inefficiencies.\n• Built a Power BI dashboard with vendor scorecards and 12+ KPIs, giving clearer procurement visibility and pointing to cost optimization opportunities."
+          },
+          {
+            "id": "5c67fdb2-cf09-4ced-b25a-ff7996cd2697",
+            "name": "IKEA Customer Segmentation and RFM Analysis",
+            "role": "",
+            "link": "",
+            "startDate": "",
+            "endDate": "",
+            "description": "• Built an RFM-based segmentation framework in Python and SQL to group customers by recency, frequency, and monetary value.\n• Applied K-Means clustering to identify 5 customer segments and understand their purchasing behavior and revenue contribution.\n• Developed a Power BI dashboard showing segment-level revenue, customer behavior, and engagement to support targeted marketing decisions."
+          }
+        ],
+        "skills": [
+          {
+            "id": "32410d25-46b4-4b97-942b-c368d6b551ee",
+            "name": "SQL",
+            "category": "Programming",
+            "level": "Intermediate"
+          },
+          {
+            "id": "a38fbc1e-72b5-4adf-8bce-c38010e93863",
+            "name": "Python",
+            "category": "Programming",
+            "level": "Intermediate"
+          },
+          {
+            "id": "4ca48c7a-d2a5-4758-a049-b0625fb4e7a1",
+            "name": "Joins, CTEs, Window Functions, Subqueries, Aggregations",
+            "category": "SQL",
+            "level": "Intermediate"
+          },
+          {
+            "id": "38a3b614-6c56-4f6e-9a6e-5747aaeb5218",
+            "name": "Pandas, NumPy, Data Cleaning, EDA, Statistical Analysis, Hypothesis Testing",
+            "category": "Data Analysis",
+            "level": "Intermediate"
+          },
+          {
+            "id": "290f5959-60cc-49bd-9dd0-e6ce679afe52",
+            "name": "Power BI, Tableau, Excel, DAX, Data Modeling, Dashboard Development",
+            "category": "Business Intelligence",
+            "level": "Intermediate"
+          },
+          {
+            "id": "39bbafd4-ed6f-41c9-bba4-0115ab1499ba",
+            "name": "KPI Development, Cohort Analysis, Customer Segmentation, RFM Analysis",
+            "category": "Business Analytics",
+            "level": "Intermediate"
+          },
+          {
+            "id": "87ac0d05-679f-4c87-abaa-09ac33e5f34e",
+            "name": "MySQL, PostgreSQL, Jupyter Notebook, Git, GitHub",
+            "category": "Databases and Tools",
+            "level": "Intermediate"
+          }
+        ],
+        "design": {
+          "fontFamily": "font-mono",
+          "fontSize": "md",
+          "sectionOrder": [
+            "summary",
+            "experience",
+            "projects",
+            "education",
+            "skills"
+          ],
+          "density": "ultra-compact",
+          "sectionSpacing": 0.65,
+          "itemSpacing": 0.65,
+          "lineHeight": 1.22,
+          "autoFitOnePage": false,
+          "resumeStyle": "classic"
+        }
+      },
+      "ats_score": 0,
+      "created_at": "2026-11-04T04:55:23.176Z",
+      "updated_at": "2026-11-04T04:58:03.327Z"
+    },
+    {
       "id": "1793679267422",
       "user_id": "demo-user-id",
       "title": "Custom Role Resume",
@@ -973,97 +1374,6 @@
       "ats_score": 0,
       "created_at": "2026-10-19T17:16:11.650Z",
       "updated_at": "2026-10-19T17:16:11.650Z"
-    },
-    {
-      "id": "1792430135702",
-      "user_id": "demo-user-id",
-      "title": "IAPWE - Freelance Writer Tailored",
-      "content": {
-        "personalInfo": {
-          "fullName": "Alex Johnson",
-          "email": "alex.johnson@example.com",
-          "phone": "(555) 019-2834",
-          "location": "San Francisco, CA",
-          "website": "https://alexjohnson.dev",
-          "linkedin": "https://linkedin.com/in/alexj-tech"
-        },
-        "summary": "Versatile freelance writer with extensive experience producing engaging articles, blog posts, and home project guides across diverse industries. Proven track record of managing strict publishing schedules while delivering clean, well-researched copy using standard word processors.",
-        "experience": [
-          {
-            "id": "e305ffec-19f6-4993-84f0-4623aef54261",
-            "company": "Stripe",
-            "position": "Senior Software Engineer",
-            "location": "San Francisco, CA",
-            "startDate": "Jan 2022",
-            "endDate": "Present",
-            "current": true,
-            "description": "• Authored comprehensive articles and customer guides, translating complex concepts into clear instructional content for external audiences and meeting strict publishing deadlines.\n• Partnered with product teams to draft release notes and blog posts explaining software updates, ensuring complete factual accuracy and consistent brand tone.\n• Managed remote editorial workflows and peer reviews for internal publications, maintaining high standards of written clarity and grammatical precision in Microsoft Word."
-          },
-          {
-            "id": "6732f796-03de-406a-a28a-6b47c0b02f83",
-            "company": "Apex Cloud Technologies",
-            "position": "Full Stack Developer",
-            "location": "Austin, TX",
-            "startDate": "Jun 2019",
-            "endDate": "Dec 2021",
-            "current": false,
-            "description": "• Researched industry trends and wrote detailed articles and help center user guides, helping customers understand complex topics quickly and effectively.\n• Edited and formatted marketing copy and blog posts using word processors to ensure consistent tone, formatting, and strict quality control.\n• Partnered with marketing teams to produce informative blog posts on various topics, consistently meeting tight weekly publication deadlines without supervision."
-          }
-        ],
-        "education": [
-          {
-            "id": "21e428ec-2178-43d9-aefb-bde92d9d1502",
-            "school": "University of California, Berkeley",
-            "degree": "Bachelor of Science",
-            "fieldOfStudy": "Computer Science",
-            "location": "Berkeley, CA",
-            "startDate": "Aug 2015",
-            "endDate": "May 2019",
-            "current": false
-          }
-        ],
-        "projects": [
-          {
-            "id": "787c800c-7b02-4467-bc5f-de0ea0beff3d",
-            "name": "CloudMetrics AI",
-            "role": "Creator & Lead Developer",
-            "link": "https://github.com/alexj/cloudmetrics",
-            "startDate": "2023",
-            "endDate": "Present",
-            "description": "• Authored comprehensive project documentation, README files, and tutorial articles covering home projects and technology topics that attracted over 1,200 stars."
-          }
-        ],
-        "skills": [
-          {
-            "id": "4b68e923-a55e-4c78-b1ad-35dc90c9b0e1",
-            "name": "Article & Blog Writing",
-            "category": "Writing & Content"
-          },
-          {
-            "id": "060a4f5f-0040-4272-9b2f-3ea66a33b934",
-            "name": "Microsoft Word",
-            "category": "Tools"
-          },
-          {
-            "id": "4b1ef4ef-142c-4fb0-a7d1-e63d4e73f8e4",
-            "name": "Copy Editing & Proofreading",
-            "category": "Writing & Content"
-          },
-          {
-            "id": "f5a0ccf2-1a42-49d6-8b9a-41d39b8bc738",
-            "name": "Research & Fact-Checking",
-            "category": "Content Operations"
-          },
-          {
-            "id": "0df0069a-6880-4547-8a9d-bdebe813d33f",
-            "name": "Deadline Management",
-            "category": "Content Operations"
-          }
-        ]
-      },
-      "ats_score": 0,
-      "created_at": "2026-10-19T17:15:35.702Z",
-      "updated_at": "2026-10-19T17:15:35.702Z"
     },
     {
       "id": "1792430105088",

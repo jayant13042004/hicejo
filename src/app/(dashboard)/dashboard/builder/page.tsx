@@ -135,6 +135,7 @@ function ResumeBuilderContent() {
   const [importRawText, setImportRawText] = React.useState("");
   const [portfolioResumes, setPortfolioResumes] = React.useState<any[]>([]);
   const [isParsing, setIsParsing] = React.useState(false);
+  const [parseStage, setParseStage] = React.useState<string>("");
   const [importError, setImportError] = React.useState<string | null>(null);
 
   // Smart Bullet Compressor Modal states
@@ -855,6 +856,80 @@ function ResumeBuilderContent() {
       list[index] = list[index + 1];
       list[index + 1] = temp;
       updateDesignSettings({ sectionOrder: list });
+    }
+  };
+
+  // Automated AI Resume Parser & Importer
+  const executeAIParsing = async (textToParse: string) => {
+    const cleanText = textToParse.trim();
+    if (!cleanText) {
+      setImportError("Please provide resume text or upload a document to extract.");
+      return;
+    }
+    setIsParsing(true);
+    setParseStage("Analyzing resume & extracting all sections with AI...");
+    setImportError(null);
+    try {
+      const res = await fetch("/api/ai/parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resumeText: cleanText,
+          rawText: cleanText
+        })
+      });
+      const result = await res.json();
+      if (result.success && result.data) {
+        importResumeData(result.data);
+        if (result.data.personalInfo?.fullName && (!title || title === "Untitled Resume")) {
+          setTitle(`${result.data.personalInfo.fullName}'s Resume`);
+        }
+        setIsImportModalOpen(false);
+        setImportRawText("");
+        const expCount = result.data.experience?.length || 0;
+        const projCount = result.data.projects?.length || 0;
+        const eduCount = result.data.education?.length || 0;
+        const skillsCount = result.data.skills?.length || 0;
+        setAutoFitNotification(
+          `✓ All information extracted! Loaded ${expCount} work experiences, ${projCount} projects, ${eduCount} education items, and ${skillsCount} skills. You can now edit each section.`
+        );
+      } else {
+        setImportError(result.error || "Failed to extract resume structure.");
+      }
+    } catch {
+      setImportError("Server connection failed during AI parsing.");
+    } finally {
+      setIsParsing(false);
+      setParseStage("");
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    if (!file) return;
+    setIsParsing(true);
+    setParseStage("Step 1/2: Reading document text...");
+    setImportError(null);
+    try {
+      const fData = new FormData();
+      fData.append("file", file);
+      const parseRes = await fetch("/api/parse-file", {
+        method: "POST",
+        body: fData
+      });
+      const parseData = await parseRes.json();
+      if (parseData.success && parseData.text) {
+        setImportRawText(parseData.text);
+        setParseStage("Step 2/2: Structuring all details with AI into your resume...");
+        await executeAIParsing(parseData.text);
+      } else {
+        setImportError(parseData.error || "Failed to extract text from file.");
+        setIsParsing(false);
+        setParseStage("");
+      }
+    } catch {
+      setImportError("File upload extraction failed. You can paste the text directly.");
+      setIsParsing(false);
+      setParseStage("");
     }
   };
 
@@ -2726,62 +2801,83 @@ function ResumeBuilderContent() {
               {/* Modal Content */}
               <div className="flex-1 overflow-y-auto p-5 space-y-4">
                 {importError && (
-                  <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium rounded-lg">
-                    {importError}
+                  <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium rounded-lg flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>{importError}</span>
                   </div>
                 )}
 
-                {importTab === "text" ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        Resume Text or Upload Document
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs text-primary hover:underline cursor-pointer font-medium">
-                        <Upload className="h-3.5 w-3.5" />
-                        <span>{isParsing ? "Extracting text..." : "Upload File (.pdf, .docx, .txt, .png, .jpg)"}</span>
-                        <input
-                          type="file"
-                          accept=".txt,.pdf,.docx,.png,.jpg,.jpeg,.webp"
-                          disabled={isParsing}
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            setIsParsing(true);
-                            setImportError(null);
-                            try {
-                              const fData = new FormData();
-                              fData.append("file", file);
-                              const parseRes = await fetch("/api/parse-file", {
-                                method: "POST",
-                                body: fData
-                              });
-                              const parseData = await parseRes.json();
-                              if (parseData.success && parseData.text) {
-                                setImportRawText(parseData.text);
-                              } else {
-                                setImportError(parseData.error || "Failed to extract text from file.");
-                              }
-                            } catch {
-                              setImportError("File upload extraction failed.");
-                            } finally {
-                              setIsParsing(false);
-                              e.target.value = "";
-                            }
-                          }}
-                          className="hidden"
-                        />
-                      </label>
+                {isParsing && (
+                  <div className="p-6 rounded-xl border border-primary/40 bg-primary/5 flex flex-col items-center justify-center gap-3 text-center animate-in fade-in">
+                    <RefreshCw className="h-6 w-6 text-primary animate-spin" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold text-foreground">
+                        {parseStage || "Extracting resume details with AI..."}
+                      </p>
+                      <p className="text-xs text-muted-foreground max-w-sm">
+                        Extracting contact info, summary, work experiences with full bullet points, education, projects, and skills into your builder.
+                      </p>
                     </div>
-                    <textarea
-                      rows={10}
-                      placeholder="Paste raw text or upload a document to auto-parse..."
-                      value={importRawText}
-                      onChange={(e) => setImportRawText(e.target.value)}
-                      className="w-full p-3 rounded-lg border border-border bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-primary leading-relaxed resize-none"
-                    />
                   </div>
-                ) : (
+                )}
+
+                {importTab === "text" && !isParsing && (
+                  <div className="space-y-4">
+                    {/* Instant File Upload Area */}
+                    <label className="border-2 border-dashed border-primary/30 hover:border-primary/80 bg-primary/5 hover:bg-primary/10 rounded-xl p-5 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all text-center group">
+                      <div className="h-10 w-10 rounded-xl bg-primary/15 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                        <Upload className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
+                          Upload Resume Document or Image
+                        </span>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          PDF, Word (.docx), Text (.txt), or Screenshot (.png, .jpg)
+                        </p>
+                      </div>
+                      <span className="text-[11px] font-semibold text-primary px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20">
+                        ⚡ Instant AI auto-extraction into your resume
+                      </span>
+                      <input
+                        type="file"
+                        accept=".txt,.pdf,.docx,.png,.jpg,.jpeg,.webp"
+                        disabled={isParsing}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(file);
+                          e.target.value = "";
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+
+                    {/* Divider */}
+                    <div className="relative flex py-1 items-center">
+                      <div className="flex-grow border-t border-border"></div>
+                      <span className="flex-shrink mx-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Or Paste Raw Resume Text
+                      </span>
+                      <div className="flex-grow border-t border-border"></div>
+                    </div>
+
+                    {/* Text Area */}
+                    <div className="space-y-1.5">
+                      <textarea
+                        rows={7}
+                        placeholder="Paste your raw resume text here (experience, bullets, projects, education, skills, contact details)..."
+                        value={importRawText}
+                        onChange={(e) => setImportRawText(e.target.value)}
+                        className="w-full p-3 rounded-xl border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary leading-relaxed resize-none font-sans"
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        All experiences, projects, and skills will be parsed into editable cards with no manual retyping.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {importTab === "portfolio" && !isParsing && (
                   <div className="space-y-2">
                     {portfolioResumes.length === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-6">
@@ -2805,16 +2901,19 @@ function ResumeBuilderContent() {
                             onClick={async () => {
                               try {
                                 setIsParsing(true);
+                                setParseStage("Loading portfolio draft...");
                                 const res = await fetch(`/api/resume/${p.id}`);
                                 const single = await res.json();
                                 if (single.success && single.data) {
                                   importResumeData(single.data.content);
                                   setIsImportModalOpen(false);
+                                  setAutoFitNotification(`✓ Loaded resume draft: ${p.title}`);
                                 }
                               } catch {
                                 setImportError("Failed to load portfolio draft.");
                               } finally {
                                 setIsParsing(false);
+                                setParseStage("");
                               }
                             }}
                           >
@@ -2829,49 +2928,31 @@ function ResumeBuilderContent() {
 
               {/* Modal Footer */}
               {importTab === "text" && (
-                <div className="p-4 border-t border-border flex justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setIsImportModalOpen(false);
-                      setImportError(null);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    isLoading={isParsing}
-                    disabled={!importRawText.trim()}
-                    onClick={async () => {
-                      setIsParsing(true);
-                      setImportError(null);
-                      try {
-                        const res = await fetch("/api/ai/parse", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            resumeText: importRawText,
-                            rawText: importRawText
-                          })
-                        });
-                        const result = await res.json();
-                        if (result.success && result.data) {
-                          importResumeData(result.data);
-                          setIsImportModalOpen(false);
-                          setImportRawText("");
-                        } else {
-                          setImportError(result.error || "Failed to parse text structure.");
-                        }
-                      } catch {
-                        setImportError("Server connection failed during AI parsing.");
-                      } finally {
-                        setIsParsing(false);
-                      }
-                    }}
-                    className="bg-primary text-primary-foreground font-semibold"
-                  >
-                    Parse with AI
-                  </Button>
+                <div className="p-4 border-t border-border flex items-center justify-between gap-2 bg-card">
+                  <span className="text-[11px] text-muted-foreground">
+                    {importRawText.trim() ? `${importRawText.trim().split(/\s+/).length} words detected` : ""}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setIsImportModalOpen(false);
+                        setImportError(null);
+                      }}
+                      disabled={isParsing}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      isLoading={isParsing}
+                      disabled={!importRawText.trim() || isParsing}
+                      onClick={() => executeAIParsing(importRawText)}
+                      className="bg-primary text-primary-foreground font-bold text-xs gap-1.5 shadow-md cursor-pointer hover:bg-primary/90"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      <span>Extract & Put into Resume</span>
+                    </Button>
+                  </div>
                 </div>
               )}
             </motion.div>
@@ -2886,6 +2967,10 @@ function ResumeBuilderContent() {
         onSelectTemplate={(tmpl) => {
           importResumeData(tmpl.data);
           setTitle(`${tmpl.role} Resume`);
+        }}
+        onOpenImport={() => {
+          setIsTemplatesModalOpen(false);
+          setIsImportModalOpen(true);
         }}
       />
     </div>

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, LayoutTemplate, ArrowRight, Check, X } from "lucide-react";
+import { Sparkles, LayoutTemplate, ArrowRight, Check, X, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { STARTER_TEMPLATES, StarterTemplate } from "@/data/starterTemplates";
 
@@ -10,12 +10,14 @@ interface StarterTemplatesModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectTemplate: (template: StarterTemplate) => void;
+  onOpenImport?: () => void;
 }
 
 export function StarterTemplatesModal({
   isOpen,
   onClose,
-  onSelectTemplate
+  onSelectTemplate,
+  onOpenImport
 }: StarterTemplatesModalProps) {
   if (!isOpen) return null;
 
@@ -51,6 +53,38 @@ export function StarterTemplatesModal({
 
           {/* Body */}
           <div className="flex-1 overflow-y-auto p-5 space-y-3">
+            {/* Upload / Import Existing Resume Card */}
+            {onOpenImport && (
+              <div className="p-4 rounded-xl border border-primary/50 bg-primary/10 hover:bg-primary/15 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-primary text-primary-foreground flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" />
+                      Recommended
+                    </span>
+                    <h4 className="font-bold text-sm text-foreground">
+                      Upload or Paste Existing Resume
+                    </h4>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Let AI automatically extract your contact info, summary, work experiences with all bullet points, education, projects, and skills.
+                  </p>
+                  <p className="text-[11px] text-primary/80 font-medium">
+                    No retyping • 100% extracted & ready to edit
+                  </p>
+                </div>
+
+                <Button
+                  size="sm"
+                  onClick={onOpenImport}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold shrink-0 cursor-pointer"
+                >
+                  <Upload className="h-4 w-4 mr-1.5" />
+                  Import Resume
+                </Button>
+              </div>
+            )}
+
             {/* Blank Canvas Option */}
             <div className="p-4 rounded-xl border-2 border-dashed border-primary/40 hover:border-primary bg-primary/5 hover:bg-primary/10 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group">
               <div className="space-y-1">

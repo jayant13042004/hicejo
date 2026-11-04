@@ -299,14 +299,98 @@ export const useResumeStore = create<ResumeStore>((set, get) => {
 
     importResumeData: (data) => {
       set((state) => {
-        const mergedData = {
-          ...data,
+        const safePersonalInfo: PersonalInfo = {
+          fullName: data.personalInfo?.fullName || "",
+          email: data.personalInfo?.email || "",
+          phone: data.personalInfo?.phone || "",
+          location: data.personalInfo?.location || "",
+          website: data.personalInfo?.website || "",
+          linkedin: data.personalInfo?.linkedin || "",
+          github: data.personalInfo?.github || ""
+        };
+
+        const safeExperience: Experience[] = Array.isArray(data.experience)
+          ? data.experience.map((exp) => ({
+              id: exp.id || crypto.randomUUID(),
+              company: exp.company || "",
+              position: exp.position || "",
+              location: exp.location || "",
+              startDate: exp.startDate || "",
+              endDate: exp.endDate || "",
+              current: Boolean(exp.current),
+              description: Array.isArray(exp.description)
+                ? (exp.description as any).join("\n")
+                : (exp.description || "")
+            }))
+          : [];
+
+        const safeEducation: Education[] = Array.isArray(data.education)
+          ? data.education.map((edu) => ({
+              id: edu.id || crypto.randomUUID(),
+              school: edu.school || "",
+              degree: edu.degree || "",
+              fieldOfStudy: edu.fieldOfStudy || "",
+              location: edu.location || "",
+              startDate: edu.startDate || "",
+              endDate: edu.endDate || "",
+              current: Boolean(edu.current),
+              gradeType: edu.gradeType || "none",
+              grade: edu.grade || "",
+              description: Array.isArray(edu.description)
+                ? (edu.description as any).join("\n")
+                : (edu.description || "")
+            }))
+          : [];
+
+        const safeProjects: Project[] = Array.isArray(data.projects)
+          ? data.projects.map((proj) => ({
+              id: proj.id || crypto.randomUUID(),
+              name: proj.name || "",
+              role: proj.role || "",
+              link: proj.link || "",
+              startDate: proj.startDate || "",
+              endDate: proj.endDate || "",
+              description: Array.isArray(proj.description)
+                ? (proj.description as any).join("\n")
+                : (proj.description || "")
+            }))
+          : [];
+
+        const safeSkills: Skill[] = Array.isArray(data.skills)
+          ? data.skills
+              .map((sk: any) => {
+                if (typeof sk === "string") {
+                  return {
+                    id: crypto.randomUUID(),
+                    name: sk,
+                    category: "Technical Skills",
+                    level: "Intermediate"
+                  };
+                }
+                return {
+                  id: sk.id || crypto.randomUUID(),
+                  name: sk.name || "",
+                  category: sk.category || "Technical Skills",
+                  level: sk.level || "Intermediate"
+                };
+              })
+              .filter((sk) => sk.name && sk.name.trim().length > 0)
+          : [];
+
+        const mergedData: ResumeData = {
+          personalInfo: safePersonalInfo,
+          summary: data.summary || "",
+          experience: safeExperience,
+          education: safeEducation,
+          projects: safeProjects,
+          skills: safeSkills,
           design: {
             ...defaultDesign,
             ...(state.data.design || {}),
             ...(data.design || {})
           }
         };
+
         return {
           data: mergedData,
           past: [...state.past, state.data],
