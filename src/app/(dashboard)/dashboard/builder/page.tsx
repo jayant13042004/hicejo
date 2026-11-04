@@ -1984,56 +1984,31 @@ function ResumeBuilderContent() {
                       </div>
 
                       <CardContent className="p-4 space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <Input
-                            label="Title / Honor"
-                            placeholder="e.g. Winner - Smart India Hackathon"
-                            value={ach.title}
-                            onChange={(e) => updateAchievement(ach.id, { title: e.target.value })}
-                          />
-                          <Input
-                            label="Organization / Subtitle"
-                            placeholder="e.g. IEEE Student Chapter or ACM"
-                            value={ach.organization || ""}
-                            onChange={(e) => updateAchievement(ach.id, { organization: e.target.value })}
-                          />
-                          <div className="md:col-span-2">
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                          <div className="md:col-span-4">
                             <Input
-                              label="Date / Year"
-                              placeholder="e.g. 2024 or Fall 2023"
+                              label="Title / Category"
+                              placeholder="e.g. Winner, Lead, Scholarship"
+                              value={ach.title}
+                              onChange={(e) => updateAchievement(ach.id, { title: e.target.value })}
+                            />
+                          </div>
+                          <div className="md:col-span-5">
+                            <Input
+                              label="Achievement / Details"
+                              placeholder="e.g. JEE Mains, Smart India Hackathon"
+                              value={ach.organization || ach.description || ""}
+                              onChange={(e) => updateAchievement(ach.id, { organization: e.target.value, description: "" })}
+                            />
+                          </div>
+                          <div className="md:col-span-3">
+                            <Input
+                              label="Year"
+                              placeholder="e.g. 2023"
                               value={ach.date || ""}
                               onChange={(e) => updateAchievement(ach.id, { date: e.target.value })}
                             />
                           </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div>
-                              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                Key Highlights / Details
-                              </label>
-                              <p className="text-[11px] text-muted-foreground">
-                                Enter 1-3 bullet points detailing your accomplishment or contribution
-                              </p>
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 text-[11px] gap-1 text-primary border-primary/30 hover:bg-primary/5 cursor-pointer"
-                              onClick={() => handleEnhanceBullet(ach.id, ach.description || "", "achievements")}
-                              disabled={enhancingId === ach.id || !ach.description}
-                            >
-                              <Sparkles className="h-3 w-3" />
-                              <span>{enhancingId === ach.id ? "Enhancing..." : "AI Polish"}</span>
-                            </Button>
-                          </div>
-                          <textarea
-                            className="flex min-h-[90px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-2xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                            placeholder="• Built real-time monitoring solution awarded 1st place among 150+ teams&#10;• Mentored 40+ junior developers across full-stack workshops"
-                            value={ach.description || ""}
-                            onChange={(e) => updateAchievement(ach.id, { description: e.target.value })}
-                          />
                         </div>
                       </CardContent>
                     </Card>
@@ -2705,31 +2680,28 @@ function ResumeBuilderContent() {
                           <h3 className={getHeadingClass("Extracurricular & Achievements")}>
                             Extracurricular & Achievements
                           </h3>
-                          <div style={{ display: "flex", flexDirection: "column", gap: `${8 * itemSpacingMultiplier}px` }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: `${4 * itemSpacingMultiplier}px` }}>
                             {(data.achievements || []).map((ach) => {
-                              const achTitleAndOrg = renderTitleWithSubtitle(ach.title, ach.organization);
+                              const cleanTitle = (ach.title || "").trim().replace(/[:—–-]+$/, "").trim();
+                              const cleanDetail = (ach.organization || ach.description || "").trim().replace(/^[•\-\s]+/, "").trim();
                               const cleanDate = (ach.date || "").trim();
 
                               return (
-                                <div key={ach.id} className="space-y-0.5">
-                                  <div className="flex items-baseline justify-between text-[1em]">
-                                    <span className="font-bold text-zinc-900">
-                                      {achTitleAndOrg}
-                                    </span>
-                                    {cleanDate && (
-                                      <span className="text-zinc-600 font-medium text-[0.9em] shrink-0 ml-2">
-                                        {cleanDate}
-                                      </span>
+                                <div key={ach.id} className="flex items-baseline justify-between text-[0.92em] leading-normal gap-4">
+                                  <p className="text-zinc-700 font-normal min-w-0">
+                                    {cleanTitle && (
+                                      <strong className="font-bold text-zinc-950 mr-1.5">
+                                        {cleanTitle}{cleanDetail ? ":" : ""}
+                                      </strong>
                                     )}
-                                  </div>
-                                  {ach.description && (
-                                    <ul className="list-disc list-outside pl-4 space-y-0.5">
-                                      {ach.description.split("\n").filter(b => b.trim() !== "").map((bullet, i) => (
-                                        <li key={i} className="text-[0.95em] text-zinc-700 leading-relaxed">
-                                          {bullet.replace(/^[•\-\s]*/, "")}
-                                        </li>
-                                      ))}
-                                    </ul>
+                                    {cleanDetail && (
+                                      <span>{cleanDetail}</span>
+                                    )}
+                                  </p>
+                                  {cleanDate && (
+                                    <span className="text-zinc-600 font-medium text-[0.9em] shrink-0 whitespace-nowrap ml-2">
+                                      {cleanDate}
+                                    </span>
                                   )}
                                 </div>
                               );
