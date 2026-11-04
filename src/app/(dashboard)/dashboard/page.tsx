@@ -65,11 +65,16 @@ const EXPERIENCE_LEVELS = [
 ];
 
 export default function DashboardPage() {
+  const [isMounted, setIsMounted] = React.useState(false);
   const [profile, setProfile] = React.useState<UserProfile | null>(null);
   const [resumes, setResumes] = React.useState<ResumeItem[]>([]);
   const [savedTargets, setSavedTargets] = React.useState<any[]>([]);
   const [lastInterview, setLastInterview] = React.useState<any | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const { careerProfile, setCareerProfile, activeJobContext, setActiveJobContext } = useResumeStore();
 
@@ -280,13 +285,14 @@ export default function DashboardPage() {
     return 5;
   }, [activeTargetRole, resumes.length, savedTargets.length, highestAtsScore]);
 
-  // Greeting time of day
+  // Greeting time of day with hydration protection
   const greeting = React.useMemo(() => {
+    if (!isMounted) return "Welcome";
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
     if (hour < 18) return "Good afternoon";
     return "Good evening";
-  }, []);
+  }, [isMounted]);
 
   return (
     <DashboardShell title="Career Command Center">
@@ -301,7 +307,7 @@ export default function DashboardPage() {
                 Active Target Position
               </span>
             </div>
-            {activeTargetRole ? (
+            {isMounted && activeTargetRole ? (
               <div className="flex flex-wrap items-baseline gap-2 mt-1">
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
                   {activeTargetRole}
@@ -312,16 +318,16 @@ export default function DashboardPage() {
               </div>
             ) : (
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-muted-foreground mt-1">
-                No Target Position Selected
+                {isMounted ? "No Target Position Selected" : "Loading target position..."}
               </h1>
             )}
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-1" suppressHydrationWarning>
               {greeting}, {displayName}. Your preparation arc is calibrated to this role.
             </p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {activeTargetRole ? (
+            {isMounted && activeTargetRole ? (
               <Button
                 variant="outline"
                 size="sm"
