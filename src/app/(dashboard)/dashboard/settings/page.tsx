@@ -40,6 +40,7 @@ export default function SettingsPage() {
   const [saveSuccess, setSaveSuccess] = React.useState(false);
   const [isExporting, setIsExporting] = React.useState(false);
   const [exportSuccess, setExportSuccess] = React.useState(false);
+  const [isResettingData, setIsResettingData] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -220,34 +221,73 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDeleteAccount = async () => {
+  // 1. Reset user career data only (keeps user login active)
+  const handleResetDataOnly = async () => {
+    const confirmed = confirm(
+      "Are you sure you want to wipe all resumes, cover letters, tracker jobs, and career history? Your login account will remain active so you can start fresh."
+    );
+    if (!confirmed) return;
+
+    setIsResettingData(true);
+    try {
+      const res = await fetch("/api/profile?mode=data_only", {
+        method: "DELETE"
+      });
+      const data = await res.json().catch(() => ({}));
+
+      // Clear local browser storage
+      const keysToRemove = [
+        "hicejo_career_profile",
+        "hicejo_saved_targets",
+        "hicejo_active_job_context",
+        "hicejo_completed_skills",
+        "hicejo_deleted_skills",
+        "hicejo_learning_role",
+        "hicejo_daily_credits",
+        "hicejo_tailor_draft",
+        "activeResumeId"
+      ];
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+
+      alert(data.message || "All career data wiped clean. Your login remains active.");
+      window.location.reload();
+    } catch (err) {
+      console.error("Data wipe failed:", err);
+      alert("Failed to reset data. Please check your connection.");
+    } finally {
+      setIsResettingData(false);
+    }
+  };
+
+  // 2. Permanently delete entire account, login credentials, and data
+  const handleDeleteFullAccount = async () => {
     const confirmation1 = confirm(
-      "WARNING: This will permanently delete your Hicejo account and clear all saved resumes, cover letters, and scoring metrics. Do you wish to continue?"
+      "WARNING: This will permanently delete your Hicejo account, login credentials, and all saved resumes, cover letters, and career history. Do you wish to continue?"
     );
     if (!confirmation1) return;
 
     const confirmation2 = confirm(
-      "Are you absolutely certain? This operation is irreversible and all your data will be permanently purged."
+      "Are you absolutely certain? This operation cannot be undone and your login will be permanently deleted."
     );
     if (!confirmation2) return;
 
     setIsDeleting(true);
 
     try {
-      // 1. Call server API to purge all user database records (and auth user if admin key is present)
-      const res = await fetch("/api/profile", {
+      // Call server API to purge all user database records and auth user
+      const res = await fetch("/api/profile?mode=full", {
         method: "DELETE"
       });
       const data = await res.json().catch(() => ({}));
 
-      // 2. Also attempt Postgres RPC if set in Supabase
+      // Also attempt Postgres RPC if set in Supabase
       try {
         await supabase.rpc("delete_user_account");
       } catch {
         // Handled gracefully if not available
       }
 
-      // 3. Wipe all browser local state
+      // Wipe all browser local state
       try {
         const keysToRemove = [
           "hicejo_career_profile",
@@ -265,7 +305,7 @@ export default function SettingsPage() {
         console.warn("Storage wipe error:", storageErr);
       }
 
-      // 4. Terminate client auth session
+      // Terminate client auth session
       await supabase.auth.signOut();
 
       alert(data.message || "Your account and all associated data have been permanently deleted.");
@@ -466,38 +506,75 @@ export default function SettingsPage() {
           </Card>
 
           {/* GDPR / Purges Card */}
-          <Card className="border-destructive/20 bg-destructive/5">
+          <Card className="border-destructive/20 bg-destructive/5 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-destructive">
                 <ShieldAlert className="h-5 w-5 shrink-0" />
                 <span>Destructive Settings</span>
               </CardTitle>
               <CardDescription className="text-destructive/80">
-                Purge your information and close this account in compliance with GDPR privacy requests.
+                Manage your privacy, reset your career workspace, or permanently delete your account.
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-2">
-              <p className="text-xs text-muted-foreground leading-relaxed mb-4">
-                This action is permanent and cannot be undone. All resume content history, matched scores, and generated letters will be deleted immediately.
-              </p>
-              <Button
-                variant="destructive"
-                className="w-full gap-2 font-bold cursor-pointer"
-                onClick={handleDeleteAccount}
-                disabled={isDeleting}
-              >
-                {isDeleting ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    <span>Purging Account & Data...</span>
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="h-4 w-4" />
-                    <span>Purge Data & Close Account</span>
-                  </>
-                )}
-              </Button>
+            <CardContent className="pt-2 space-y-4">
+              {/* Option 1: Reset Career Data Only */}
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-2.5">
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
+                    Option 1: Reset Career Data (Keep Login)
+                  </p>
+                  <p className="text-[11px] text-muted-foreground leading-normal">
+                    Wipes all saved resumes, cover letters, tracker jobs, and curriculum history so you can start completely fresh, while keeping your account login active.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-xs font-semibold border-amber-500/40 hover:bg-amber-500/10 text-amber-900 dark:text-amber-200 cursor-pointer h-9"
+                  onClick={handleResetDataOnly}
+                  disabled={isResettingData || isDeleting}
+                >
+                  {isResettingData ? (
+                    <>
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                      <span>Wiping Career Data...</span>
+                    </>
+                  ) : (
+                    <span>Reset All Career Data (Keep Login)</span>
+                  )}
+                </Button>
+              </div>
+
+              {/* Option 2: Full Account & Login Deletion */}
+              <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 space-y-2.5">
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-destructive">
+                    Option 2: Permanently Delete Account & Login
+                  </p>
+                  <p className="text-[11px] text-muted-foreground leading-normal">
+                    Permanently deletes your login credentials, email address, and all personal data in compliance with GDPR. This operation cannot be reversed.
+                  </p>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="w-full text-xs font-bold gap-1.5 cursor-pointer h-9"
+                  onClick={handleDeleteFullAccount}
+                  disabled={isDeleting || isResettingData}
+                >
+                  {isDeleting ? (
+                    <>
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      <span>Purging Account & Login...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Delete Entire Account & All Data</span>
+                    </>
+                  )}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

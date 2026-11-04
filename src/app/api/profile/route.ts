@@ -143,14 +143,19 @@ export async function PUT(request: Request) {
   }
 }
 
-// DELETE /api/profile - Permanently delete candidate account and all associated data
-export async function DELETE() {
+// DELETE /api/profile - Permanently delete candidate account or reset data
+export async function DELETE(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const mode = searchParams.get("mode") || "full"; // "data_only" | "full"
+
     if (await isDemoMode()) {
       return NextResponse.json({
         success: true,
-        authUserDeleted: true,
-        message: "Sandbox session data cleared successfully."
+        authUserDeleted: mode === "full",
+        message: mode === "data_only"
+          ? "Sandbox session data has been reset. Your login session is active."
+          : "Sandbox account and session data cleared successfully."
       });
     }
 
@@ -159,32 +164,20 @@ export async function DELETE() {
 
     if (authError || !user) {
       return NextResponse.json(
-        { success: false, error: "Unauthorized. Please log in to delete your account." },
+        { success: false, error: "Unauthorized. Please log in first." },
         { status: 401 }
       );
     }
 
     const userId = user.id;
-    let authUserDeleted = false;
 
-    // 1. Attempt Postgres RPC function if defined
-    try {
-      const { error: rpcError } = await supabase.rpc("delete_user_account");
-      if (!rpcError) {
-        authUserDeleted = true;
-      }
-    } catch (rpcErr) {
-      console.warn("delete_user_account RPC check:", rpcErr);
-    }
-
-    // 2. Explicitly wipe all records in user-owned tables
+    // 1. Wipe all user data across content tables
     const userTables = [
       { name: "referral_contacts", col: "user_id" },
       { name: "applications", col: "user_id" },
       { name: "ats_scans", col: "user_id" },
       { name: "cover_letters", col: "user_id" },
-      { name: "resumes", col: "user_id" },
-      { name: "profiles", col: "id" }
+      { name: "resumes", col: "user_id" }
     ];
 
     for (const tbl of userTables) {
@@ -195,7 +188,48 @@ export async function DELETE() {
       }
     }
 
-    // 3. If service role key is configured, delete from auth.users directly
+    // MODE: DATA_ONLY -> reset profile info, keep account & login intact
+    if (mode === "data_only") {
+      try {
+        await supabase.from("profiles").update({
+          target_role: "",
+          target_industry: "",
+          target_salary: "",
+          fact_bank: null,
+          resume_text: null,
+          updated_at: new Date().toISOString()
+        }).eq("id", userId);
+      } catch (err) {
+        console.warn("Profile reset warning:", err);
+      }
+
+      return NextResponse.json({
+        success: true,
+        mode: "data_only",
+        message: "All your saved resumes, cover letters, and career tracking data have been wiped. Your login remains active."
+      });
+    }
+
+    // MODE: FULL -> permanently purge profile, auth user, and sessions
+    let authUserDeleted = false;
+
+    try {
+      await supabase.from("profiles").delete().eq("id", userId);
+    } catch (err) {
+      console.warn("Profile delete warning:", err);
+    }
+
+    // Attempt Postgres RPC function if defined
+    try {
+      const { error: rpcError } = await supabase.rpc("delete_user_account");
+      if (!rpcError) {
+        authUserDeleted = true;
+      }
+    } catch (rpcErr) {
+      console.warn("delete_user_account RPC check:", rpcErr);
+    }
+
+    // If service role key is configured, delete from auth.users directly
     const adminClient = createAdminClient();
     if (adminClient) {
       try {
@@ -210,7 +244,7 @@ export async function DELETE() {
       }
     }
 
-    // 4. Sign out
+    // Terminate session
     try {
       await supabase.auth.signOut();
     } catch {
@@ -219,15 +253,16 @@ export async function DELETE() {
 
     return NextResponse.json({
       success: true,
+      mode: "full",
       authUserDeleted,
       message: authUserDeleted
-        ? "Your account and all associated data have been permanently deleted."
-        : "Your saved resumes, cover letters, and profile data have been wiped from the database."
+        ? "Your account, login credentials, and all associated data have been permanently deleted."
+        : "Your saved resumes, cover letters, and profile data have been permanently wiped from the database."
     });
   } catch (error: any) {
     console.error("Account deletion route error:", error);
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to delete account" },
+      { success: false, error: error.message || "Failed to process request" },
       { status: 500 }
     );
   }
