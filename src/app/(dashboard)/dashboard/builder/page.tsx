@@ -29,7 +29,8 @@ import {
   LayoutTemplate,
   Printer,
   AlertCircle,
-  Trophy
+  Trophy,
+  Save
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -244,45 +245,73 @@ function ResumeBuilderContent() {
     }
   }, [pendingImprovement]);
 
-  // Debounced Auto-save to cloud DB
-  React.useEffect(() => {
-    if (saveState !== "typing") return;
+  // Manual Save to cloud DB (Auto-save disabled by user design)
+  const [isSavingResume, setIsSavingResume] = React.useState(false);
 
-    const timer = setTimeout(async () => {
-      setSaveState("saving");
-      try {
-        const endpoint = id ? `/api/resume/${id}` : "/api/resume";
-        const method = id ? "PUT" : "POST";
+  const handleManualSave = React.useCallback(async () => {
+    if (isSavingResume) return;
+    setIsSavingResume(true);
+    setSaveState("saving");
+    try {
+      const endpoint = id ? `/api/resume/${id}` : "/api/resume";
+      const method = id ? "PUT" : "POST";
+      const cleanTitle = title.trim() || "Untitled Resume";
 
-        const res = await fetch(endpoint, {
-          method,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: title.trim() || "Untitled Resume",
-            content: data
-          })
-        });
-        const result = await res.json();
+      const res = await fetch(endpoint, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: cleanTitle,
+          content: data
+        })
+      });
+      const result = await res.json();
 
-        if (result.success && result.data) {
-          if (!id) {
-            setResumeId(result.data.id);
-            const newUrl = `${window.location.pathname}?id=${result.data.id}`;
-            window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, "", newUrl);
-          }
-          setSaveState("saved");
-        } else {
-          console.error("Auto-save server response:", result.error);
-          setSaveState("error");
+      if (result.success && result.data) {
+        if (!id) {
+          setResumeId(result.data.id);
+          const newUrl = `${window.location.pathname}?id=${result.data.id}`;
+          window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, "", newUrl);
         }
-      } catch (err) {
-        console.error("Auto-save network error:", err);
+        setSaveState("saved");
+        setAutoFitNotification(`✓ Saved "${cleanTitle}" successfully!`);
+      } else {
+        console.error("Save server response error:", result.error);
         setSaveState("error");
+        setAutoFitNotification(`Save failed: ${result.error || "Please try again"}`);
       }
-    }, 1200);
+    } catch (err) {
+      console.error("Save network error:", err);
+      setSaveState("error");
+      setAutoFitNotification("Save failed due to network error");
+    } finally {
+      setIsSavingResume(false);
+    }
+  }, [id, title, data, isSavingResume, setResumeId, setSaveState]);
 
-    return () => clearTimeout(timer);
-  }, [data, title, id, saveState, setResumeId, setSaveState]);
+  // Ctrl+S / Cmd+S manual save shortcut
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        handleManualSave();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleManualSave]);
+
+  // Warn if leaving page with unsaved edits
+  React.useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (saveState === "typing") {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [saveState]);
 
   // One-Page Fit Analysis & Auto-Optimizer states
   const [fitAnalysis, setFitAnalysis] = React.useState<FitAnalysis>({
@@ -975,48 +1004,55 @@ function ResumeBuilderContent() {
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background text-foreground">
       {/* Top Action Header */}
-      <header className="h-16 border-b border-border/40 bg-card px-6 flex items-center justify-between shrink-0 no-print">
-        <div className="flex items-center gap-3">
+      <header className="h-16 border-b border-border/40 bg-card px-4 sm:px-6 flex items-center justify-between shrink-0 no-print gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
           <Link
             href="/dashboard"
-            className="flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg border border-border/60 bg-muted/40 hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-xs"
+            className="flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg border border-border/60 bg-muted/40 hover:bg-muted text-xs font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-xs shrink-0"
             title="Back to Dashboard"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            <span>Dashboard</span>
+            <span className="hidden sm:inline">Dashboard</span>
           </Link>
-          <div className="h-5 w-[1px] bg-border/60 mx-1" />
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Untitled Resume"
-            className="text-lg font-bold bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none px-1 py-0.5 rounded transition-colors"
-          />
-          {/* Cloud Auto-save state pill */}
-          <span className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
+          <div className="h-5 w-[1px] bg-border/60 mx-0.5 shrink-0" />
+
+          {/* Explicit Editable Resume Name Field */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/70 bg-muted/20 hover:bg-muted/40 focus-within:bg-background focus-within:border-primary/70 focus-within:ring-1 focus-within:ring-primary/20 transition-all max-w-[200px] sm:max-w-[280px] md:max-w-[340px]">
+            <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Resume Name (e.g. SDE - Google)"
+              title="Click to rename this resume"
+              className="text-xs sm:text-sm font-bold bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none w-full truncate"
+            />
+          </div>
+
+          {/* Unsaved / Saved status label */}
+          <span className="text-[11px] text-muted-foreground hidden lg:flex items-center gap-1.5 font-medium shrink-0">
             {saveState === "saving" && (
               <>
                 <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                <span>Saving draft...</span>
+                <span>Saving...</span>
               </>
             )}
             {saveState === "saved" && (
               <>
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                <span>Saved to cloud</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-medium">All changes saved</span>
               </>
             )}
             {saveState === "typing" && (
               <>
-                <span className="h-2 w-2 rounded-full bg-blue-500" />
-                <span>Unsaved changes</span>
+                <span className="h-2 w-2 rounded-full bg-amber-400" />
+                <span className="text-amber-600 dark:text-amber-400 font-medium">Unsaved changes</span>
               </>
             )}
             {saveState === "error" && (
               <>
                 <span className="h-2 w-2 rounded-full bg-destructive" />
-                <span>Auto-save failed</span>
+                <span className="text-destructive font-medium">Save failed</span>
               </>
             )}
           </span>
@@ -1024,9 +1060,9 @@ function ResumeBuilderContent() {
 
         {/* Target Role Badge if Set */}
         {(careerProfile?.targetRole || activeJobContext?.jobTitle) && (
-          <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs">
+          <div className="hidden xl:flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs shrink-0">
             <span className="text-primary font-bold">🎯</span>
-            <span className="font-semibold text-foreground truncate max-w-[220px]" title={careerProfile?.targetRole || activeJobContext?.jobTitle}>
+            <span className="font-semibold text-foreground truncate max-w-[180px]" title={careerProfile?.targetRole || activeJobContext?.jobTitle}>
               {careerProfile?.targetRole || activeJobContext?.jobTitle}
             </span>
             <Link
@@ -1040,9 +1076,9 @@ function ResumeBuilderContent() {
         )}
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 shrink-0">
           {/* History Controls */}
-          <div className="flex items-center bg-muted p-1 rounded-lg mr-2 border border-border/40">
+          <div className="hidden md:flex items-center bg-muted p-1 rounded-lg mr-1 border border-border/40">
             <button
               onClick={undo}
               disabled={past.length === 0}
@@ -1061,32 +1097,76 @@ function ResumeBuilderContent() {
             </button>
           </div>
 
+          {/* Explicit Manual Save Button */}
+          <Button
+            size="sm"
+            onClick={handleManualSave}
+            disabled={isSavingResume}
+            className={`gap-1.5 text-xs font-bold transition-all cursor-pointer ${
+              saveState === "typing"
+                ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm ring-2 ring-primary/20"
+                : saveState === "saved"
+                ? "border border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15"
+                : "border border-border/60 bg-card hover:bg-muted text-foreground"
+            }`}
+            variant={saveState === "typing" ? "primary" : "outline"}
+            title="Save resume to cloud (Ctrl+S)"
+          >
+            {isSavingResume ? (
+              <>
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : saveState === "saved" ? (
+              <>
+                <Check className="h-3.5 w-3.5 text-emerald-500" />
+                <span>Saved</span>
+              </>
+            ) : (
+              <>
+                <Save className="h-3.5 w-3.5" />
+                <span>Save</span>
+                {saveState === "typing" && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-300 ml-0.5 animate-pulse" />
+                )}
+              </>
+            )}
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
             onClick={() => {
-              if (window.confirm("Start a new blank resume from scratch?")) {
-                loadResume(null, "Untitled Resume", {
-                  personalInfo: { fullName: "", email: "", phone: "", location: "", website: "", linkedin: "", github: "" },
-                  summary: "",
-                  experience: [],
-                  education: [],
-                  projects: [],
-                  skills: [],
-                  design: {
-                    fontFamily: "font-sans",
-                    fontSize: "md",
-                    sectionOrder: ["summary", "experience", "projects", "education", "skills"],
-                    density: "normal",
-                    sectionSpacing: 1.0,
-                    itemSpacing: 1.0,
-                    lineHeight: 1.4
-                  }
-                });
-                window.history.replaceState({}, "", "/dashboard/builder");
+              if (saveState === "typing") {
+                if (!window.confirm("You have unsaved changes. Start a new blank resume anyway?")) {
+                  return;
+                }
+              } else if (!window.confirm("Start a new blank resume from scratch?")) {
+                return;
               }
+              setResumeId(null);
+              loadResume(null, "Untitled Resume", {
+                personalInfo: { fullName: "", email: "", phone: "", location: "", website: "", linkedin: "", github: "" },
+                summary: "",
+                experience: [],
+                education: [],
+                projects: [],
+                skills: [],
+                achievements: [],
+                design: {
+                  fontFamily: "font-sans",
+                  fontSize: "md",
+                  sectionOrder: ["summary", "experience", "projects", "education", "skills", "achievements"],
+                  density: "normal",
+                  sectionSpacing: 1.0,
+                  itemSpacing: 1.0,
+                  lineHeight: 1.4
+                }
+              });
+              window.history.replaceState({}, "", "/dashboard/builder");
+              setSaveState("idle");
             }}
-            className="gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
+            className="gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground hidden sm:flex"
             title="Create a new blank resume from scratch"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -1097,7 +1177,7 @@ function ResumeBuilderContent() {
             variant="outline"
             size="sm"
             onClick={() => setIsTemplatesModalOpen(true)}
-            className="gap-1.5 text-xs font-semibold border-primary/30 hover:border-primary text-foreground"
+            className="gap-1.5 text-xs font-semibold border-primary/30 hover:border-primary text-foreground hidden sm:flex"
           >
             <LayoutTemplate className="h-3.5 w-3.5 text-primary" />
             <span>Templates</span>
@@ -1107,10 +1187,10 @@ function ResumeBuilderContent() {
             variant="outline"
             size="sm"
             onClick={() => setIsImportModalOpen(true)}
-            className="gap-1.5 text-xs font-semibold"
+            className="gap-1.5 text-xs font-semibold hidden md:flex"
           >
             <Upload className="h-3.5 w-3.5" />
-            <span>Import Resume</span>
+            <span>Import</span>
           </Button>
 
           <Button
