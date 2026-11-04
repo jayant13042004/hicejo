@@ -1743,13 +1743,13 @@ function ResumeBuilderContent() {
                             onChange={(e) => updateProject(proj.id, { name: e.target.value })}
                           />
                           <Input
-                            label="Your Role / Contribution"
-                            placeholder="Lead Developer"
+                            label="Technologies / Role"
+                            placeholder="e.g. Next.js, TypeScript, PostgreSQL"
                             value={proj.role}
                             onChange={(e) => updateProject(proj.id, { role: e.target.value })}
                           />
                           <Input
-                            label="Demo URL / GitHub Link"
+                            label="Project Link (GitHub / Live Demo)"
                             placeholder="https://github.com/yourname/project"
                             value={proj.link}
                             onChange={(e) => updateProject(proj.id, { link: e.target.value })}
@@ -2421,28 +2421,41 @@ function ResumeBuilderContent() {
                           </h3>
                           <div style={{ display: "flex", flexDirection: "column", gap: `${10 * itemSpacingMultiplier}px` }}>
                             {data.projects.map((proj) => {
-                              const projectNameAndRole = renderTitleWithSubtitle(proj.name, proj.role);
+                              const cleanName = (proj.name || "").trim().replace(/[\s—–-]+$/, "");
+                              const cleanRole = (proj.role || "").trim().replace(/^[\s—–-]+/, "");
                               const projDate = formatSafeDateRange(proj.startDate, proj.endDate);
-                              const isGitHub = (proj.link || "").toLowerCase().includes("github");
-                              const linkLabel = isGitHub ? "GitHub" : "Live Demo";
+                              const hasLink = Boolean(proj.link && proj.link.trim() !== "");
+                              const linkHref = hasLink
+                                ? (proj.link.startsWith("http") ? proj.link.trim() : `https://${proj.link.trim()}`)
+                                : undefined;
 
                               return (
                                 <div key={proj.id} className="space-y-0.5">
                                   <div className="flex items-baseline justify-between text-[1em]">
                                     <div className="flex flex-wrap items-baseline gap-1.5 min-w-0">
-                                      <span className="font-bold text-zinc-900">
-                                        {projectNameAndRole}
-                                      </span>
-                                      {proj.link && (
+                                      {/* Clickable project title if link provided; otherwise clean unlinked bold text */}
+                                      {hasLink ? (
                                         <a
-                                          href={proj.link.startsWith("http") ? proj.link : `https://${proj.link}`}
+                                          href={linkHref}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="text-[0.82em] font-medium text-primary hover:underline inline-flex items-center"
+                                          className="font-bold text-zinc-950 hover:text-primary hover:underline transition-colors cursor-pointer"
+                                          title={proj.link}
                                         >
-                                          <span className="text-zinc-400 font-normal mr-1.5">|</span>
-                                          <span>{linkLabel}</span>
+                                          {cleanName || "Project"}
                                         </a>
+                                      ) : (
+                                        <span className="font-bold text-zinc-950">
+                                          {cleanName || "Project"}
+                                        </span>
+                                      )}
+
+                                      {/* Tech stack or Role beside title */}
+                                      {cleanRole && (
+                                        <span className="text-zinc-600 font-normal text-[0.95em]">
+                                          <span className="text-zinc-400 font-normal mr-1.5">|</span>
+                                          <span>{cleanRole}</span>
+                                        </span>
                                       )}
                                     </div>
                                     {projDate && (
