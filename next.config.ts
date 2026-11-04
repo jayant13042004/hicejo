@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  serverExternalPackages: ["pdf-parse", "pdfjs-dist", "sharp", "@napi-rs/canvas"]
+  serverExternalPackages: ["pdf-parse", "pdfjs-dist"]
 };
 
 export default nextConfig;
