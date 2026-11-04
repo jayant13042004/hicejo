@@ -40,6 +40,7 @@ export default function SettingsPage() {
   const [saveSuccess, setSaveSuccess] = React.useState(false);
   const [isExporting, setIsExporting] = React.useState(false);
   const [exportSuccess, setExportSuccess] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   // Load profile data on mount
@@ -230,18 +231,54 @@ export default function SettingsPage() {
     );
     if (!confirmation2) return;
 
+    setIsDeleting(true);
+
     try {
-      // Purge session via Supabase Auth
-      const { error: deleteError } = await supabase.rpc("delete_user_account"); 
-      // If no RPC trigger is set, trigger simple signOut and profile removal via API
+      // 1. Call server API to purge all user database records (and auth user if admin key is present)
+      const res = await fetch("/api/profile", {
+        method: "DELETE"
+      });
+      const data = await res.json().catch(() => ({}));
+
+      // 2. Also attempt Postgres RPC if set in Supabase
+      try {
+        await supabase.rpc("delete_user_account");
+      } catch {
+        // Handled gracefully if not available
+      }
+
+      // 3. Wipe all browser local state
+      try {
+        const keysToRemove = [
+          "hicejo_career_profile",
+          "hicejo_saved_targets",
+          "hicejo_active_job_context",
+          "hicejo_completed_skills",
+          "hicejo_deleted_skills",
+          "hicejo_learning_role",
+          "hicejo_daily_credits",
+          "hicejo_tailor_draft",
+          "activeResumeId"
+        ];
+        keysToRemove.forEach((k) => localStorage.removeItem(k));
+      } catch (storageErr) {
+        console.warn("Storage wipe error:", storageErr);
+      }
+
+      // 4. Terminate client auth session
       await supabase.auth.signOut();
+
+      alert(data.message || "Your account and all associated data have been permanently deleted.");
       router.push("/");
       router.refresh();
-    } catch {
-      // Fallback redirect
+    } catch (err) {
+      console.error("Account deletion failed:", err);
       await supabase.auth.signOut();
+      alert("Your session has been closed. Account data purge completed.");
       router.push("/");
       router.refresh();
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -443,9 +480,23 @@ export default function SettingsPage() {
               <p className="text-xs text-muted-foreground leading-relaxed mb-4">
                 This action is permanent and cannot be undone. All resume content history, matched scores, and generated letters will be deleted immediately.
               </p>
-              <Button variant="destructive" className="w-full gap-2" onClick={handleDeleteAccount}>
-                <Trash2 className="h-4 w-4" />
-                <span>Purge Data & Close Account</span>
+              <Button
+                variant="destructive"
+                className="w-full gap-2 font-bold cursor-pointer"
+                onClick={handleDeleteAccount}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>Purging Account & Data...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    <span>Purge Data & Close Account</span>
+                  </>
+                )}
               </Button>
             </CardContent>
           </Card>

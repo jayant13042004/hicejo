@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSideClient } from "@/lib/supabase/server";
 import { isDemoMode, getDemoProfile, updateDemoProfile } from "@/lib/supabase/demo";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // GET /api/profile - Fetch candidate profile metadata
 export async function GET() {
@@ -139,5 +140,95 @@ export async function PUT(request: Request) {
       updated_at: new Date().toISOString()
     });
     return NextResponse.json({ success: true, data: updated, error: error.message });
+  }
+}
+
+// DELETE /api/profile - Permanently delete candidate account and all associated data
+export async function DELETE() {
+  try {
+    if (await isDemoMode()) {
+      return NextResponse.json({
+        success: true,
+        authUserDeleted: true,
+        message: "Sandbox session data cleared successfully."
+      });
+    }
+
+    const supabase = await createServerSideClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized. Please log in to delete your account." },
+        { status: 401 }
+      );
+    }
+
+    const userId = user.id;
+    let authUserDeleted = false;
+
+    // 1. Attempt Postgres RPC function if defined
+    try {
+      const { error: rpcError } = await supabase.rpc("delete_user_account");
+      if (!rpcError) {
+        authUserDeleted = true;
+      }
+    } catch (rpcErr) {
+      console.warn("delete_user_account RPC check:", rpcErr);
+    }
+
+    // 2. Explicitly wipe all records in user-owned tables
+    const userTables = [
+      { name: "referral_contacts", col: "user_id" },
+      { name: "applications", col: "user_id" },
+      { name: "ats_scans", col: "user_id" },
+      { name: "cover_letters", col: "user_id" },
+      { name: "resumes", col: "user_id" },
+      { name: "profiles", col: "id" }
+    ];
+
+    for (const tbl of userTables) {
+      try {
+        await supabase.from(tbl.name).delete().eq(tbl.col, userId);
+      } catch (err) {
+        console.warn(`Table wipe (${tbl.name}):`, err);
+      }
+    }
+
+    // 3. If service role key is configured, delete from auth.users directly
+    const adminClient = createAdminClient();
+    if (adminClient) {
+      try {
+        const { error: adminErr } = await adminClient.auth.admin.deleteUser(userId);
+        if (!adminErr) {
+          authUserDeleted = true;
+        } else {
+          console.warn("Admin deleteUser warning:", adminErr.message);
+        }
+      } catch (adminEx) {
+        console.warn("Admin deleteUser exception:", adminEx);
+      }
+    }
+
+    // 4. Sign out
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // ignore
+    }
+
+    return NextResponse.json({
+      success: true,
+      authUserDeleted,
+      message: authUserDeleted
+        ? "Your account and all associated data have been permanently deleted."
+        : "Your saved resumes, cover letters, and profile data have been wiped from the database."
+    });
+  } catch (error: any) {
+    console.error("Account deletion route error:", error);
+    return NextResponse.json(
+      { success: false, error: error.message || "Failed to delete account" },
+      { status: 500 }
+    );
   }
 }
