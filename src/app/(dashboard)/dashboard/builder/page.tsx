@@ -53,10 +53,12 @@ const fontClassMap: Record<string, string> = {
   "font-geometric": "font-[Outfit,system-ui,sans-serif]"
 };
 
-// Safe date range formatter: avoids empty date columns or trailing dashes
+// Safe date range formatter: avoids empty date columns or trailing dashes.
+// Prioritizes explicitly typed dates (e.g. "2026") so typed graduation or end dates are never overwritten by "Present".
 function formatSafeDateRange(startDate?: string, endDate?: string, current?: boolean): string | null {
   const start = (startDate || "").trim();
-  const end = current ? "Present" : (endDate || "").trim();
+  const rawEnd = (endDate || "").trim();
+  const end = rawEnd || (current ? "Present" : "");
   if (start && end) return `${start} – ${end}`;
   if (start) return start;
   if (end) return end;
@@ -1404,7 +1406,13 @@ function ResumeBuilderContent() {
                               label="End Date"
                               placeholder="Present"
                               value={exp.endDate}
-                              onChange={(e) => updateExperience(exp.id, { endDate: e.target.value })}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                updateExperience(exp.id, {
+                                  endDate: val,
+                                  current: val.trim().toLowerCase() === "present"
+                                });
+                              }}
                             />
                           </div>
                         </div>
@@ -1579,7 +1587,13 @@ function ResumeBuilderContent() {
                                 label="Graduation Date"
                                 placeholder="Jun 2022"
                                 value={edu.endDate}
-                                onChange={(e) => updateEducation(edu.id, { endDate: e.target.value })}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  updateEducation(edu.id, {
+                                    endDate: val,
+                                    current: val.trim().toLowerCase() === "present"
+                                  });
+                                }}
                               />
                             </div>
 
@@ -2409,30 +2423,34 @@ function ResumeBuilderContent() {
                             {data.projects.map((proj) => {
                               const projectNameAndRole = renderTitleWithSubtitle(proj.name, proj.role);
                               const projDate = formatSafeDateRange(proj.startDate, proj.endDate);
-                              const cleanLink = (proj.link || "").trim().replace(/^https?:\/\//i, "");
+                              const isGitHub = (proj.link || "").toLowerCase().includes("github");
+                              const linkLabel = isGitHub ? "GitHub" : "Live Demo";
 
                               return (
                                 <div key={proj.id} className="space-y-0.5">
-                                  <div className="flex items-center justify-between text-[1em]">
-                                    <span className="font-bold text-zinc-900">
-                                      {projectNameAndRole}
-                                    </span>
+                                  <div className="flex items-baseline justify-between text-[1em]">
+                                    <div className="flex flex-wrap items-baseline gap-1.5 min-w-0">
+                                      <span className="font-bold text-zinc-900">
+                                        {projectNameAndRole}
+                                      </span>
+                                      {proj.link && (
+                                        <a
+                                          href={proj.link.startsWith("http") ? proj.link : `https://${proj.link}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-[0.82em] font-medium text-primary hover:underline inline-flex items-center"
+                                        >
+                                          <span className="text-zinc-400 font-normal mr-1.5">|</span>
+                                          <span>{linkLabel}</span>
+                                        </a>
+                                      )}
+                                    </div>
                                     {projDate && (
                                       <span className="text-zinc-600 font-medium text-[0.9em] shrink-0 ml-2">
                                         {projDate}
                                       </span>
                                     )}
                                   </div>
-                                  {proj.link && (
-                                    <a
-                                      href={proj.link.startsWith("http") ? proj.link : `https://${proj.link}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-[0.8em] text-primary hover:underline font-medium inline-block"
-                                    >
-                                      {cleanLink || "Project Link"}
-                                    </a>
-                                  )}
                                   {proj.description && (
                                     <ul className="list-disc list-outside pl-4 space-y-0.5">
                                       {proj.description.split("\n").filter(b => b.trim() !== "").map((bullet, i) => (
