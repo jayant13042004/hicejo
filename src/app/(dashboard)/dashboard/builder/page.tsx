@@ -28,7 +28,8 @@ import {
   FileCheck,
   LayoutTemplate,
   Printer,
-  AlertCircle
+  AlertCircle,
+  Trophy
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,6 +121,9 @@ function ResumeBuilderContent() {
     addSkill,
     updateSkill,
     removeSkill,
+    addAchievement,
+    updateAchievement,
+    removeAchievement,
     updateDesignSettings,
     setDensity,
     applyCompressedBullet,
@@ -134,7 +138,7 @@ function ResumeBuilderContent() {
   } = useResumeStore();
 
   const [activeTab, setActiveTab] = React.useState<
-    "personal" | "summary" | "experience" | "education" | "projects" | "skills" | "design"
+    "personal" | "summary" | "experience" | "education" | "projects" | "skills" | "achievements" | "design"
   >("personal");
 
   const [mobileViewMode, setMobileViewMode] = React.useState<"editor" | "preview">("editor");
@@ -749,7 +753,7 @@ function ResumeBuilderContent() {
   };
 
   // AI Bullet Enhancer endpoint trigger (Google XYZ format)
-  const handleEnhanceBullet = async (itemId: string, text: string, itemType: "experience" | "projects") => {
+  const handleEnhanceBullet = async (itemId: string, text: string, itemType: "experience" | "projects" | "achievements") => {
     if (!text || text.trim() === "") return;
     setEnhancingId(itemId);
 
@@ -767,6 +771,8 @@ function ResumeBuilderContent() {
       if (result.success && result.data?.enhanced) {
         if (itemType === "experience") {
           updateExperience(itemId, { description: result.data.enhanced });
+        } else if (itemType === "achievements") {
+          updateAchievement(itemId, { description: result.data.enhanced });
         } else {
           updateProject(itemId, { description: result.data.enhanced });
         }
@@ -861,8 +867,14 @@ function ResumeBuilderContent() {
   };
 
   // Section Ordering handlers
+  const getSectionOrderList = () => {
+    const defaultList = ["summary", "experience", "projects", "education", "skills", "achievements"];
+    const current = data.design?.sectionOrder || defaultList;
+    return current.includes("achievements") ? current : [...current, "achievements"];
+  };
+
   const handleMoveUp = (index: number) => {
-    const list = [...(data.design?.sectionOrder || ["summary", "experience", "projects", "education", "skills"])];
+    const list = [...getSectionOrderList()];
     if (index > 0) {
       const temp = list[index];
       list[index] = list[index - 1];
@@ -872,7 +884,7 @@ function ResumeBuilderContent() {
   };
 
   const handleMoveDown = (index: number) => {
-    const list = [...(data.design?.sectionOrder || ["summary", "experience", "projects", "education", "skills"])];
+    const list = [...getSectionOrderList()];
     if (index < list.length - 1) {
       const temp = list[index];
       list[index] = list[index + 1];
@@ -1207,6 +1219,7 @@ function ResumeBuilderContent() {
               { id: "education", label: "Education", icon: GraduationCap },
               { id: "projects", label: "Projects", icon: FolderGit2 },
               { id: "skills", label: "Skills", icon: Cpu },
+              { id: "achievements", label: "Activities & Awards", icon: Trophy },
               { id: "design", label: "Design & Density", icon: Palette },
             ].map((tab) => {
               const Icon = tab.icon;
@@ -1936,6 +1949,105 @@ function ResumeBuilderContent() {
               </div>
             )}
 
+            {/* Extracurricular Activities & Achievements Tab */}
+            {activeTab === "achievements" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">Extracurricular Activities & Achievements</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Highlight hackathon awards, student clubs, open-source impact, or leadership roles.
+                    </p>
+                  </div>
+                  <Button onClick={addAchievement} size="sm" className="gap-1.5 cursor-pointer">
+                    <Plus className="h-4 w-4" />
+                    <span>Add Item</span>
+                  </Button>
+                </div>
+
+                <div className="space-y-4">
+                  {(data.achievements || []).map((ach, index) => (
+                    <Card key={ach.id} className="border border-border/70 overflow-hidden bg-card/60 shadow-2xs">
+                      <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border/50 text-xs">
+                        <span className="font-semibold text-foreground truncate">
+                          {ach.title ? `${ach.title}${ach.organization ? ` • ${ach.organization}` : ""}` : `Activity / Award #${index + 1}`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeAchievement(ach.id)}
+                          className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-destructive transition-colors cursor-pointer px-1.5 py-0.5 rounded hover:bg-destructive/10"
+                          title="Remove item"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>Remove</span>
+                        </button>
+                      </div>
+
+                      <CardContent className="p-4 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <Input
+                            label="Title / Honor"
+                            placeholder="e.g. Winner - Smart India Hackathon"
+                            value={ach.title}
+                            onChange={(e) => updateAchievement(ach.id, { title: e.target.value })}
+                          />
+                          <Input
+                            label="Organization / Subtitle"
+                            placeholder="e.g. IEEE Student Chapter or ACM"
+                            value={ach.organization || ""}
+                            onChange={(e) => updateAchievement(ach.id, { organization: e.target.value })}
+                          />
+                          <div className="md:col-span-2">
+                            <Input
+                              label="Date / Year"
+                              placeholder="e.g. 2024 or Fall 2023"
+                              value={ach.date || ""}
+                              onChange={(e) => updateAchievement(ach.id, { date: e.target.value })}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                Key Highlights / Details
+                              </label>
+                              <p className="text-[11px] text-muted-foreground">
+                                Enter 1-3 bullet points detailing your accomplishment or contribution
+                              </p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-[11px] gap-1 text-primary border-primary/30 hover:bg-primary/5 cursor-pointer"
+                              onClick={() => handleEnhanceBullet(ach.id, ach.description || "", "achievements")}
+                              disabled={enhancingId === ach.id || !ach.description}
+                            >
+                              <Sparkles className="h-3 w-3" />
+                              <span>{enhancingId === ach.id ? "Enhancing..." : "AI Polish"}</span>
+                            </Button>
+                          </div>
+                          <textarea
+                            className="flex min-h-[90px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-2xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            placeholder="• Built real-time monitoring solution awarded 1st place among 150+ teams&#10;• Mentored 40+ junior developers across full-stack workshops"
+                            value={ach.description || ""}
+                            onChange={(e) => updateAchievement(ach.id, { description: e.target.value })}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+
+                  {(!data.achievements || data.achievements.length === 0) && (
+                    <div className="w-full text-center py-8 rounded-xl border border-dashed border-border/80 text-muted-foreground text-sm">
+                      No activities or achievements listed yet. Click &quot;Add Item&quot; to highlight your extracurricular achievements.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Design, Density & Layout Tab */}
             {activeTab === "design" && (
               <div className="space-y-6">
@@ -2114,12 +2226,18 @@ function ResumeBuilderContent() {
                 <div className="space-y-3">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Section Ordering</h3>
                   <div className="space-y-2">
-                    {(data.design?.sectionOrder || ["summary", "experience", "projects", "education", "skills"]).map((secId, index, arr) => (
+                    {getSectionOrderList().map((secId, index, arr) => (
                       <div
                         key={secId}
                         className="flex items-center justify-between p-3 rounded-xl border border-border/60 bg-muted/30 text-xs font-semibold capitalize"
                       >
-                        <span>{secId === "summary" ? "Professional Summary" : secId}</span>
+                        <span>
+                          {secId === "summary"
+                            ? "Professional Summary"
+                            : secId === "achievements"
+                            ? "Extracurricular & Achievements"
+                            : secId}
+                        </span>
                         <div className="flex items-center gap-1">
                           <button
                             type="button"
@@ -2581,6 +2699,45 @@ function ResumeBuilderContent() {
                         </div>
                       ) : null;
 
+                    const renderAchievements = () =>
+                      (data.achievements || []).length > 0 ? (
+                        <div key="achievements" className="space-y-1.5 section-item break-inside-avoid">
+                          <h3 className={getHeadingClass("Extracurricular & Achievements")}>
+                            Extracurricular & Achievements
+                          </h3>
+                          <div style={{ display: "flex", flexDirection: "column", gap: `${8 * itemSpacingMultiplier}px` }}>
+                            {(data.achievements || []).map((ach) => {
+                              const achTitleAndOrg = renderTitleWithSubtitle(ach.title, ach.organization);
+                              const cleanDate = (ach.date || "").trim();
+
+                              return (
+                                <div key={ach.id} className="space-y-0.5">
+                                  <div className="flex items-baseline justify-between text-[1em]">
+                                    <span className="font-bold text-zinc-900">
+                                      {achTitleAndOrg}
+                                    </span>
+                                    {cleanDate && (
+                                      <span className="text-zinc-600 font-medium text-[0.9em] shrink-0 ml-2">
+                                        {cleanDate}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {ach.description && (
+                                    <ul className="list-disc list-outside pl-4 space-y-0.5">
+                                      {ach.description.split("\n").filter(b => b.trim() !== "").map((bullet, i) => (
+                                        <li key={i} className="text-[0.95em] text-zinc-700 leading-relaxed">
+                                          {bullet.replace(/^[•\-\s]*/, "")}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : null;
+
                     // If 2-Column Split Sidebar Style
                     if (isSplit) {
                       return (
@@ -2595,6 +2752,7 @@ function ResumeBuilderContent() {
                             {renderSummary()}
                             {renderExperience()}
                             {renderProjects()}
+                            {renderAchievements()}
                           </div>
                         </div>
                       );
@@ -2606,10 +2764,11 @@ function ResumeBuilderContent() {
                       experience: renderExperience,
                       projects: renderProjects,
                       education: renderEducation,
-                      skills: renderSkills
+                      skills: renderSkills,
+                      achievements: renderAchievements
                     };
 
-                    const order = data.design?.sectionOrder || ["summary", "experience", "projects", "education", "skills"];
+                    const order = getSectionOrderList();
 
                     return (
                       <div

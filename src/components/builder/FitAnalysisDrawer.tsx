@@ -52,6 +52,19 @@ export function FitAnalysisDrawer({
     });
   });
 
+  resumeData.achievements?.forEach((ach) => {
+    ach.description?.split("\n").forEach((b) => {
+      if (b.trim().length > 140) {
+        verboseBullets.push({
+          text: b.trim(),
+          itemId: ach.id,
+          itemType: "achievements" as any,
+          title: ach.title || "Achievement"
+        });
+      }
+    });
+  });
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -6 }}

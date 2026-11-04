@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ResumeData, PersonalInfo, Experience, Education, Project, Skill, SaveState, DesignSettings, ResumeDensity } from "@/types/resume";
+import { ResumeData, PersonalInfo, Experience, Education, Project, Skill, Achievement, SaveState, DesignSettings, ResumeDensity } from "@/types/resume";
 
 export interface PendingImprovement {
   type?: "uplift" | "roast" | "tailor";
@@ -78,10 +78,14 @@ interface ResumeStore {
   updateSkill: (id: string, name: string, category?: string) => void;
   removeSkill: (id: string) => void;
 
+  addAchievement: () => void;
+  updateAchievement: (id: string, ach: Partial<Achievement>) => void;
+  removeAchievement: (id: string) => void;
+
   updateDesignSettings: (design: Partial<DesignSettings>) => void;
   setDensity: (density: ResumeDensity) => void;
   toggleAutoFitOnePage: () => void;
-  applyCompressedBullet: (itemId: string, itemType: "experience" | "projects", oldBullet: string, newBullet: string) => void;
+  applyCompressedBullet: (itemId: string, itemType: "experience" | "projects" | "achievements", oldBullet: string, newBullet: string) => void;
   
   // History Actions
   undo: () => void;
@@ -92,7 +96,7 @@ interface ResumeStore {
 const defaultDesign: DesignSettings = {
   fontFamily: "font-sans",
   fontSize: "md",
-  sectionOrder: ["summary", "experience", "projects", "education", "skills"],
+  sectionOrder: ["summary", "experience", "projects", "education", "skills", "achievements"],
   density: "normal",
   sectionSpacing: 1.0,
   itemSpacing: 1.0,
@@ -115,6 +119,7 @@ const initialResumeData: ResumeData = {
   education: [],
   projects: [],
   skills: [],
+  achievements: [],
   design: defaultDesign
 };
 
@@ -377,6 +382,18 @@ export const useResumeStore = create<ResumeStore>((set, get) => {
               .filter((sk) => sk.name && sk.name.trim().length > 0)
           : [];
 
+        const safeAchievements: Achievement[] = Array.isArray(data.achievements)
+          ? data.achievements.map((ach) => ({
+              id: ach.id || crypto.randomUUID(),
+              title: ach.title || "",
+              organization: ach.organization || "",
+              date: ach.date || "",
+              description: Array.isArray(ach.description)
+                ? (ach.description as any).join("\n")
+                : (ach.description || "")
+            }))
+          : [];
+
         const mergedData: ResumeData = {
           personalInfo: safePersonalInfo,
           summary: data.summary || "",
@@ -384,6 +401,7 @@ export const useResumeStore = create<ResumeStore>((set, get) => {
           education: safeEducation,
           projects: safeProjects,
           skills: safeSkills,
+          achievements: safeAchievements,
           design: {
             ...defaultDesign,
             ...(state.data.design || {}),
@@ -580,6 +598,44 @@ export const useResumeStore = create<ResumeStore>((set, get) => {
       saveState: "typing",
     })),
 
+    addAchievement: () => set((state) => {
+      const newAch: Achievement = {
+        id: crypto.randomUUID(),
+        title: "",
+        organization: "",
+        date: "",
+        description: ""
+      };
+      return {
+        ...saveHistory(state),
+        data: {
+          ...state.data,
+          achievements: [...(state.data.achievements || []), newAch]
+        },
+        saveState: "typing"
+      };
+    }),
+
+    updateAchievement: (id, ach) => set((state) => ({
+      ...saveHistory(state),
+      data: {
+        ...state.data,
+        achievements: (state.data.achievements || []).map((item) =>
+          item.id === id ? { ...item, ...ach } : item
+        )
+      },
+      saveState: "typing"
+    })),
+
+    removeAchievement: (id) => set((state) => ({
+      ...saveHistory(state),
+      data: {
+        ...state.data,
+        achievements: (state.data.achievements || []).filter((item) => item.id !== id)
+      },
+      saveState: "typing"
+    })),
+
     updateDesignSettings: (design) => set((state) => ({
       ...saveHistory(state),
       data: {
@@ -640,6 +696,20 @@ export const useResumeStore = create<ResumeStore>((set, get) => {
             experience: state.data.experience.map((item) => {
               if (item.id !== itemId) return item;
               const bullets = item.description.split("\n");
+              const updatedBullets = bullets.map((b) => b.trim() === oldBullet.trim() ? newBullet : b);
+              return { ...item, description: updatedBullets.join("\n") };
+            })
+          },
+          saveState: "typing"
+        };
+      } else if (itemType === "achievements") {
+        return {
+          ...saveHistory(state),
+          data: {
+            ...state.data,
+            achievements: (state.data.achievements || []).map((item) => {
+              if (item.id !== itemId) return item;
+              const bullets = (item.description || "").split("\n");
               const updatedBullets = bullets.map((b) => b.trim() === oldBullet.trim() ? newBullet : b);
               return { ...item, description: updatedBullets.join("\n") };
             })

@@ -95,6 +95,14 @@ export interface Skill {
   level?: string; // e.g. Beginner, Intermediate, Expert
 }
 
+export interface Achievement {
+  id: string;
+  title: string;
+  organization?: string;
+  date?: string;
+  description?: string;
+}
+
 export type ResumeDensity = "relaxed" | "normal" | "compact" | "ultra-compact";
 
 export type ResumeStyle = "classic" | "split-sidebar" | "executive" | "minimal" | "technical";
@@ -133,6 +141,7 @@ export interface ResumeData {
   education: Education[];
   projects: Project[];
   skills: Skill[];
+  achievements?: Achievement[];
   design?: DesignSettings;
 }
 
