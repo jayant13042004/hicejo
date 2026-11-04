@@ -52,34 +52,30 @@ export function formatEducationGrade(edu?: Partial<Education> | null): string | 
 
   if (!rawGrade) return null;
 
+  // Normalize slash spacing: "7.99 / 10" -> "7.99/10", "8.5 out of 10" -> "8.5/10"
+  rawGrade = rawGrade.replace(/\s*\/\s*/g, "/").replace(/\s*out\s+of\s*/gi, "/");
+
   // Determine effective type
   const effectiveType = gradeType || (
     rawGrade.includes("%") || /percent/i.test(rawGrade) ? "percentage" :
     /gpa/i.test(rawGrade) && !/cgpa/i.test(rawGrade) ? "gpa" : "cgpa"
   );
 
-  // If rawGrade already includes a prefix, standardize it
-  if (/^cgpa\s*[:=-]?\s*/i.test(rawGrade)) {
-    return rawGrade.replace(/^cgpa\s*[:=-]?\s*/i, "CGPA: ");
-  }
-  if (/^gpa\s*[:=-]?\s*/i.test(rawGrade)) {
-    return rawGrade.replace(/^gpa\s*[:=-]?\s*/i, "GPA: ");
-  }
-  if (/^percentage\s*[:=-]?\s*/i.test(rawGrade)) {
-    return rawGrade.replace(/^percentage\s*[:=-]?\s*/i, "Percentage: ");
-  }
+  // Strip redundant prefix
+  const stripped = rawGrade.replace(/^(?:cgpa|gpa|percentage|score|grade)\s*[:=-]?\s*/i, "").trim();
+  if (!stripped) return null;
 
   if (effectiveType === "percentage") {
-    const hasPercent = rawGrade.endsWith("%");
-    return `Percentage: ${rawGrade}${hasPercent ? "" : "%"}`;
+    const hasPercent = stripped.endsWith("%");
+    return `Percentage: ${stripped}${hasPercent ? "" : "%"}`;
   }
 
   if (effectiveType === "gpa") {
-    return `GPA: ${rawGrade}`;
+    return `GPA: ${stripped}`;
   }
 
-  // Default is CGPA
-  return `CGPA: ${rawGrade}`;
+  // Default is standardized CGPA: 7.99/10
+  return `CGPA: ${stripped}`;
 }
 
 export interface Project {

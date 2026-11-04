@@ -242,7 +242,7 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
         { id: "sk-6", name: "Docker / Kubernetes / AWS", category: "Deployment" }
       ],
       design: {
-        fontFamily: "font-mono",
+        fontFamily: "font-sans",
         fontSize: "md",
         sectionOrder: ["summary", "experience", "projects", "education", "skills"],
         density: "normal",
@@ -481,7 +481,7 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
         { id: "sk-6", name: "Prometheus / Grafana / Datadog", category: "Observability" }
       ],
       design: {
-        fontFamily: "font-mono",
+        fontFamily: "font-sans",
         fontSize: "md",
         sectionOrder: ["summary", "experience", "projects", "education", "skills"],
         density: "normal",
@@ -639,7 +639,7 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
         { id: "sk-5", name: "Python / Bash / PowerShell Scripting", category: "Automation" }
       ],
       design: {
-        fontFamily: "font-mono",
+        fontFamily: "font-sans",
         fontSize: "md",
         sectionOrder: ["summary", "experience", "projects", "education", "skills"],
         density: "normal",

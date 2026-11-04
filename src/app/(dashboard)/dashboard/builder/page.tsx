@@ -48,10 +48,30 @@ import { ROLE_CURRICULA, getCuratedSkillsForRole } from "@/data/learningCurricul
 const fontClassMap: Record<string, string> = {
   "font-sans": "font-sans",
   "font-serif": "font-serif font-[Merriweather,Georgia,serif]",
-  "font-mono": "font-mono font-[JetBrains_Mono,monospace]",
+  "font-mono": "font-sans font-[Inter,Calibri,Arial,system-ui,sans-serif]",
   "font-executive": "font-[Garamond,Georgia,serif]",
   "font-geometric": "font-[Outfit,system-ui,sans-serif]"
 };
+
+// Safe date range formatter: avoids empty date columns or trailing dashes
+function formatSafeDateRange(startDate?: string, endDate?: string, current?: boolean): string | null {
+  const start = (startDate || "").trim();
+  const end = current ? "Present" : (endDate || "").trim();
+  if (start && end) return `${start} – ${end}`;
+  if (start) return start;
+  if (end) return end;
+  return null;
+}
+
+// Clean title/subtitle separator helper: prevents dangling em-dashes/hyphens when one side is missing
+function renderTitleWithSubtitle(title?: string, subtitle?: string, separator = "—"): string {
+  const cleanTitle = (title || "").trim().replace(/[\s—–-]+$/, "");
+  const cleanSubtitle = (subtitle || "").trim().replace(/^[\s—–-]+/, "");
+  if (cleanTitle && cleanSubtitle) {
+    return `${cleanTitle} ${separator} ${cleanSubtitle}`;
+  }
+  return cleanTitle || cleanSubtitle || "";
+}
 
 // 5 Text Scale Levels
 const fontSizeMap: Record<string, string> = {
@@ -2213,8 +2233,6 @@ function ResumeBuilderContent() {
                             ? "pb-2 mb-3"
                             : isExecutive
                             ? "border-b-2 border-zinc-900"
-                            : isTechnical
-                            ? "border-b border-dashed border-zinc-400"
                             : "border-b border-zinc-200"
                         }`}
                         style={{
@@ -2228,8 +2246,6 @@ function ResumeBuilderContent() {
                           className={`text-2xl tracking-tight text-zinc-950 ${
                             isExecutive
                               ? "font-serif font-black tracking-wider uppercase"
-                              : isTechnical
-                              ? "font-mono font-bold uppercase tracking-tight"
                               : isMinimal
                               ? "font-black tracking-tight"
                               : "font-extrabold tracking-tight uppercase"
@@ -2241,8 +2257,8 @@ function ResumeBuilderContent() {
                         {/* Contact destinations */}
                         <div
                           className={`flex flex-wrap items-center gap-3 text-[0.85em] mt-1.5 ${
-                            isMinimal || isSplit ? "justify-start text-zinc-600 font-medium" : "justify-center text-zinc-700 font-semibold uppercase tracking-wider"
-                          } ${isTechnical ? "font-mono text-[0.8em]" : ""}`}
+                            isMinimal || isSplit ? "justify-start text-zinc-600 font-medium" : "justify-center text-zinc-700 font-medium"
+                          }`}
                         >
                           {data.personalInfo.email && (
                             <a
@@ -2252,7 +2268,7 @@ function ResumeBuilderContent() {
                               className="hover:text-primary hover:underline transition-colors"
                               title={data.personalInfo.email}
                             >
-                              {isTechnical ? `[${data.personalInfo.email}]` : "Email"}
+                              {data.personalInfo.email}
                             </a>
                           )}
                           {data.personalInfo.phone && (
@@ -2261,7 +2277,7 @@ function ResumeBuilderContent() {
                               className="hover:text-primary hover:underline transition-colors"
                               title={data.personalInfo.phone}
                             >
-                              {isTechnical ? `[${data.personalInfo.phone}]` : "Phone"}
+                              {data.personalInfo.phone}
                             </a>
                           )}
                           {data.personalInfo.location && (
@@ -2277,7 +2293,7 @@ function ResumeBuilderContent() {
                               className="hover:text-primary hover:underline transition-colors"
                               title={data.personalInfo.website}
                             >
-                              {isTechnical ? `[portfolio]` : "Portfolio"}
+                              Portfolio
                             </a>
                           )}
                           {data.personalInfo.linkedin && (
@@ -2288,7 +2304,7 @@ function ResumeBuilderContent() {
                               className="hover:text-primary hover:underline transition-colors"
                               title={data.personalInfo.linkedin}
                             >
-                              {isTechnical ? `[linkedin]` : "LinkedIn"}
+                              LinkedIn
                             </a>
                           )}
                           {data.personalInfo.github && (
@@ -2299,7 +2315,7 @@ function ResumeBuilderContent() {
                               className="hover:text-primary hover:underline transition-colors"
                               title={data.personalInfo.github}
                             >
-                              {isTechnical ? `[github]` : "GitHub"}
+                              GitHub
                             </a>
                           )}
                         </div>
@@ -2321,10 +2337,7 @@ function ResumeBuilderContent() {
                         return "text-[1.05em] font-serif font-bold uppercase tracking-wider text-zinc-950 border-l-3 border-zinc-900 pl-2 pb-0.5 mb-1";
                       }
                       if (isMinimal) {
-                        return "text-[0.88em] font-black uppercase tracking-widest text-zinc-400 pb-0.5";
-                      }
-                      if (isTechnical) {
-                        return "text-[1.02em] font-mono font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-300 pb-0.5";
+                        return "text-[0.88em] font-bold uppercase tracking-widest text-zinc-500 pb-0.5";
                       }
                       return "text-[1.05em] font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-200 pb-0.5";
                     };
@@ -2349,30 +2362,39 @@ function ResumeBuilderContent() {
                             Work Experience
                           </h3>
                           <div style={{ display: "flex", flexDirection: "column", gap: `${10 * itemSpacingMultiplier}px` }}>
-                            {data.experience.map((exp) => (
-                              <div key={exp.id} className="space-y-0.5">
-                                <div className="flex items-center justify-between text-[1em] font-bold">
-                                  <span className="text-zinc-900">
-                                    {exp.position} — <span className={isExecutive ? "font-serif font-semibold" : ""}>{exp.company}</span>
-                                  </span>
-                                  <span className="text-zinc-600 font-medium text-[0.9em]">{exp.startDate} - {exp.endDate}</span>
+                            {data.experience.map((exp) => {
+                              const titleAndCompany = renderTitleWithSubtitle(exp.position, exp.company);
+                              const dateRange = formatSafeDateRange(exp.startDate, exp.endDate, exp.current);
+
+                              return (
+                                <div key={exp.id} className="space-y-0.5">
+                                  <div className="flex items-center justify-between text-[1em]">
+                                    <span className="font-bold text-zinc-900">
+                                      {titleAndCompany}
+                                    </span>
+                                    {dateRange && (
+                                      <span className="text-zinc-600 font-medium text-[0.9em] shrink-0 ml-2">
+                                        {dateRange}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {exp.location && (
+                                    <p className="text-[0.8em] text-zinc-500 font-medium uppercase tracking-wide">
+                                      {exp.location}
+                                    </p>
+                                  )}
+                                  {exp.description && (
+                                    <ul className="list-disc list-outside pl-4 space-y-0.5">
+                                      {exp.description.split("\n").filter(b => b.trim() !== "").map((bullet, i) => (
+                                        <li key={i} className="text-[0.95em] text-zinc-700 leading-relaxed">
+                                          {bullet.replace(/^[•\-\s]*/, "")}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
                                 </div>
-                                {exp.location && (
-                                  <p className="text-[0.8em] text-zinc-500 font-semibold uppercase tracking-wide">
-                                    {exp.location}
-                                  </p>
-                                )}
-                                {exp.description && (
-                                  <ul className="list-disc list-outside pl-4 space-y-0.5">
-                                    {exp.description.split("\n").filter(b => b.trim() !== "").map((bullet, i) => (
-                                      <li key={i} className="text-[0.95em] text-zinc-700 leading-relaxed">
-                                        {bullet.replace(/^[•\-\s]*/, "")}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       ) : null;
@@ -2384,33 +2406,45 @@ function ResumeBuilderContent() {
                             Personal Projects
                           </h3>
                           <div style={{ display: "flex", flexDirection: "column", gap: `${10 * itemSpacingMultiplier}px` }}>
-                            {data.projects.map((proj) => (
-                              <div key={proj.id} className="space-y-0.5">
-                                <div className="flex items-center justify-between text-[1em] font-bold">
-                                  <span className="text-zinc-900">{proj.name} — {proj.role}</span>
-                                  <span className="text-zinc-600 font-medium text-[0.9em]">{proj.startDate} - {proj.endDate}</span>
+                            {data.projects.map((proj) => {
+                              const projectNameAndRole = renderTitleWithSubtitle(proj.name, proj.role);
+                              const projDate = formatSafeDateRange(proj.startDate, proj.endDate);
+                              const cleanLink = (proj.link || "").trim().replace(/^https?:\/\//i, "");
+
+                              return (
+                                <div key={proj.id} className="space-y-0.5">
+                                  <div className="flex items-center justify-between text-[1em]">
+                                    <span className="font-bold text-zinc-900">
+                                      {projectNameAndRole}
+                                    </span>
+                                    {projDate && (
+                                      <span className="text-zinc-600 font-medium text-[0.9em] shrink-0 ml-2">
+                                        {projDate}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {proj.link && (
+                                    <a
+                                      href={proj.link.startsWith("http") ? proj.link : `https://${proj.link}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-[0.8em] text-primary hover:underline font-medium inline-block"
+                                    >
+                                      {cleanLink || "Project Link"}
+                                    </a>
+                                  )}
+                                  {proj.description && (
+                                    <ul className="list-disc list-outside pl-4 space-y-0.5">
+                                      {proj.description.split("\n").filter(b => b.trim() !== "").map((bullet, i) => (
+                                        <li key={i} className="text-[0.95em] text-zinc-700 leading-relaxed">
+                                          {bullet.replace(/^[•\-\s]*/, "")}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
                                 </div>
-                                {proj.link && (
-                                  <a
-                                    href={proj.link.startsWith("http") ? proj.link : `https://${proj.link}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`text-[0.8em] text-primary hover:underline font-semibold ${isTechnical ? "font-mono" : ""}`}
-                                  >
-                                    {isTechnical ? `[Live Demo: ${proj.link}]` : proj.link}
-                                  </a>
-                                )}
-                                {proj.description && (
-                                  <ul className="list-disc list-outside pl-4 space-y-0.5">
-                                    {proj.description.split("\n").filter(b => b.trim() !== "").map((bullet, i) => (
-                                      <li key={i} className="text-[0.95em] text-zinc-700 leading-relaxed">
-                                        {bullet.replace(/^[•\-\s]*/, "")}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       ) : null;
@@ -2427,10 +2461,8 @@ function ResumeBuilderContent() {
                               const degreeAndField = [
                                 edu.degree,
                                 edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ""
-                              ].filter(Boolean).join(" ");
-                              const dateRange = edu.startDate && edu.endDate
-                                ? `${edu.startDate} – ${edu.endDate}`
-                                : edu.startDate || edu.endDate || "";
+                              ].filter(Boolean).join(" ").trim();
+                              const dateRange = formatSafeDateRange(edu.startDate, edu.endDate, edu.current);
 
                               return isSplit ? (
                                 <div key={edu.id} className="space-y-0.5 text-[0.9em]">
@@ -2438,38 +2470,38 @@ function ResumeBuilderContent() {
                                     {edu.school}
                                   </div>
                                   {degreeAndField && (
-                                    <div className="text-zinc-700 text-[0.9em] leading-tight">
+                                    <div className="text-zinc-700 font-medium text-[0.9em] leading-tight">
                                       {degreeAndField}
                                     </div>
                                   )}
                                   {gradeText && (
-                                    <div className={`text-zinc-800 font-semibold text-[0.85em] ${isTechnical ? "font-mono" : ""}`}>
+                                    <div className="text-zinc-500 font-normal text-[0.85em]">
                                       {gradeText}
                                     </div>
                                   )}
-                                  <div className="text-zinc-500 font-medium text-[0.82em]">
+                                  <div className="text-zinc-500 font-normal text-[0.82em]">
                                     {dateRange}
-                                    {edu.location ? ` · ${edu.location}` : ""}
+                                    {edu.location ? (dateRange ? ` · ${edu.location}` : edu.location) : ""}
                                   </div>
                                 </div>
                               ) : (
                                 <div key={edu.id} className="space-y-0.5 text-[0.95em]">
-                                  <div className="flex items-center justify-between font-bold text-[1em]">
-                                    <span className="text-zinc-900">{edu.school}</span>
+                                  <div className="flex items-center justify-between text-[1em]">
+                                    <span className="text-zinc-950 font-bold">{edu.school}</span>
                                     {dateRange && (
-                                      <span className="text-zinc-600 font-medium text-[0.9em]">{dateRange}</span>
+                                      <span className="text-zinc-600 font-medium text-[0.9em] shrink-0 ml-2">{dateRange}</span>
                                     )}
                                   </div>
                                   <div className="flex items-center justify-between text-zinc-700 text-[0.95em]">
                                     <span>
-                                      {degreeAndField}
+                                      {degreeAndField && <span className="font-medium text-zinc-800">{degreeAndField}</span>}
                                       {gradeText && (
-                                        <span className={`text-zinc-600 font-medium ${degreeAndField ? "ml-2" : ""}`}>
-                                          {degreeAndField ? "• " : ""}<span className={`font-semibold text-zinc-800 ${isTechnical ? "font-mono" : ""}`}>{gradeText}</span>
+                                        <span className={`text-zinc-500 font-normal text-[0.9em] ${degreeAndField ? "ml-2" : ""}`}>
+                                          {degreeAndField ? "· " : ""}{gradeText}
                                         </span>
                                       )}
                                     </span>
-                                    {edu.location && <span className="text-zinc-500 font-medium">{edu.location}</span>}
+                                    {edu.location && <span className="text-zinc-500 font-normal text-[0.9em] shrink-0 ml-2">{edu.location}</span>}
                                   </div>
                                 </div>
                               );
@@ -2485,12 +2517,12 @@ function ResumeBuilderContent() {
                             Skills & Technologies
                           </h3>
                           {isSplit ? (
-                            <div className="space-y-3 pt-1 text-[0.9em]">
+                            <div className="space-y-2.5 pt-1 text-[0.9em]">
                               {Object.keys(groupedSkills).map((catKey) => {
                                 const rowSkills = groupedSkills[catKey].map((s) => s.name).join(", ");
                                 return (
-                                  <div key={catKey} className="space-y-1">
-                                    <span className="text-[0.82em] font-bold text-zinc-900 uppercase tracking-wider block">
+                                  <div key={catKey} className="space-y-0.5">
+                                    <span className="text-[0.85em] font-bold text-zinc-900 block">
                                       {catKey}
                                     </span>
                                     <p className="text-[0.9em] text-zinc-700 leading-snug">
@@ -2500,36 +2532,18 @@ function ResumeBuilderContent() {
                                 );
                               })}
                             </div>
-                          ) : isTechnical ? (
-                            <div className="space-y-2 pt-1 text-[0.9em]">
-                              {Object.keys(groupedSkills).map((catKey) => (
-                                <div key={catKey} className="space-y-1">
-                                  <span className="text-xs font-mono font-bold text-zinc-800 uppercase tracking-wide block">
-                                    {catKey}
-                                  </span>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {groupedSkills[catKey].map((s) => (
-                                      <span
-                                        key={s.id}
-                                        className="inline-block px-2 py-0.5 rounded bg-zinc-100 text-zinc-800 text-[0.8em] font-mono border border-zinc-200"
-                                      >
-                                        {s.name}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
                           ) : (
-                            <div className="space-y-1 text-[0.95em] text-zinc-700 leading-relaxed">
+                            <div className="space-y-1.5 pt-1 text-[0.92em] text-zinc-800 leading-relaxed">
                               {Object.keys(groupedSkills).map((catKey) => {
                                 const rowSkills = groupedSkills[catKey].map((s) => s.name).join(", ");
                                 return (
-                                  <div key={catKey} className="grid grid-cols-12 gap-2">
-                                    <span className="col-span-3 font-bold text-zinc-900 uppercase text-[0.85em] tracking-wide">
+                                  <div key={catKey} className="flex flex-wrap items-baseline gap-1.5">
+                                    <span className="font-bold text-zinc-950 shrink-0">
                                       {catKey}:
                                     </span>
-                                    <span className="col-span-9">{rowSkills}</span>
+                                    <span className="text-zinc-700 font-normal">
+                                      {rowSkills}
+                                    </span>
                                   </div>
                                 );
                               })}

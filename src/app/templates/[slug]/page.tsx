@@ -156,21 +156,32 @@ export default async function TemplateDetailsPage({ params }: Props) {
                   <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-950 border-b border-zinc-200 pb-0.5">
                     Work Experience
                   </h3>
-                  {data.experience.map((exp) => (
-                    <div key={exp.id} className="space-y-1">
-                      <div className="flex items-center justify-between font-bold text-zinc-900 text-[11.5px]">
-                        <span>{exp.position} — {exp.company}</span>
-                        <span className="text-zinc-500 font-medium text-[10.5px]">{exp.startDate} - {exp.endDate}</span>
+                  {data.experience.map((exp) => {
+                    const cleanPos = (exp.position || "").trim().replace(/[\s—–-]+$/, "");
+                    const cleanComp = (exp.company || "").trim().replace(/^[\s—–-]+/, "");
+                    const titleCompany = cleanPos && cleanComp ? `${cleanPos} — ${cleanComp}` : (cleanPos || cleanComp);
+                    const dateRange = exp.startDate && exp.endDate
+                      ? `${exp.startDate} – ${exp.endDate}`
+                      : exp.startDate || exp.endDate || null;
+
+                    return (
+                      <div key={exp.id} className="space-y-1">
+                        <div className="flex items-center justify-between font-bold text-zinc-900 text-[11.5px]">
+                          <span>{titleCompany}</span>
+                          {dateRange && (
+                            <span className="text-zinc-500 font-medium text-[10.5px]">{dateRange}</span>
+                          )}
+                        </div>
+                        <ul className="list-disc list-outside pl-4 space-y-1 text-zinc-700">
+                          {exp.description.split("\n").map((b, i) => (
+                            <li key={i} className="leading-relaxed">
+                              {b.replace(/^[•\-\s]*/, "")}
+                            </li>
+                          ))}
+                        </ul>
                       </div>
-                      <ul className="list-disc list-outside pl-4 space-y-1 text-zinc-700">
-                        {exp.description.split("\n").map((b, i) => (
-                          <li key={i} className="leading-relaxed">
-                            {b.replace(/^[•\-\s]*/, "")}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
@@ -197,20 +208,20 @@ export default async function TemplateDetailsPage({ params }: Props) {
                     const degreeAndField = [
                       edu.degree,
                       edu.fieldOfStudy ? `in ${edu.fieldOfStudy}` : ""
-                    ].filter(Boolean).join(" ");
+                    ].filter(Boolean).join(" ").trim();
                     const dateRange = edu.startDate && edu.endDate
-                      ? `${edu.startDate} - ${edu.endDate}`
-                      : edu.startDate || edu.endDate || "";
+                      ? `${edu.startDate} – ${edu.endDate}`
+                      : edu.startDate || edu.endDate || null;
 
                     return (
                       <div key={edu.id} className="flex items-center justify-between text-zinc-800">
                         <div>
-                          <span className="font-bold">
+                          <span className="font-bold text-zinc-950">
                             {degreeAndField ? `${degreeAndField} — ` : ""}{edu.school}
                           </span>
                           {gradeText && (
-                            <span className="text-zinc-600 text-xs font-semibold ml-2">
-                              • {gradeText}
+                            <span className="text-zinc-500 text-xs font-normal ml-2">
+                              · {gradeText}
                             </span>
                           )}
                         </div>
