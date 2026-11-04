@@ -2564,18 +2564,16 @@ function ResumeBuilderContent() {
                               })}
                             </div>
                           ) : (
-                            <div className="space-y-1.5 pt-1 text-[0.92em] text-zinc-800 leading-relaxed">
+                            <div className="space-y-1.5 pt-1 text-[0.92em] leading-relaxed">
                               {Object.keys(groupedSkills).map((catKey) => {
                                 const rowSkills = groupedSkills[catKey].map((s) => s.name).join(", ");
                                 return (
-                                  <div key={catKey} className="flex flex-wrap items-baseline gap-1.5">
-                                    <span className="font-bold text-zinc-950 shrink-0">
+                                  <p key={catKey} className="text-zinc-700 font-normal">
+                                    <strong className="font-bold text-zinc-950 mr-1.5">
                                       {catKey}:
-                                    </span>
-                                    <span className="text-zinc-700 font-normal">
-                                      {rowSkills}
-                                    </span>
-                                  </div>
+                                    </strong>
+                                    <span>{rowSkills}</span>
+                                  </p>
                                 );
                               })}
                             </div>
