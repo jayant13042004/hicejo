@@ -174,6 +174,20 @@ export interface UpliftStep {
   groundedContext: string;
 }
 
+export interface GrammarJargonIssue {
+  type: "grammar" | "cliche" | "passive_voice" | "jargon";
+  original: string;
+  suggestion: string;
+  reason: string;
+}
+
+export interface MetricAudit {
+  quantifiedCount: number;
+  totalBullets: number;
+  percentage: number;
+  status: "excellent" | "good" | "needs_work";
+}
+
 export interface ApplicationStrengthResult {
   isTargeted: boolean;
   score: number; // Overall score 0-100
@@ -191,4 +205,7 @@ export interface ApplicationStrengthResult {
   missingKeywords: string[];
   formattingIssues: string[];
   executiveSummary: string;
+  grammarIssues?: GrammarJargonIssue[];
+  metricAudit?: MetricAudit;
+  companyStandard?: string;
 }

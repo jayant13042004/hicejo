@@ -56,7 +56,7 @@ export default function CheckerPage() {
   const [scanResult, setScanResult] = React.useState<ApplicationStrengthResult | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [expandedPillarId, setExpandedPillarId] = React.useState<string | null>(null);
-  const [activeAnalysisTab, setActiveAnalysisTab] = React.useState<"strengths" | "weaknesses" | "missing" | "risks">("strengths");
+  const [activeAnalysisTab, setActiveAnalysisTab] = React.useState<"strengths" | "weaknesses" | "missing" | "risks" | "grammar">("strengths");
 
   const [isFixingAll, setIsFixingAll] = React.useState(false);
 
@@ -677,7 +677,7 @@ export default function CheckerPage() {
                         </div>
 
                         <div className="space-y-1.5">
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <span
                               className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded border ${
                                 scanResult.tierLabel === "Top Tier Contender"
@@ -694,12 +694,17 @@ export default function CheckerPage() {
                             <span className="text-xs text-muted-foreground font-mono">
                               Readability: <strong className="text-foreground">{scanResult.readabilityScore}%</strong>
                             </span>
+                            {scanResult.companyStandard && (
+                              <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-secondary text-primary border border-primary/20">
+                                🎯 {scanResult.companyStandard}
+                              </span>
+                            )}
                           </div>
                           <h3 className="text-base font-bold text-foreground">
                             {scanResult.isTargeted ? (jobTitle ? `${jobTitle}${company ? ` @ ${company}` : ""} Evaluation` : "Target Application Alignment") : "General Resume ATS Baseline"}
                           </h3>
                           <p className="text-xs text-muted-foreground">
-                            Evaluated across 8 hiring dimensions grounded strictly in verifiable resume evidence.
+                            Evaluated across 8 hiring dimensions grounded strictly in verifiable resume evidence and industry standards.
                           </p>
                         </div>
                       </div>
@@ -720,6 +725,34 @@ export default function CheckerPage() {
                       </div>
                     </div>
 
+                    {/* Metric Audit Bar (Google XYZ formula benchmark) */}
+                    {scanResult.metricAudit && scanResult.metricAudit.totalBullets > 0 && (
+                      <div className="p-3 rounded-lg bg-secondary/40 border border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-base">📊</span>
+                          <div>
+                            <span className="font-bold text-foreground block">
+                              Quantified Impact Benchmark: {scanResult.metricAudit.quantifiedCount} of {scanResult.metricAudit.totalBullets} bullets ({scanResult.metricAudit.percentage}%)
+                            </span>
+                            <span className="text-[11px] text-muted-foreground">
+                              {scanResult.metricAudit.percentage >= 70
+                                ? "Strong quantified metrics meeting Google XYZ standards (Accomplished [X] as measured by [Y] by doing [Z])."
+                                : "Increase concrete metrics (percentages, latency, scale, dollar impact) across bullets to improve recruiter trust."}
+                            </span>
+                          </div>
+                        </div>
+                        <span
+                          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border self-start sm:self-center shrink-0 ${
+                            scanResult.metricAudit.percentage >= 70
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                              : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                          }`}
+                        >
+                          {scanResult.metricAudit.percentage >= 70 ? "Google XYZ Pass" : "Needs More Metrics"}
+                        </span>
+                      </div>
+                    )}
+
                     {/* Executive Summary */}
                     <div className="text-xs text-muted-foreground leading-relaxed">
                       <strong className="text-foreground font-semibold">Executive Assessment: </strong>
@@ -737,6 +770,17 @@ export default function CheckerPage() {
                           <Button
                             size="sm"
                             variant="outline"
+                            onClick={() => router.push("/dashboard/tailor")}
+                            className="text-xs h-8 gap-1.5 font-semibold text-primary border-primary/30 hover:bg-primary/10"
+                          >
+                            <Sparkles className="h-3.5 w-3.5 text-primary" />
+                            <span>Tailor for this Job (+{scanResult.potentialUplift} pts)</span>
+                          </Button>
+                        )}
+                        {scanResult.isTargeted && (
+                          <Button
+                            size="sm"
+                            variant="outline"
                             onClick={handleGenerateCoverLetter}
                             className="text-xs h-8 gap-1.5 font-semibold"
                           >
@@ -747,7 +791,7 @@ export default function CheckerPage() {
                         <Button
                           size="sm"
                           onClick={handleOpenInBuilder}
-                          className="bg-primary text-primary-foreground text-xs h-8 gap-1.5 font-bold shadow-xs"
+                          className="bg-primary text-primary-foreground text-xs h-8 gap-1.5 font-bold shadow-xs cursor-pointer"
                         >
                           <span>Open in Builder</span>
                           <ArrowRight className="h-3.5 w-3.5" />
@@ -978,6 +1022,17 @@ export default function CheckerPage() {
                         >
                           Recruiter Vulnerabilities ({scanResult.recruiterRisks.length})
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveAnalysisTab("grammar")}
+                          className={`text-xs font-semibold py-1 px-3 rounded-md transition-colors cursor-pointer ${
+                            activeAnalysisTab === "grammar"
+                              ? "bg-card text-foreground shadow-xs border border-border/60 font-bold"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          Grammar, Clichés & Jargon ({scanResult.grammarIssues?.length || 0})
+                        </button>
                       </div>
                     </div>
 
@@ -1043,6 +1098,47 @@ export default function CheckerPage() {
                           {scanResult.recruiterRisks.length === 0 && (
                             <div className="text-center py-6 text-xs text-muted-foreground">
                               ✓ No major recruiter vulnerabilities identified.
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {activeAnalysisTab === "grammar" && (
+                        <div className="space-y-3">
+                          {scanResult.grammarIssues && scanResult.grammarIssues.length > 0 ? (
+                            scanResult.grammarIssues.map((issue, idx) => (
+                              <div key={idx} className="p-3.5 rounded-lg border border-border/60 bg-secondary/30 space-y-2 text-xs">
+                                <div className="flex items-center justify-between">
+                                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                                    issue.type === "cliche" || issue.type === "jargon"
+                                      ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                                      : issue.type === "passive_voice"
+                                      ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+                                      : "bg-destructive/10 text-destructive border-destructive/20"
+                                  }`}>
+                                    {issue.type === "cliche" ? "AI Cliché / Overused Buzzword" : issue.type === "passive_voice" ? "Passive Voice Opener" : issue.type === "jargon" ? "Unclear Jargon" : "Grammar / Typo"}
+                                  </span>
+                                </div>
+
+                                <div className="space-y-1">
+                                  <div className="p-2 rounded bg-muted/40 border border-border/40 text-muted-foreground line-through">
+                                    {issue.original}
+                                  </div>
+                                  <div className="p-2 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-medium">
+                                    ✓ Suggested replacement: {issue.suggestion}
+                                  </div>
+                                </div>
+
+                                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                  <strong className="text-foreground">Why this matters: </strong>
+                                  {issue.reason}
+                                </p>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-8 text-xs text-muted-foreground space-y-1">
+                              <p className="font-semibold text-emerald-600 dark:text-emerald-400">✓ Excellent Grammar & Tone!</p>
+                              <p>No passive voice openers, spelling errors, or overused AI buzzwords detected.</p>
                             </div>
                           )}
                         </div>

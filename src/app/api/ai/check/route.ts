@@ -2,27 +2,27 @@ import { NextResponse } from "next/server";
 import { getAIClient } from "@/lib/ai";
 import { createServerSideClient } from "@/lib/supabase/server";
 import { isDemoMode, getDemoResume, updateDemoResume } from "@/lib/supabase/demo";
-import { ApplicationStrengthResult, PillarScore, UpliftStep } from "@/types/resume";
+import { ApplicationStrengthResult, PillarScore, UpliftStep, GrammarJargonIssue, MetricAudit } from "@/types/resume";
 
 const DEFAULT_TARGETED_PILLARS = [
-  { id: "skill_alignment", name: "Skill Alignment", weight: 15 },
-  { id: "experience_relevance", name: "Experience Relevance", weight: 15 },
-  { id: "seniority_scope", name: "Seniority & Scope Match", weight: 10 },
-  { id: "achievement_impact", name: "Achievement & Impact Strength", weight: 15 },
-  { id: "keyword_terminology", name: "Keyword & ATS Terminology", weight: 15 },
-  { id: "education_credentials", name: "Education & Credentials", weight: 10 },
-  { id: "requirement_coverage", name: "Role Requirement Coverage", weight: 15 },
-  { id: "ats_structure", name: "ATS Formatting & Structure", weight: 5 }
+  { id: "skill_alignment", name: "Hard Skills & Keyword Match", weight: 20 },
+  { id: "experience_relevance", name: "Experience Relevance & Scope", weight: 15 },
+  { id: "achievement_impact", name: "Metric Quantification (Google XYZ)", weight: 15 },
+  { id: "keyword_terminology", name: "ATS Keyword Frequency & Nomenclature", weight: 15 },
+  { id: "grammar_style", name: "Grammar, Tone & Cliché Elimination", weight: 10 },
+  { id: "seniority_scope", name: "Seniority & Deliverable Alignment", weight: 10 },
+  { id: "requirement_coverage", name: "Core Requirements Coverage", weight: 10 },
+  { id: "ats_structure", name: "ATS Formatting & Structural Parsability", weight: 5 }
 ];
 
 const DEFAULT_GENERAL_PILLARS = [
-  { id: "skill_clarity", name: "Technical Skill Diversity", weight: 15 },
+  { id: "skill_clarity", name: "Technical Skill Diversity & Depth", weight: 20 },
   { id: "experience_clarity", name: "Career Trajectory & Depth", weight: 15 },
-  { id: "seniority_clarity", name: "Role Ownership & Scope", weight: 10 },
   { id: "achievement_impact", name: "Metric & Outcome Quantification", weight: 15 },
+  { id: "grammar_style", name: "Grammar, Tone & Cliché Elimination", weight: 10 },
   { id: "industry_terminology", name: "Standard Industry Nomenclature", weight: 15 },
+  { id: "seniority_clarity", name: "Role Ownership & Scope", weight: 10 },
   { id: "education_credentials", name: "Education & Credentials Standards", weight: 10 },
-  { id: "completeness", name: "Contact & Section Completeness", weight: 15 },
   { id: "ats_structure", name: "ATS Formatting & Readability", weight: 5 }
 ];
 
@@ -126,6 +126,31 @@ function safeParseApplicationStrengthJson(rawContent: string, isTargeted: boolea
           }
         ];
 
+    const grammarIssues: GrammarJargonIssue[] = Array.isArray(parsed.grammarIssues)
+      ? parsed.grammarIssues.map((g: any) => ({
+          type: g.type || "grammar",
+          original: g.original || "",
+          suggestion: g.suggestion || "",
+          reason: g.reason || ""
+        }))
+      : [];
+
+    const metricAudit: MetricAudit = parsed.metricAudit && typeof parsed.metricAudit === "object"
+      ? {
+          quantifiedCount: typeof parsed.metricAudit.quantifiedCount === "number" ? parsed.metricAudit.quantifiedCount : 0,
+          totalBullets: typeof parsed.metricAudit.totalBullets === "number" ? parsed.metricAudit.totalBullets : 0,
+          percentage: typeof parsed.metricAudit.percentage === "number" ? parsed.metricAudit.percentage : 0,
+          status: parsed.metricAudit.status || "good"
+        }
+      : {
+          quantifiedCount: 0,
+          totalBullets: 0,
+          percentage: 0,
+          status: "good"
+        };
+
+    const companyStandard = parsed.companyStandard || (isTargeted ? "Tier-1 Enterprise ATS Standard" : "Industry Standard ATS Benchmark");
+
     return {
       isTargeted,
       score: finalScore,
@@ -135,6 +160,9 @@ function safeParseApplicationStrengthJson(rawContent: string, isTargeted: boolea
       potentialUplift: Math.max(2, projectedScore - finalScore),
       pillars,
       upliftPath,
+      grammarIssues,
+      metricAudit,
+      companyStandard,
       strengths: Array.isArray(parsed.strengths) && parsed.strengths.length > 0 ? parsed.strengths : [
         "Strong demonstrated background in core technical stack.",
         "Consistent chronological timeline with clear professional progression."
@@ -157,8 +185,6 @@ function safeParseApplicationStrengthJson(rawContent: string, isTargeted: boolea
     };
   }
 
-  // If the model's JSON was unrecoverable, do not invent a score. Returning a
-  // confident-looking 81/100 when nothing was evaluated is worse than an error.
   return null;
 }
 
@@ -204,7 +230,6 @@ export async function POST(request: Request) {
         }
       }
 
-      // Fallback: if user is in demo preview or resume is in mock DB
       if (!resumeContent) {
         const demoResume = getDemoResume(resumeId);
         if (demoResume) {
@@ -229,13 +254,16 @@ export async function POST(request: Request) {
     } else if (typeof resumeContent === "object" && resumeContent !== null) {
       const parts: string[] = [];
       if (resumeContent.personalInfo?.fullName) parts.push(`Candidate Name: ${resumeContent.personalInfo.fullName}`);
+      if (resumeContent.personalInfo?.email || resumeContent.personalInfo?.phone || resumeContent.personalInfo?.location) {
+        parts.push(`Contact: ${[resumeContent.personalInfo.email, resumeContent.personalInfo.phone, resumeContent.personalInfo.location].filter(Boolean).join(" • ")}`);
+      }
       if (resumeContent.summary) parts.push(`Professional Summary:\n${resumeContent.summary}`);
       if (Array.isArray(resumeContent.experience) && resumeContent.experience.length > 0) {
         parts.push(
           `Work Experience:\n` +
             resumeContent.experience
-              .map((e: any) => `• ${e.position || ""} at ${e.company || ""}: ${e.description || ""}`)
-              .join("\n")
+              .map((e: any) => `• ${e.position || "Role"} at ${e.company || "Company"} (${e.startDate || ""} - ${e.current ? "Present" : e.endDate || ""}):\n  ${e.description || ""}`)
+              .join("\n\n")
         );
       }
       if (Array.isArray(resumeContent.education) && resumeContent.education.length > 0) {
@@ -248,21 +276,34 @@ export async function POST(request: Request) {
       }
       if (Array.isArray(resumeContent.projects) && resumeContent.projects.length > 0) {
         parts.push(
-          `Projects:\n` +
-            resumeContent.projects.map((p: any) => `• ${p.name || ""}: ${p.description || ""}`).join("\n")
+          `Personal & Technical Projects:\n` +
+            resumeContent.projects.map((p: any) => `• ${p.name || ""}${p.role ? ` (${p.role})` : ""}${p.link ? ` [Link: ${p.link}]` : ""}:\n  ${p.description || ""}`).join("\n\n")
         );
       }
       if (Array.isArray(resumeContent.skills) && resumeContent.skills.length > 0) {
+        const skillCategories: Record<string, string[]> = {};
+        resumeContent.skills.forEach((s: any) => {
+          const cat = s.category || "General";
+          const name = typeof s === "string" ? s : s.name;
+          if (!skillCategories[cat]) skillCategories[cat] = [];
+          if (name) skillCategories[cat].push(name);
+        });
+        const skillsText = Object.keys(skillCategories)
+          .map((cat) => `${cat}: ${skillCategories[cat].join(", ")}`)
+          .join("\n");
+        parts.push(`Technical Skills:\n${skillsText}`);
+      }
+      if (Array.isArray(resumeContent.achievements) && resumeContent.achievements.length > 0) {
         parts.push(
-          `Skills: ` +
-            resumeContent.skills.map((s: any) => (typeof s === "string" ? s : s.name)).filter(Boolean).join(", ")
+          `Extracurricular & Achievements:\n` +
+            resumeContent.achievements
+              .map((a: any) => `• ${a.title || ""}${a.organization ? `: ${a.organization}` : ""}${a.date ? ` (${a.date})` : ""}`)
+              .join("\n")
         );
       }
       formattedResumeText = parts.join("\n\n");
     }
 
-    // Offline mode: no model is configured, so no real evaluation can happen.
-    // Never return a canned score — it would be indistinguishable from a real one.
     if (!isConfigured) {
       return NextResponse.json(
         {
@@ -274,49 +315,89 @@ export async function POST(request: Request) {
       );
     }
 
-    // Comprehensive System Prompt with Strict Anti-Hallucination Rules
+    // Comprehensive System Prompt with Strict Anti-Hallucination & Industry ATS Calibration
     const systemPrompt = isTargeted
-      ? `You are Hicejo's Elite Application Strength & Hiring Diagnostic Engine.
-Evaluate the candidate's resume against the target Job Description across 8 rigorous pillars.
+      ? `You are Hicejo's Principal Enterprise ATS & Hiring Diagnostic Engine, modeled on tier-1 tech recruiting standards (Google, Meta, Amazon, Stripe) and top ATS parsers (Workday, Greenhouse, Taleo, Ashby).
+Evaluate the candidate's resume against the target Job Description across 8 rigorous pillars with objective precision.
 
-CRITICAL INSTRUCTIONS & STRICT ANTI-HALLUCINATION POLICY:
-1. Ground every observation STRICTLY in the text of the resume and job description.
-2. NEVER invent, hallucinate, or assume experiences, skills, metrics, degrees, or companies the candidate did not mention.
-3. When formulating the Actionable Uplift Path, tell the candidate EXACTLY what to clarify, emphasize, or reframe from their REAL background. Do NOT tell them to add fake numbers or fake skills.
-4. Calculate an authentic overall Application Strength score (0-100) as the weighted sum of the 8 pillars:
-   - Skill Alignment (weight: 15)
-   - Experience Relevance (weight: 15)
-   - Seniority & Scope Match (weight: 10)
-   - Achievement & Impact Strength (weight: 15)
-   - Keyword & ATS Terminology (weight: 15)
-   - Education & Credentials (weight: 10)
-   - Role Requirement Coverage (weight: 15)
-   - ATS Formatting & Structure (weight: 5)
-5. Calculate a realistic projectedScore (e.g. 82 -> 88) based on following the uplift steps.
+CRITICAL SCORING & INDUSTRY-STANDARD BENCHMARK RULES:
+1. DYNAMIC SCORING RESPONSIVENESS (REWARD REAL IMPROVEMENTS):
+   - A resume that has been tailored to the JD (contains the primary required hard skills, incorporates Google XYZ quantified outcomes like percentages, latency, dollars, or scale, uses strong active verbs, and addresses the core job deliverables) MUST score in the 88–96 range (Top Tier Contender).
+   - A resume with moderate alignment (some matching skills, but missing 2-3 key JD keywords or with vague, unquantified bullets) should score in the 70–82 range.
+   - A generic or unaligned resume (missing core technologies, passive language like 'Responsible for', zero metrics) should score in the 45–65 range (High Risk).
+   - Your score MUST accurately increase when a candidate improves their resume by adding target keywords, metrics, or fixing weaknesses.
+
+2. QUANTIFIED METRIC AUDIT (GOOGLE XYZ BENCHMARK):
+   - Analyze every bullet point in Work Experience and Projects.
+   - Count how many bullets follow the Google XYZ formula: Accomplished [X] as measured by [Y] by doing [Z].
+   - Provide metricAudit: { quantifiedCount: number, totalBullets: number, percentage: number, status: "excellent" | "good" | "needs_work" }.
+
+3. GRAMMAR, TONE & JARGON AUDIT:
+   - Audit for:
+     a) Typos, grammar mistakes, tense inconsistencies (past tense for past jobs).
+     b) Passive voice openers: flag "Responsible for", "Tasked with", "Helped with", "Worked on", and suggest decisive action verbs ("Engineered", "Executed", "Reduced", "Built").
+     c) AI clichés & toxic buzzwords: flag "spearheaded", "synergized", "leveraged", "pioneered", "game-changing", "cutting-edge", "transformative", "tapestry", "seamlessly", "dynamic team player".
+   - Return grammarIssues array with { type: "grammar" | "cliche" | "passive_voice" | "jargon", original: string, suggestion: string, reason: string }.
+
+4. ACTIONABLE UPLIFT PATH WITH EXACT POINT VALUES:
+   - Provide 3 to 6 high-leverage uplift steps that will directly raise the score to projectedScore.
+   - Each step must have:
+     - "title": e.g. "Add missing required ATS keyword 'PostgreSQL' under Technical Skills" (+4 pts)
+     - "estimatedPoints": number (1 to 5)
+     - "action": concrete action candidate can take
+     - "rationale": why enterprise ATS and hiring managers require this
+     - "groundedContext": how to ground it honestly in candidate's existing background
+
+5. GROUNDING & HONESTY:
+   - Ground every observation strictly in the resume text and JD. Never assume unmentioned credentials.
+   - Calculate authentic overall score (0-100) as the weighted sum of the 8 pillars:
+     - Hard Skills & Keyword Match (weight: 20)
+     - Experience Relevance & Scope (weight: 15)
+     - Metric Quantification (Google XYZ) (weight: 15)
+     - ATS Keyword Frequency & Nomenclature (weight: 15)
+     - Grammar, Tone & Cliché Elimination (weight: 10)
+     - Seniority & Deliverable Alignment (weight: 10)
+     - Core Requirements Coverage (weight: 10)
+     - ATS Formatting & Structural Parsability (weight: 5)
 
 Respond in a STRICT, single JSON format matching this schema:
 {
   "score": number (0 to 100),
   "readabilityScore": number (0 to 100),
   "projectedScore": number,
+  "companyStandard": string,
+  "metricAudit": {
+    "quantifiedCount": number,
+    "totalBullets": number,
+    "percentage": number,
+    "status": "excellent" | "good" | "needs_work"
+  },
+  "grammarIssues": [
+    {
+      "type": "grammar" | "cliche" | "passive_voice" | "jargon",
+      "original": string,
+      "suggestion": string,
+      "reason": string
+    }
+  ],
   "pillars": [
     {
-      "id": "skill_alignment" | "experience_relevance" | "seniority_scope" | "achievement_impact" | "keyword_terminology" | "education_credentials" | "requirement_coverage" | "ats_structure",
+      "id": "skill_alignment" | "experience_relevance" | "achievement_impact" | "keyword_terminology" | "grammar_style" | "seniority_scope" | "requirement_coverage" | "ats_structure",
       "name": string,
       "score": number (0 to 100),
       "weight": number,
       "status": "strong" | "moderate" | "weak",
-      "summary": string (1-2 sentences grounded in resume/JD),
-      "recommendation": string (honest, actionable suggestion)
+      "summary": string,
+      "recommendation": string
     }
   ],
   "upliftPath": [
     {
       "title": string,
-      "estimatedPoints": number (1 to 4),
-      "action": string (exact step the user can take),
-      "rationale": string (why this lifts score),
-      "groundedContext": string (how it stays honest to their background)
+      "estimatedPoints": number (1 to 5),
+      "action": string,
+      "rationale": string,
+      "groundedContext": string
     }
   ],
   "strengths": string[],
@@ -330,22 +411,36 @@ Respond in a STRICT, single JSON format matching this schema:
 }
 Return only raw JSON without markdown code fences.`
       : `You are Hicejo's Elite Application Strength & Resume Health Diagnostic Engine.
-Evaluate the candidate's resume across 8 universal hiring and ATS standards.
+Evaluate the candidate's resume across 8 universal hiring and ATS standards with strict grammar, metric, and buzzword audits.
 
-CRITICAL INSTRUCTIONS & STRICT ANTI-HALLUCINATION POLICY:
-1. Ground all observations strictly in the candidate's provided resume text.
-2. NEVER invent or hallucinate metrics, companies, or skills.
-3. Calculate an authentic holistic resume quality score (0-100) across the 8 general pillars.
-4. Provide a clear, actionable uplift path with honest advice on quantifying real outcomes and clarifying achievements.
+CRITICAL SCORING & AUDIT RULES:
+1. QUANTIFIED METRIC AUDIT: Count bullets with Google XYZ quantifiable metrics vs total bullets.
+2. GRAMMAR & BUZZWORD AUDIT: Flag typos, passive voice ("Responsible for"), and AI clichés ("spearheaded", "synergized", "leveraged", "pioneered").
+3. ACTIONABLE UPLIFT: Provide step-by-step improvements with estimated point gains.
 
 Respond in a STRICT, single JSON format matching this schema:
 {
   "score": number (0 to 100),
   "readabilityScore": number (0 to 100),
   "projectedScore": number,
+  "companyStandard": string,
+  "metricAudit": {
+    "quantifiedCount": number,
+    "totalBullets": number,
+    "percentage": number,
+    "status": "excellent" | "good" | "needs_work"
+  },
+  "grammarIssues": [
+    {
+      "type": "grammar" | "cliche" | "passive_voice" | "jargon",
+      "original": string,
+      "suggestion": string,
+      "reason": string
+    }
+  ],
   "pillars": [
     {
-      "id": "skill_clarity" | "experience_clarity" | "seniority_clarity" | "achievement_impact" | "industry_terminology" | "education_credentials" | "completeness" | "ats_structure",
+      "id": "skill_clarity" | "experience_clarity" | "achievement_impact" | "grammar_style" | "industry_terminology" | "seniority_clarity" | "education_credentials" | "ats_structure",
       "name": string,
       "score": number (0 to 100),
       "weight": number,
