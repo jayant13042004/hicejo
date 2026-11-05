@@ -1,6 +1,8 @@
 import { JobListing } from "@/types/jobs";
+import { FRESHER_HIGH_PACKAGE_JOBS } from "./fresherHighPackageJobs";
 
 export const CURATED_JOB_LISTINGS: JobListing[] = [
+  ...FRESHER_HIGH_PACKAGE_JOBS,
   // ==========================================
   // HYBRID + ENTRY-LEVEL (Matches user test!)
   // ==========================================

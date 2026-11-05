@@ -2,6 +2,7 @@ export type JobSource = "all" | "linkedin" | "wellfound" | "indeed" | "remotive"
 export type WorkplaceType = "remote" | "hybrid" | "onsite";
 export type JobType = "full-time" | "part-time" | "contract" | "internship";
 export type ExperienceLevel = "entry" | "mid" | "senior" | "lead" | "any";
+export type RoleCategory = "all" | "data_science" | "ai_ml" | "data_analyst" | "sde" | "fresher_high_package";
 
 export interface JobListing {
   id: string;
@@ -44,6 +45,7 @@ export interface JobListing {
 export interface JobFilterState {
   query: string;
   source: JobSource;
+  roleCategory?: RoleCategory;
   workplaceType: "all" | WorkplaceType;
   experienceLevel: "all" | ExperienceLevel;
   jobType: "all" | JobType;

@@ -43,9 +43,34 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { UpgradeModal } from "@/components/shared/UpgradeModal";
 import { useResumeStore } from "@/store/useResumeStore";
-import { JobListing, JobSource, WorkplaceType, ExperienceLevel, JobFilterState, JobMatchAnalysis } from "@/types/jobs";
+import { JobListing, JobSource, WorkplaceType, ExperienceLevel, JobFilterState, JobMatchAnalysis, RoleCategory } from "@/types/jobs";
 import { analyzeJobMatch } from "@/lib/jobMatcher";
 import { CURATED_JOB_LISTINGS } from "@/data/curatedJobs";
+
+export function getJobNormalizedSalary(job: JobListing): number {
+  const raw = job.maxSalary || job.minSalary || 0;
+  if (!raw) return 0;
+  if (job.currency === "USD") return raw * 85;
+  return raw;
+}
+
+export function formatJobSalary(job: JobListing): string {
+  if (!job.minSalary && !job.maxSalary) return "Salary undisclosed";
+  if (job.currency === "INR") {
+    const minLpa = job.minSalary ? (job.minSalary / 100000).toFixed(0) : null;
+    const maxLpa = job.maxSalary ? (job.maxSalary / 100000).toFixed(0) : null;
+    if (minLpa && maxLpa && minLpa !== maxLpa) {
+      return `₹${minLpa} - ₹${maxLpa} LPA`;
+    }
+    return `₹${maxLpa || minLpa} LPA`;
+  }
+  const minK = job.minSalary ? Math.round(job.minSalary / 1000) : null;
+  const maxK = job.maxSalary ? Math.round(job.maxSalary / 1000) : null;
+  if (minK && maxK && minK !== maxK) {
+    return `$${minK}k - $${maxK}k / yr`;
+  }
+  return `$${maxK || minK}k / yr`;
+}
 
 export interface JobRole {
   id: string;
@@ -122,11 +147,12 @@ export default function TargetJobsPage() {
   const [filters, setFilters] = React.useState<JobFilterState>({
     query: "",
     source: "all",
+    roleCategory: "fresher_high_package",
     workplaceType: "all",
-    experienceLevel: "all",
+    experienceLevel: "entry",
     jobType: "all",
     sortBy: "match",
-    minSalary: 0
+    minSalary: 1000000
   });
 
   // URL Importer Modal
@@ -199,6 +225,7 @@ export default function TargetJobsPage() {
   const hasActiveFilters =
     filters.query !== "" ||
     filters.source !== "all" ||
+    (filters.roleCategory && filters.roleCategory !== "all") ||
     filters.workplaceType !== "all" ||
     filters.experienceLevel !== "all" ||
     filters.jobType !== "all" ||
@@ -208,6 +235,7 @@ export default function TargetJobsPage() {
     setFilters({
       query: "",
       source: "all",
+      roleCategory: "all",
       workplaceType: "all",
       experienceLevel: "all",
       jobType: "all",
@@ -216,19 +244,24 @@ export default function TargetJobsPage() {
     });
   };
 
-  // Fetch job listings
-  const fetchListings = React.useCallback(async () => {
+  // Fetch job listings (supports explicit refresh to re-query LinkedIn & live platforms)
+  const fetchListings = React.useCallback(async (forceRefresh = false) => {
     setIsLoadingListings(true);
     try {
       const params = new URLSearchParams();
       if (filters.query) params.set("q", filters.query);
       if (userTargetRole) params.set("targetRole", userTargetRole);
       if (filters.source !== "all") params.set("source", filters.source);
+      if (filters.roleCategory && filters.roleCategory !== "all") params.set("roleCategory", filters.roleCategory);
       if (filters.workplaceType !== "all") params.set("workplace", filters.workplaceType);
       if (filters.experienceLevel !== "all") params.set("experience", filters.experienceLevel);
       if (filters.jobType !== "all") params.set("jobType", filters.jobType);
       if (filters.minSalary > 0) params.set("minSalary", filters.minSalary.toString());
       if (filters.sortBy !== "match") params.set("sortBy", filters.sortBy);
+      if (forceRefresh) {
+        params.set("refresh", "true");
+        params.set("t", Date.now().toString());
+      }
 
       const res = await fetch(`/api/jobs?${params.toString()}`);
       const json = await res.json();
@@ -244,8 +277,8 @@ export default function TargetJobsPage() {
           });
         } else if (filters.sortBy === "salary_high") {
           results.sort((a, b) => {
-            const salB = b.maxSalary || b.minSalary || 0;
-            const salA = a.maxSalary || a.minSalary || 0;
+            const salB = getJobNormalizedSalary(b);
+            const salA = getJobNormalizedSalary(a);
             return salB - salA;
           });
         } else if (filters.sortBy === "recent") {
@@ -801,6 +834,18 @@ export default function TargetJobsPage() {
                 {/* Dropdown Filters & Sorters */}
                 <div className="flex flex-wrap items-center gap-2">
                   <select
+                    value={filters.minSalary}
+                    onChange={(e) => setFilters((prev) => ({ ...prev, minSalary: Number(e.target.value) }))}
+                    className="h-9 px-2.5 rounded-lg border border-border/70 bg-card text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                  >
+                    <option value={0}>Package: Any</option>
+                    <option value={1000000}>10+ LPA / $60k+ 🎯</option>
+                    <option value={1500000}>15+ LPA / $80k+</option>
+                    <option value={2000000}>20+ LPA / $100k+</option>
+                    <option value={3000000}>30+ LPA / $150k+</option>
+                  </select>
+
+                  <select
                     value={filters.workplaceType}
                     onChange={(e) => setFilters((prev) => ({ ...prev, workplaceType: e.target.value as any }))}
                     className="h-9 px-2.5 rounded-lg border border-border/70 bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
@@ -817,7 +862,7 @@ export default function TargetJobsPage() {
                     className="h-9 px-2.5 rounded-lg border border-border/70 bg-card text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
                   >
                     <option value="all">Level: All</option>
-                    <option value="entry">Entry-Level</option>
+                    <option value="entry">Entry-Level / Fresher</option>
                     <option value="mid">Mid-Level</option>
                     <option value="senior">Senior</option>
                     <option value="lead">Lead / Staff</option>
@@ -829,37 +874,48 @@ export default function TargetJobsPage() {
                     className="h-9 px-2.5 rounded-lg border border-border/70 bg-card text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
                   >
                     <option value="match">Sort: Best ATS Match</option>
+                    <option value="salary_high">Sort: Highest Package</option>
                     <option value="recent">Sort: Most Recent</option>
-                    <option value="salary_high">Sort: Highest Salary</option>
                   </select>
 
-                  <button
-                    onClick={() => fetchListings()}
-                    title="Refresh live listings"
-                    className="h-9 w-9 flex items-center justify-center rounded-lg border border-border/70 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
+                  {/* PROMINENT SEARCH AGAIN ACTION BUTTON */}
+                  <Button
+                    size="sm"
+                    onClick={() => fetchListings(true)}
+                    disabled={isLoadingListings}
+                    className="h-9 px-3.5 gap-1.5 text-xs font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs cursor-pointer shrink-0"
+                    title="Search again live across LinkedIn, Remotive, Arbeitnow & Partner Portals"
                   >
                     <RefreshCw className={`h-3.5 w-3.5 ${isLoadingListings ? "animate-spin" : ""}`} />
-                  </button>
+                    <span>Search Again</span>
+                  </Button>
                 </div>
               </div>
 
-              {/* Source Filter Pills + Count Indicator */}
+              {/* Focus / Role Category Pills */}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/40 text-xs">
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-                  <span className="text-[11px] font-semibold text-muted-foreground mr-1 shrink-0">Source:</span>
-                  {(["all", "linkedin", "wellfound", "indeed", "remotive", "direct"] as const).map((src) => {
-                    const isSelected = filters.source === src;
+                  <span className="text-[11px] font-semibold text-muted-foreground mr-1 shrink-0">Focus:</span>
+                  {[
+                    { id: "all", label: "All Roles" },
+                    { id: "fresher_high_package", label: "🎯 10+ LPA Fresher Target" },
+                    { id: "data_science", label: "Data Science" },
+                    { id: "ai_ml", label: "AI / ML Engineer" },
+                    { id: "data_analyst", label: "Data Analyst" },
+                    { id: "sde", label: "SDE / Software Eng" }
+                  ].map((role) => {
+                    const isSelected = (filters.roleCategory || "all") === role.id;
                     return (
                       <button
-                        key={src}
-                        onClick={() => setFilters((prev) => ({ ...prev, source: src }))}
+                        key={role.id}
+                        onClick={() => setFilters((prev) => ({ ...prev, roleCategory: role.id as any }))}
                         className={`px-2.5 py-1 rounded-full text-[11px] font-medium shrink-0 transition-colors cursor-pointer border ${
                           isSelected
                             ? "bg-primary text-primary-foreground border-primary font-bold shadow-2xs"
                             : "bg-muted/40 text-muted-foreground hover:text-foreground border-border/50 hover:bg-muted"
                         }`}
                       >
-                        {src === "all" ? "All Sources" : src === "direct" ? "Direct Partner ⚡" : src.charAt(0).toUpperCase() + src.slice(1)}
+                        {role.label}
                       </button>
                     );
                   })}
@@ -880,6 +936,27 @@ export default function TargetJobsPage() {
                     </button>
                   )}
                 </div>
+              </div>
+
+              {/* Platform Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pt-1 text-xs">
+                <span className="text-[11px] font-semibold text-muted-foreground mr-1 shrink-0">Platforms:</span>
+                {(["all", "linkedin", "wellfound", "indeed", "remotive", "direct"] as const).map((src) => {
+                  const isSelected = filters.source === src;
+                  return (
+                    <button
+                      key={src}
+                      onClick={() => setFilters((prev) => ({ ...prev, source: src }))}
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-medium shrink-0 transition-colors cursor-pointer border ${
+                        isSelected
+                          ? "bg-secondary text-foreground border-border font-bold"
+                          : "bg-muted/20 text-muted-foreground hover:text-foreground border-transparent hover:bg-muted/40"
+                      }`}
+                    >
+                      {src === "all" ? "All Platforms" : src === "direct" ? "Direct Partner ⚡" : src.charAt(0).toUpperCase() + src.slice(1)}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -948,6 +1025,11 @@ export default function TargetJobsPage() {
                                   Fast-Track
                                 </span>
                               )}
+                              {getJobNormalizedSalary(job) >= 1000000 && (job.experienceLevel === "entry" || job.experienceLevel === "any") && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shrink-0">
+                                  10+ LPA Fresher
+                                </span>
+                              )}
                             </div>
 
                             <div className="flex items-center gap-1 shrink-0">
@@ -979,10 +1061,8 @@ export default function TargetJobsPage() {
                           {/* Location & Salary */}
                           <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                             <span className="truncate">{job.location}</span>
-                            <span className="font-medium text-foreground/80 shrink-0 text-[11px]">
-                              {job.minSalary && job.maxSalary
-                                ? `$${(job.minSalary / 1000).toFixed(0)}k - $${(job.maxSalary / 1000).toFixed(0)}k`
-                                : "Salary undisclosed"}
+                            <span className="font-semibold text-foreground/90 shrink-0 text-[11px]">
+                              {formatJobSalary(job)}
                             </span>
                           </div>
 
@@ -1133,11 +1213,11 @@ export default function TargetJobsPage() {
                             </span>
                             <span>•</span>
                             <span className="capitalize">{selectedListing.workplaceType}</span>
-                            {selectedListing.minSalary && selectedListing.maxSalary && (
+                            {formatJobSalary(selectedListing) !== "Salary undisclosed" && (
                               <>
                                 <span>•</span>
                                 <span className="font-bold text-foreground">
-                                  ${(selectedListing.minSalary / 1000).toFixed(0)}k - ${(selectedListing.maxSalary / 1000).toFixed(0)}k / yr
+                                  {formatJobSalary(selectedListing)}
                                 </span>
                               </>
                             )}

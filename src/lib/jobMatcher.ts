@@ -14,7 +14,16 @@ export function analyzeJobMatch(job: JobListing, resumeData?: ResumeData | null)
   }
 
   // Aggregate resume text into a single searchable corpus
-  const resumeSkills = (resumeData.skills || []).map((s) => s.name.toLowerCase().trim());
+  const resumeSkills = (resumeData.skills || []).flatMap((s) => {
+    const tokens = (s.name || "")
+      .split(/[,•|/]/)
+      .map((t) => t.toLowerCase().trim())
+      .filter(Boolean);
+    if (s.category) {
+      tokens.push(s.category.toLowerCase().trim());
+    }
+    return tokens;
+  });
   const expText = (resumeData.experience || [])
     .map((e) => `${e.position} ${e.company} ${e.description}`)
     .join(" ")
