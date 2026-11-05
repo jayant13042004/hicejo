@@ -91,6 +91,11 @@ function ResumeBuilderContent() {
   const resumeIdParam = searchParams.get("id");
   const isAllFixed = searchParams.get("fixed") === "all";
   const [showAllFixedBanner, setShowAllFixedBanner] = React.useState(false);
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   React.useEffect(() => {
     if (isAllFixed) {
@@ -1059,7 +1064,7 @@ function ResumeBuilderContent() {
         </div>
 
         {/* Target Role Badge if Set */}
-        {(careerProfile?.targetRole || activeJobContext?.jobTitle) && (
+        {isMounted && (careerProfile?.targetRole || activeJobContext?.jobTitle) && (
           <div className="hidden xl:flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs shrink-0">
             <span className="text-primary font-bold">🎯</span>
             <span className="font-semibold text-foreground truncate max-w-[180px]" title={careerProfile?.targetRole || activeJobContext?.jobTitle}>

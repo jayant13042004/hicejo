@@ -43,6 +43,17 @@ export default function CheckerPage() {
   const router = useRouter();
   const { setActiveJobContext, activeJobContext } = useResumeStore();
 
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+    if (activeJobContext) {
+      if (activeJobContext.company) setCompany((prev) => prev || activeJobContext.company || "");
+      if (activeJobContext.jobTitle) setJobTitle((prev) => prev || activeJobContext.jobTitle || "");
+      if (activeJobContext.jobDescription) setJobDescription((prev) => prev || activeJobContext.jobDescription || "");
+    }
+  }, [activeJobContext]);
+
   const [resumes, setResumes] = React.useState<ResumeOption[]>([]);
   const [scanMode, setScanMode] = React.useState<"general" | "targeted">("targeted");
   const [sourceType, setSourceType] = React.useState<"draft" | "text">("draft");
@@ -498,7 +509,7 @@ export default function CheckerPage() {
                   {/* Target JD Fields */}
                   {scanMode === "targeted" ? (
                     <div className="space-y-4 pt-2 border-t border-border/40">
-                      {activeJobContext && (activeJobContext.company || activeJobContext.jobTitle) && (
+                      {isMounted && activeJobContext && (activeJobContext.company || activeJobContext.jobTitle) && (
                         <div className="rounded-lg bg-primary/10 border border-primary/20 px-3 py-2 flex items-center justify-between text-xs text-primary font-medium">
                           <div className="flex items-center gap-2 truncate">
                             <Target className="h-3.5 w-3.5 shrink-0" />

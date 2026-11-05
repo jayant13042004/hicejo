@@ -170,6 +170,11 @@ function InterviewStudioInner() {
   const fromJob = searchParams.get("from") === "job";
 
   const { careerProfile, activeJobContext, setPendingImprovement, data: currentResumeData } = useResumeStore();
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Studio Mode: 'interview' (Full Mock Interview) vs 'practice' (Skill Sparring)
   const [studioMode, setStudioMode] = React.useState<"interview" | "practice">(() => {
@@ -180,9 +185,9 @@ function InterviewStudioInner() {
   const [studioStage, setStudioStage] = React.useState<"setup" | "plan-preview" | "active">("setup");
 
   // Setup Form State
-  const [roleInput, setRoleInput] = React.useState(activeJobContext?.jobTitle || careerProfile?.targetRole || "Software Engineer");
-  const [isCompanyTargeted, setIsCompanyTargeted] = React.useState<boolean>(Boolean(activeJobContext?.company));
-  const [companyInput, setCompanyInput] = React.useState(activeJobContext?.company || "");
+  const [roleInput, setRoleInput] = React.useState("Software Engineer");
+  const [isCompanyTargeted, setIsCompanyTargeted] = React.useState<boolean>(false);
+  const [companyInput, setCompanyInput] = React.useState("");
   const [roundType, setRoundType] = React.useState<string>("full_loop");
 
   // Dynamically compute authentic interview rounds tailored to role and company
@@ -264,8 +269,10 @@ function InterviewStudioInner() {
       if (activeJobContext.jobTitle || activeJobContext.jobDescription) {
         setStudioMode("interview");
       }
+    } else if (careerProfile?.targetRole) {
+      setRoleInput(careerProfile.targetRole);
     }
-  }, [activeJobContext]);
+  }, [activeJobContext, careerProfile]);
 
   // Sync with career profile or builder resume text
   React.useEffect(() => {
@@ -1191,7 +1198,7 @@ ${evaluationResult.areasForImprovement.map((a) => `• ${a}`).join("\n")}
             </div>
 
             {/* Active Target Job Context Indicator */}
-            {activeJobContext && (activeJobContext.company || activeJobContext.jobTitle) && (
+            {isMounted && activeJobContext && (activeJobContext.company || activeJobContext.jobTitle) && (
               <div className="rounded-xl bg-primary/10 border border-primary/20 px-4 py-3 flex items-center justify-between text-xs text-primary font-medium shadow-xs">
                 <div className="flex items-center gap-2.5 truncate">
                   <Target className="h-4 w-4 shrink-0" />

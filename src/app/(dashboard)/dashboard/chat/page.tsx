@@ -295,7 +295,7 @@ function CareerChatContent() {
                     <div className="flex items-center gap-2 px-1 text-[10px] text-muted-foreground">
                       <span className="font-bold text-foreground">{isAi ? "Hicejo AI Advisor" : "You"}</span>
                       <span>•</span>
-                      <span>{msg.timestamp}</span>
+                      <span suppressHydrationWarning>{msg.timestamp}</span>
                     </div>
 
                     <div

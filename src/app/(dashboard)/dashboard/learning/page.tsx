@@ -52,21 +52,21 @@ export interface CustomSkillItem extends SkillItem {
 
 export default function LearningPage() {
   const { careerProfile } = useResumeStore();
+  const [isMounted, setIsMounted] = React.useState(false);
 
   // 1. Determine Initial Role from careerProfile, localStorage, or default to swe-dsa
-  const [selectedRoleId, setSelectedRoleId] = React.useState<string>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("hicejo_learning_role");
-      if (saved && ROLE_CURRICULA.some((r) => r.id === saved)) {
-        return saved;
-      }
-    }
-    if (careerProfile?.targetRole) {
+  const [selectedRoleId, setSelectedRoleId] = React.useState<string>("swe-dsa");
+
+  React.useEffect(() => {
+    setIsMounted(true);
+    const saved = localStorage.getItem("hicejo_learning_role");
+    if (saved && ROLE_CURRICULA.some((r) => r.id === saved)) {
+      setSelectedRoleId(saved);
+    } else if (careerProfile?.targetRole) {
       const matched = getCuratedCurriculumForRole(careerProfile.targetRole, careerProfile.experienceLevel);
-      if (matched) return matched.id;
+      if (matched) setSelectedRoleId(matched.id);
     }
-    return "swe-dsa";
-  });
+  }, [careerProfile]);
 
   // Keep in sync if careerProfile loads or changes
   React.useEffect(() => {
@@ -474,7 +474,7 @@ export default function LearningPage() {
         </div>
 
         {/* Connected Career Profile Alert */}
-        {careerProfile?.targetRole && (
+        {isMounted && careerProfile?.targetRole && (
           <div className="p-3.5 rounded-xl bg-primary/5 border border-primary/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2">
               <Target className="h-4 w-4 text-primary shrink-0" />

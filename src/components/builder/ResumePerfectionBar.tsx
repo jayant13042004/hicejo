@@ -33,6 +33,11 @@ export function ResumePerfectionBar({
   targetRole
 }: ResumePerfectionBarProps) {
   const [isExpanded, setIsExpanded] = React.useState(false);
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // 1. Contact Info evaluation (Max: 20 pts)
   const contactScore = React.useMemo(() => {
@@ -170,7 +175,7 @@ export function ResumePerfectionBar({
               Resume Readiness
             </span>
             <span className="text-muted-foreground/40 hidden md:inline">•</span>
-            {targetRole && (
+            {isMounted && targetRole && (
               <>
                 <span className="font-semibold text-primary truncate max-w-[180px]">
                   🎯 {targetRole}

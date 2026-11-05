@@ -31,6 +31,11 @@ interface ResumeOption {
 }
 export default function CoverLetterPage() {
   const { activeJobContext } = useResumeStore();
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const [resumes, setResumes] = React.useState<ResumeOption[]>([]);
   const [sourceType, setSourceType] = React.useState<"draft" | "text">("draft");
@@ -306,7 +311,7 @@ export default function CoverLetterPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                {activeJobContext && (
+                {isMounted && activeJobContext && (
                   <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary font-medium mb-4">
                     <div className="flex items-center gap-2">
                       <Sparkles className="h-4 w-4 shrink-0 text-primary" />

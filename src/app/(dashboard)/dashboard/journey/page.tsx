@@ -31,12 +31,14 @@ import {
 
 export default function JourneyPage() {
   const { careerProfile, activeJobContext } = useResumeStore();
+  const [isMounted, setIsMounted] = React.useState(false);
 
   const [savedTargets, setSavedTargets] = React.useState<any[]>([]);
   const [resumes, setResumes] = React.useState<any[]>([]);
   const [lastInterview, setLastInterview] = React.useState<any | null>(null);
 
   React.useEffect(() => {
+    setIsMounted(true);
     if (typeof window !== "undefined") {
       try {
         const storedTargets = localStorage.getItem(STORAGE_KEYS.SAVED_TARGETS);
@@ -63,8 +65,8 @@ export default function JourneyPage() {
       .catch(() => {});
   }, []);
 
-  const activeTargetRole = careerProfile?.targetRole || "Software Engineer";
-  const activeExperienceLevel = careerProfile?.experienceLevel || "Mid-Level";
+  const activeTargetRole = isMounted ? (careerProfile?.targetRole || "Software Engineer") : "Software Engineer";
+  const activeExperienceLevel = isMounted ? (careerProfile?.experienceLevel || "Mid-Level") : "Mid-Level";
 
   const roleCurriculum = React.useMemo(() => {
     return getCuratedCurriculumForRole(activeTargetRole, activeExperienceLevel);
@@ -92,7 +94,7 @@ export default function JourneyPage() {
   // check counts. No resume → no score; a resume without a check → not scored.
   const highestAtsScore = resumes.reduce((max, r) => Math.max(max, r.ats_score || 0), 0);
   const alignmentScore: number | null =
-    highestAtsScore > 0 ? highestAtsScore : activeJobContext?.atsScore && activeJobContext.atsScore > 0
+    highestAtsScore > 0 ? highestAtsScore : isMounted && activeJobContext?.atsScore && activeJobContext.atsScore > 0
       ? activeJobContext.atsScore
       : null;
   const alignmentLabel = alignmentScore === null ? "Not scored yet" : `${alignmentScore}% aligned`;
@@ -113,7 +115,7 @@ export default function JourneyPage() {
       tasks: [
         { text: `Target role calibrated to ${activeTargetRole}`, done: Boolean(activeTargetRole) },
         { text: `Seniority set to ${activeExperienceLevel}`, done: Boolean(activeExperienceLevel) },
-        { text: "Career profile stored across workspace", done: Boolean(careerProfile?.isConfigured) }
+        { text: "Career profile stored across workspace", done: isMounted && Boolean(careerProfile?.isConfigured) }
       ]
     },
     {
@@ -220,8 +222,8 @@ export default function JourneyPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-foreground bg-secondary border border-border/80 px-2.5 py-1 rounded-md">
-              {demonstratedCount}/{totalRequirements} Requirements Proven
+            <span suppressHydrationWarning className="text-xs font-semibold text-foreground bg-secondary border border-border/80 px-2.5 py-1 rounded-md">
+              {isMounted ? `${demonstratedCount}/${totalRequirements} Requirements Proven` : "Requirements Proven"}
             </span>
           </div>
         </div>
