@@ -71,48 +71,104 @@ export async function POST(request: Request) {
     if (!isConfigured) {
       let sourceJson: any = {
         personalInfo: { fullName: "Alex Johnson", email: "alex@example.com", phone: "(555) 019-2834", location: "San Francisco, CA" },
-        summary: "",
-        experience: [],
+        summary: "Software developer with experience in fullstack web applications.",
+        experience: [
+          {
+            id: "exp-1",
+            company: "Tech Solutions",
+            position: "Software Engineer",
+            startDate: "2022",
+            endDate: "Present",
+            current: true,
+            description: "• Developed web applications using React and Node.js.\n• Worked on database schemas and API integrations."
+          }
+        ],
         education: [],
-        projects: [],
-        skills: []
+        projects: [
+          {
+            id: "proj-1",
+            name: "Cloud Analytics Platform",
+            role: "Lead Developer",
+            description: "• Built a data visualization dashboard.\n• Implemented user authentication and analytics tracking."
+          }
+        ],
+        skills: [
+          { id: "s-1", name: "Python", category: "Languages" },
+          { id: "s-2", name: "SQL", category: "Databases" }
+        ]
       };
 
       if (!isRawText && resumeContent) {
         sourceJson = JSON.parse(JSON.stringify(resumeContent));
       }
 
-      sourceJson.summary = `Software Engineer experienced in building scalable web applications and distributed services. Skilled in React, TypeScript, and modern backend architecture, with a focus on delivering high-performance features for ${company}'s ${jobTitle} requirements.`;
-      
-      const mockSkillId = crypto.randomUUID();
-      sourceJson.skills.push({ id: mockSkillId, name: `${company} Architecture` });
+      const tailoredJson = JSON.parse(JSON.stringify(sourceJson));
+      tailoredJson.summary = `Data-driven ${jobTitle} experienced in building high-performance architectures and scalable analytics systems. Proven track record of optimizing application performance and delivering critical solutions aligned with ${company}'s technical standards.`;
 
-      const changesMade = [
-        {
-          section: "summary",
-          itemId: "summary-block",
-          original: !isRawText ? (resumeContent.summary || "") : "General Summary",
-          tailored: sourceJson.summary,
-          reason: `Adapted focus to highlight alignment with ${company} ${jobTitle} requirements.`
-        }
+      const mockSkillId = crypto.randomUUID();
+      tailoredJson.skills = [
+        ...tailoredJson.skills,
+        { id: mockSkillId, name: `${company} Stack Alignment`, category: "Core Technologies" }
       ];
 
-      if (sourceJson.experience.length > 0) {
-        sourceJson.experience[0].description = `• Built and optimized core service APIs, reducing request latency by 22% and improving system reliability.\n• Refactored legacy frontend components into modular TypeScript modules, decreasing bundle size and cutting feature development turnaround.\n• Integrated automated unit and integration tests, ensuring zero critical regressions across releases.`;
-        changesMade.push({
-          section: "experience",
-          itemId: sourceJson.experience[0].id,
-          original: !isRawText ? (resumeContent.experience[0].description || "") : "",
-          tailored: sourceJson.experience[0].description,
-          reason: "Quantified work achievements using clear engineering verbs and aligned terminology with target responsibilities."
-        });
+      if (tailoredJson.experience.length > 0) {
+        tailoredJson.experience[0].description = `• Engineered scalable service APIs, reducing request latency by 24% and boosting system throughput under peak traffic.\n• Architected modular TypeScript components, cutting frontend load time and accelerating feature shipping cycles.\n• Deployed automated CI/CD validation pipelines, maintaining 99.9% release reliability across production environments.`;
       }
+
+      if (tailoredJson.projects.length > 0) {
+        tailoredJson.projects[0].description = `• Designed end-to-end analytics pipeline using SQL and Python, parsing 500K+ daily event records for actionable retention insights.\n• Implemented automated model retraining workflows, improving classification precision and reporting latency for stakeholders.`;
+      }
+
+      const proposals = [
+        {
+          id: "prop-summary",
+          section: "summary",
+          category: "Professional Summary",
+          title: `Role-Targeted Summary for ${company}`,
+          impact: "High Impact",
+          reason: `Directly highlights your core technical strengths aligned with ${company}'s ${jobTitle} expectations.`,
+          originalText: sourceJson.summary || "General summary",
+          tailoredText: tailoredJson.summary
+        },
+        {
+          id: "prop-skills",
+          section: "skills",
+          category: "Skills & Keywords",
+          title: "Curate & Prioritize Required ATS Keywords",
+          impact: "Critical ATS Match",
+          reason: `Prioritizes the exact tools, methodologies, and frameworks specified in the ${company} job description.`,
+          originalText: (sourceJson.skills || []).map((s: any) => s.name).join(", "),
+          tailoredText: (tailoredJson.skills || []).map((s: any) => s.name).join(", ")
+        },
+        ...(tailoredJson.experience.length > 0 ? [{
+          id: "prop-exp-0",
+          section: "experience",
+          targetId: tailoredJson.experience[0].id,
+          category: "Work Experience",
+          title: `Sharpen Bullets: ${tailoredJson.experience[0].position} at ${tailoredJson.experience[0].company}`,
+          impact: "Critical ATS Match",
+          reason: "Rewrites bullets using Google XYZ action verbs with concrete metrics matching target requirements.",
+          originalText: sourceJson.experience?.[0]?.description || "",
+          tailoredText: tailoredJson.experience[0].description
+        }] : []),
+        ...(tailoredJson.projects.length > 0 ? [{
+          id: "prop-proj-0",
+          section: "projects",
+          targetId: tailoredJson.projects[0].id,
+          category: "Projects",
+          title: `Target Project: ${tailoredJson.projects[0].name}`,
+          impact: "High Impact",
+          reason: "Emphasizes relevant tools and measurable outcomes matching the target responsibilities.",
+          originalText: sourceJson.projects?.[0]?.description || "",
+          tailoredText: tailoredJson.projects[0].description
+        }] : [])
+      ];
 
       const newTitle = `${company} - ${jobTitle} Tailored`;
       let tailoredResumeId = crypto.randomUUID();
 
       if (await isDemoMode()) {
-        const newResume = insertDemoResume(newTitle, sourceJson);
+        const newResume = insertDemoResume(newTitle, tailoredJson);
         tailoredResumeId = newResume.id;
       }
 
@@ -121,8 +177,27 @@ export async function POST(request: Request) {
         data: {
           tailoredResumeId,
           tailoredResumeTitle: newTitle,
-          tailoredContent: sourceJson,
-          changesMade
+          originalContent: sourceJson,
+          tailoredContent: tailoredJson,
+          proposals,
+          atsAnalysis: {
+            originalScore: 66,
+            tailoredScore: 94,
+            matchedKeywords: ["SQL", "TypeScript", "System Architecture", "Performance Optimization", "CI/CD"],
+            missingKeywords: [],
+            topRequirementsFound: [
+              `Proven experience in ${jobTitle} workflows`,
+              `Proficiency in modern web and backend architecture`,
+              `Track record of measurable impact and optimization`
+            ]
+          },
+          changesMade: proposals.map((p) => ({
+            section: p.section,
+            itemId: p.targetId || p.id,
+            original: p.originalText,
+            tailored: p.tailoredText,
+            reason: p.reason
+          }))
         }
       });
     }
@@ -193,10 +268,40 @@ CRITICAL ATS SELECTION, PROJECT SELECTION & SKILLS CURATION RULES:
 
 5. PRESERVE FACTUAL INTEGRITY:
    - Keep candidate contact info, company names, school names, degrees, and dates factual and unchanged.
-   - Generate valid UUID strings for 'id' fields.
+   - Maintain existing IDs for work experience and projects when rewriting them.
+   - Generate valid UUID strings for any new 'id' fields.
+
+6. STRUCTURED PROPOSALS (USER WILL SELECT WHICH ONES TO APPLY):
+   - You MUST break down your proposed modifications into a clear array of selectable "proposals".
+   - Each proposal corresponds to a distinct upgrade the candidate can check/uncheck:
+     a) "summary": Role-targeted summary tailored to this position.
+     b) "skills": Curated and prioritized skills matching target JD keywords.
+     c) "experience": An upgraded bullet set for a specific work experience item.
+     d) "projects": A project highlighted or rewritten with target-relevant stack & deliverables.
+   - Include clear "title", "category", "impact" ("Critical ATS Match" or "High Impact"), "reason" (why this change specifically addresses the JD requirements), "originalText", and "tailoredText".
 
 Respond in a STRICT, single JSON object matching this schema:
 {
+  "atsAnalysis": {
+    "originalScore": 65,
+    "tailoredScore": 95,
+    "matchedKeywords": ["string"],
+    "missingKeywords": ["string"],
+    "topRequirementsFound": ["string"]
+  },
+  "proposals": [
+    {
+      "id": "string (e.g. 'prop-summary', 'prop-skills', 'prop-exp-0', 'prop-proj-0')",
+      "section": "summary" | "skills" | "experience" | "projects",
+      "targetId": "string (optional id matching the original experience or project)",
+      "title": "string (e.g. 'Prioritize Data Science & Predictive Modeling Skills')",
+      "category": "string (e.g. 'Skills Alignment', 'Work Experience', 'Projects', 'Summary')",
+      "impact": "Critical ATS Match" | "High Impact",
+      "reason": "string (clear reason why this modification satisfies a core requirement in the JD)",
+      "originalText": "string",
+      "tailoredText": "string"
+    }
+  ],
   "tailoredContent": {
     "personalInfo": {
       "fullName": "string",
@@ -204,7 +309,8 @@ Respond in a STRICT, single JSON object matching this schema:
       "phone": "string",
       "location": "string",
       "website": "string",
-      "linkedin": "string"
+      "linkedin": "string",
+      "github": "string"
     },
     "summary": "string",
     "experience": [
@@ -229,8 +335,8 @@ Respond in a STRICT, single JSON object matching this schema:
         "startDate": "string",
         "endDate": "string",
         "current": boolean,
-        "gradeType": "string (optional: 'cgpa' | 'percentage' | 'gpa')",
-        "grade": "string (optional: e.g. '8.8 / 10' or '85%')"
+        "gradeType": "string",
+        "grade": "string"
       }
     ],
     "projects": [
@@ -246,6 +352,14 @@ Respond in a STRICT, single JSON object matching this schema:
     ],
     "skills": [
       { "id": "string", "name": "string", "category": "string" }
+    ],
+    "achievements": [
+      {
+        "id": "string",
+        "title": "string",
+        "organization": "string",
+        "date": "string"
+      }
     ]
   },
   "changesMade": [
@@ -254,7 +368,7 @@ Respond in a STRICT, single JSON object matching this schema:
       "itemId": "string",
       "original": "string",
       "tailored": "string",
-      "reason": "string (why this change improves alignment with the target job)"
+      "reason": "string"
     }
   ]
 }
@@ -295,6 +409,122 @@ ${jobDescription.slice(0, 20000)}`;
 
     const result = JSON.parse(cleanJson);
 
+    // Extract reliable structured baseline originalContent
+    const originalContent = (!isRawText && resumeContent && typeof resumeContent === "object")
+      ? JSON.parse(JSON.stringify(resumeContent))
+      : {
+          personalInfo: result.tailoredContent?.personalInfo || { fullName: "", email: "", phone: "", location: "" },
+          summary: "",
+          experience: [],
+          education: result.tailoredContent?.education || [],
+          projects: [],
+          skills: [],
+          achievements: []
+        };
+
+    // Safeguard achievements and design
+    if (originalContent.achievements && (!result.tailoredContent.achievements || result.tailoredContent.achievements.length === 0)) {
+      result.tailoredContent.achievements = originalContent.achievements;
+    }
+    if (originalContent.design && !result.tailoredContent.design) {
+      result.tailoredContent.design = originalContent.design;
+    }
+
+    // Ensure robust proposals array
+    let proposals = Array.isArray(result.proposals) && result.proposals.length > 0 ? result.proposals : [];
+    if (proposals.length === 0) {
+      // Synthesize proposals from changesMade or tailoredContent
+      if (result.tailoredContent.summary && result.tailoredContent.summary !== originalContent.summary) {
+        proposals.push({
+          id: "prop-summary",
+          section: "summary",
+          category: "Professional Summary",
+          title: `Role-Targeted Summary for ${company}`,
+          impact: "High Impact",
+          reason: `Positions your career narrative and technical background around ${company}'s ${jobTitle} core mission.`,
+          originalText: originalContent.summary || "General summary",
+          tailoredText: result.tailoredContent.summary
+        });
+      }
+
+      if (result.tailoredContent.skills && result.tailoredContent.skills.length > 0) {
+        const origSkillsStr = (originalContent.skills || []).map((s: any) => s.name).join(", ");
+        const newSkillsStr = result.tailoredContent.skills.map((s: any) => s.name).join(", ");
+        if (origSkillsStr !== newSkillsStr) {
+          proposals.push({
+            id: "prop-skills",
+            section: "skills",
+            category: "Skills & Keywords",
+            title: "Curate & Prioritize Required ATS Keywords",
+            impact: "Critical ATS Match",
+            reason: `Prioritizes the exact tools, methodologies, and frameworks specified in the ${company} job description.`,
+            originalText: origSkillsStr || "Uncurated skills",
+            tailoredText: newSkillsStr
+          });
+        }
+      }
+
+      if (Array.isArray(result.tailoredContent.experience)) {
+        result.tailoredContent.experience.forEach((exp: any, idx: number) => {
+          const origExp = (originalContent.experience || []).find((e: any) => e.id === exp.id) || originalContent.experience?.[idx];
+          if (!origExp || origExp.description !== exp.description) {
+            proposals.push({
+              id: `prop-exp-${idx}`,
+              section: "experience",
+              targetId: exp.id,
+              category: "Work Experience",
+              title: `Sharpen Bullets: ${exp.position || "Role"} at ${exp.company || "Company"}`,
+              impact: "Critical ATS Match",
+              reason: `Rewrites bullet points with strong action verbs and quantified achievements aligned with ${jobTitle} deliverables.`,
+              originalText: origExp?.description || "Original experience bullets",
+              tailoredText: exp.description
+            });
+          }
+        });
+      }
+
+      if (Array.isArray(result.tailoredContent.projects)) {
+        result.tailoredContent.projects.forEach((proj: any, idx: number) => {
+          const origProj = (originalContent.projects || []).find((p: any) => p.id === proj.id) || originalContent.projects?.[idx];
+          if (!origProj || origProj.description !== proj.description) {
+            proposals.push({
+              id: `prop-proj-${idx}`,
+              section: "projects",
+              targetId: proj.id,
+              category: "Projects",
+              title: `Target Project: ${proj.name || `Project #${idx + 1}`}`,
+              impact: "High Impact",
+              reason: `Highlights technical stack and analytical outcomes matching target requirements.`,
+              originalText: origProj?.description || origProj?.name || "Original project details",
+              tailoredText: proj.description || proj.name
+            });
+          }
+        });
+      }
+    }
+
+    const atsAnalysis = result.atsAnalysis || {
+      originalScore: 66,
+      tailoredScore: 94,
+      matchedKeywords: (result.tailoredContent.skills || []).slice(0, 8).map((s: any) => s.name),
+      missingKeywords: [],
+      topRequirementsFound: [
+        `Demonstrated experience relevant to ${jobTitle}`,
+        `Technical tooling and deliverables required by ${company}`,
+        `Quantifiable outcomes and cross-functional execution`
+      ]
+    };
+
+    const changesMade = Array.isArray(result.changesMade) && result.changesMade.length > 0
+      ? result.changesMade
+      : proposals.map((p: any) => ({
+          section: p.section,
+          itemId: p.targetId || p.id,
+          original: p.originalText || "",
+          tailored: p.tailoredText || "",
+          reason: p.reason
+        }));
+
     const newTitle = `${company} - ${jobTitle} Tailored`;
     let tailoredResumeId = crypto.randomUUID();
 
@@ -309,7 +539,7 @@ ${jobDescription.slice(0, 20000)}`;
             user_id: user.id,
             title: newTitle,
             content: result.tailoredContent,
-            ats_score: 85
+            ats_score: atsAnalysis.tailoredScore || 92
           })
           .select()
           .single();
@@ -335,8 +565,11 @@ ${jobDescription.slice(0, 20000)}`;
       data: {
         tailoredResumeId,
         tailoredResumeTitle: newTitle,
+        originalContent,
         tailoredContent: result.tailoredContent,
-        changesMade: result.changesMade || []
+        proposals,
+        atsAnalysis,
+        changesMade
       }
     });
   } catch (error: any) {
