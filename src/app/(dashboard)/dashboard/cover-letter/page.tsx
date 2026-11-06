@@ -30,7 +30,7 @@ interface ResumeOption {
   title: string;
 }
 export default function CoverLetterPage() {
-  const { activeJobContext } = useResumeStore();
+  const { activeJobContext, clearActiveJobContext, setActiveJobContext } = useResumeStore();
   const [isMounted, setIsMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -53,6 +53,13 @@ export default function CoverLetterPage() {
       if (activeJobContext.jobDescription) setJobDescription((prev) => prev || activeJobContext.jobDescription || "");
     }
   }, [activeJobContext]);
+
+  const handleRemoveTarget = () => {
+    clearActiveJobContext();
+    if (company === activeJobContext?.company) setCompany("");
+    if (jobTitle === activeJobContext?.jobTitle) setJobTitle("");
+    if (jobDescription === activeJobContext?.jobDescription) setJobDescription("");
+  };
 
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [isExtractingFile, setIsExtractingFile] = React.useState(false);
@@ -154,6 +161,15 @@ export default function CoverLetterPage() {
       if (result.success && result.data?.content) {
         setLetterContent(result.data.content);
         consumeCredit("cover_letter");
+
+        // Keep active target context synchronized with the active generation
+        setActiveJobContext({
+          company: company.trim(),
+          jobTitle: jobTitle.trim(),
+          jobDescription: jobDescription.trim(),
+          sourceTool: "cover_letter" as any,
+          lastUpdated: new Date().toISOString()
+        });
       } else {
         setError(result.error || "Failed to generate cover letter.");
       }
@@ -311,19 +327,30 @@ export default function CoverLetterPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                {isMounted && activeJobContext && (
+                {isMounted && (activeJobContext || company || jobTitle) && (
                   <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary font-medium mb-4">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <Sparkles className="h-4 w-4 shrink-0 text-primary" />
-                      <span>
-                        Target: <strong>{activeJobContext.jobTitle || "Role"}</strong> {activeJobContext.company ? `@ ${activeJobContext.company}` : ""}
+                      <span className="truncate">
+                        Target: <strong>{jobTitle || activeJobContext?.jobTitle || "Role"}</strong> {(company || activeJobContext?.company) ? `@ ${company || activeJobContext?.company}` : ""}
                       </span>
                     </div>
-                    {activeJobContext.atsScore !== undefined && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary font-mono font-bold shrink-0">
-                        {activeJobContext.atsScore}% Match
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {activeJobContext?.atsScore !== undefined && (!company || activeJobContext.company === company) && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/20 text-primary font-mono font-bold">
+                          {activeJobContext.atsScore}% Match
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleRemoveTarget}
+                        title="Remove target"
+                        className="text-primary hover:text-destructive hover:bg-destructive/10 p-1 rounded-md transition-colors cursor-pointer"
+                        aria-label="Remove target"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 )}
                 <form onSubmit={handleGenerate} className="space-y-4">

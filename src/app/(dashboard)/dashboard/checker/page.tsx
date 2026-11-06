@@ -24,7 +24,8 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
-  Loader2
+  Loader2,
+  X
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { DashboardShell } from "@/components/shared/DashboardShell";
@@ -41,7 +42,7 @@ interface ResumeOption {
 
 export default function CheckerPage() {
   const router = useRouter();
-  const { setActiveJobContext, activeJobContext } = useResumeStore();
+  const { setActiveJobContext, activeJobContext, clearActiveJobContext } = useResumeStore();
 
   const [isMounted, setIsMounted] = React.useState(false);
 
@@ -53,6 +54,13 @@ export default function CheckerPage() {
       if (activeJobContext.jobDescription) setJobDescription((prev) => prev || activeJobContext.jobDescription || "");
     }
   }, [activeJobContext]);
+
+  const handleClearTarget = () => {
+    clearActiveJobContext();
+    if (company === activeJobContext?.company) setCompany("");
+    if (jobTitle === activeJobContext?.jobTitle) setJobTitle("");
+    if (jobDescription === activeJobContext?.jobDescription) setJobDescription("");
+  };
 
   const [resumes, setResumes] = React.useState<ResumeOption[]>([]);
   const [scanMode, setScanMode] = React.useState<"general" | "targeted">("targeted");
@@ -509,14 +517,23 @@ export default function CheckerPage() {
                   {/* Target JD Fields */}
                   {scanMode === "targeted" ? (
                     <div className="space-y-4 pt-2 border-t border-border/40">
-                      {isMounted && activeJobContext && (activeJobContext.company || activeJobContext.jobTitle) && (
+                      {isMounted && (activeJobContext || company || jobTitle) && (
                         <div className="rounded-lg bg-primary/10 border border-primary/20 px-3 py-2 flex items-center justify-between text-xs text-primary font-medium">
                           <div className="flex items-center gap-2 truncate">
                             <Target className="h-3.5 w-3.5 shrink-0" />
                             <span className="truncate">
-                              Prefilled from Target Job: <strong>{jobTitle || activeJobContext.jobTitle || "Role"}</strong> {(company || activeJobContext.company) ? `@ ${company || activeJobContext.company}` : ""}
+                              Target Job: <strong>{jobTitle || activeJobContext?.jobTitle || "Role"}</strong> {(company || activeJobContext?.company) ? `@ ${company || activeJobContext?.company}` : ""}
                             </span>
                           </div>
+                          <button
+                            type="button"
+                            onClick={handleClearTarget}
+                            title="Remove target"
+                            className="text-primary hover:text-destructive hover:bg-destructive/10 p-1 rounded-md transition-colors cursor-pointer shrink-0 ml-2"
+                            aria-label="Remove target"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                       )}
 
